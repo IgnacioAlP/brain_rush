@@ -191,7 +191,6 @@ input, select {
   filter: brightness(0) invert(1) !important;
   transition: filter 0.3s ease !important;
 }
-}
 .icons-row .option img {
   width: 54px;
   margin-bottom: 8px;

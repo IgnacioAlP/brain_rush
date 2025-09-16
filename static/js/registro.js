@@ -227,7 +227,7 @@ function finishRegister() {
   
   // Redirigir o mostrar mensaje de éxito
   alert('¡Registro completado exitosamente!');
-  // window.location.href = "{{ url_for('login') }}"; // Redirigir al login
+  window.location.href = window.location.origin + "/maestra"; // Redirigir a la página principal
 }
 
 // Inicializa la primera pantalla
