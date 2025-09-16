@@ -187,6 +187,11 @@ input, select {
   color: #fff;
   border: 1.5px solid #222;
 }
+.option.selected img {
+  filter: brightness(0) invert(1) !important;
+  transition: filter 0.3s ease !important;
+}
+}
 .icons-row .option img {
   width: 54px;
   margin-bottom: 8px;
@@ -225,4 +230,9 @@ hr {
   -moz-filter: brightness(0) invert(1) !important;
   -ms-filter: brightness(0) invert(1) !important;
   -o-filter: brightness(0) invert(1) !important;
+}
+/* Aplica el filtro blanco a todas las imágenes de los botones de lugar de trabajo al estar seleccionados */
+.work-selected img {
+  filter: brightness(0) invert(1) !important;
+  transition: filter 0.3s ease !important;
 }
