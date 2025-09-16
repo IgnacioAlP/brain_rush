@@ -1,0 +1,228 @@
+/* Mejoras adicionales para el registro */
+.step-indicator {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.step-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ddd;
+  margin: 0 5px;
+  transition: background 0.3s;
+}
+
+.step-dot.active {
+  background: #222;
+}
+
+.error-message {
+  color: #e74c3c;
+  font-size: 12px;
+  margin-top: 5px;
+  display: none;
+}
+
+.success-message {
+  color: #27ae60;
+  font-size: 12px;
+  margin-top: 5px;
+}
+
+/* Animaciones para transiciones entre pasos */
+.register-container {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Mejoras para inputs */
+input:focus, select:focus {
+  outline: none;
+  border-color: #222;
+  box-shadow: 0 0 5px rgba(34, 34, 34, 0.3);
+}
+
+/* Botón deshabilitado */
+.btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  color: #666;
+}
+
+.btn:disabled:hover {
+  background: #ccc;
+  color: #666;
+  border: 1px solid #ccc;
+}
+.background-img {
+  transition: filter 0.3s;
+}
+.work-selected .background-img {
+  filter: brightness(0) invert(1);
+}
+.work-selected .register-container,
+.work-selected .register-container * {
+  color: #fff !important;
+}
+.work-selected .register-container {
+  background: rgba(34,34,34,0.92);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+}
+/* Estilos para el registro Brain Rush */
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background-color: #f5f5f5;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+.background-img {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;
+  opacity: 0.2;
+  z-index: -1;
+}
+.register-container {
+  position: relative;
+  width: 420px;
+  padding: 36px 32px 32px 32px;
+  text-align: center;
+  background: rgba(255,255,255,0.92);
+  border-radius: 18px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.10);
+}
+.btn {
+  width: 100%;
+  padding: 12px;
+  margin: 10px 0 8px 0;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 15px;
+  background-color: #222;
+  color: white;
+  transition: background 0.2s, color 0.2s;
+}
+.btn:hover {
+  background: #fff;
+  color: #222;
+  border: 1px solid #222;
+}
+input, select {
+  width: 100%;
+  padding: 11px;
+  margin: 10px 0 8px 0;
+  border: 1px solid #aaa;
+  border-radius: 6px;
+  font-size: 15px;
+  background: #f5f5f5;
+}
+.google-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  color: #222;
+  border: 1px solid #aaa;
+  margin-bottom: 10px;
+  font-weight: bold;
+  font-size: 15px;
+  border-radius: 6px;
+  padding: 10px 0;
+  transition: background 0.2s, color 0.2s;
+}
+.google-btn:hover {
+  background: #f5f5f5;
+  color: #111;
+}
+.google-btn img {
+  width: 22px;
+  margin-right: 10px;
+}
+.options-row, .icons-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  margin: 22px 0 18px 0;
+  gap: 18px 18px;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.option {
+  flex: 1 1 120px;
+  min-width: 110px;
+  max-width: 140px;
+  margin: 0 6px;
+  text-align: center;
+  cursor: pointer;
+  background: #f5f5f5;
+  border-radius: 10px;
+  padding: 12px 0 6px 0;
+  border: 1.5px solid transparent;
+  transition: background 0.2s, border 0.2s, color 0.2s;
+  box-sizing: border-box;
+}
+.icons-row .option:last-child {
+  margin-left: auto;
+  margin-right: auto;
+}
+.option.selected {
+  background: #222;
+  color: #fff;
+  border: 1.5px solid #222;
+}
+.icons-row .option img {
+  width: 54px;
+  margin-bottom: 8px;
+}
+.terms {
+  font-size: 12px;
+  color: #555;
+  margin-top: 12px;
+}
+h2 {
+  margin-bottom: 18px;
+  font-size: 26px;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+.subtitle {
+  font-size: 18px;
+  margin-bottom: 12px;
+  font-weight: normal;
+}
+hr {
+  border: none;
+  border-top: 1px solid #ddd;
+  margin: 18px 0;
+}
+/* Forzar el cambio de color para todas las imágenes */
+.work-selected .icons-row .option img {
+  filter: brightness(0) invert(1) !important;
+  transition: filter 0.3s ease !important;
+  -webkit-filter: brightness(0) invert(1) !important;
+}
+
+.work-selected .option img {
+  filter: brightness(0) invert(1) !important;
+  -webkit-filter: brightness(0) invert(1) !important;
+  -moz-filter: brightness(0) invert(1) !important;
+  -ms-filter: brightness(0) invert(1) !important;
+  -o-filter: brightness(0) invert(1) !important;
+}

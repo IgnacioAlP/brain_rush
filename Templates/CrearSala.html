@@ -1,0 +1,13 @@
+// {% extends 'Maestra.html' %}
+{% block title %}Crear Sala{% endblock %}
+{% block content %}
+<div class="create-room-container">
+    <h2>CREAR UNA SALA</h2>
+    <form method="POST" action="{{ url_for('generar_preguntas') }}">
+        <input type="text" name="nombre_sala" placeholder="Nombre de la sala" required>
+        <div class="btn-group">
+            <button type="submit" class="btn btn-create">Crear Sala</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

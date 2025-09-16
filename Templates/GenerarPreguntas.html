@@ -1,0 +1,92 @@
+{% extends "Maestra.html" %}
+
+{% block title %}Crear Pregunta - Brain RUSH{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/preguntas.css') }}">
+<div class="kahoot-style-container">
+  <form id="question-form" method="POST" action="{{ url_for('generar_preguntas') }}" enctype="multipart/form-data">
+    <div class="kahoot-question-bar">
+      <textarea id="question-text" name="question_text" rows="2" placeholder="Escribe la pregunta aquí..." required></textarea>
+    </div>
+    <div class="kahoot-options-row" id="options-container">
+      <div class="kahoot-option kahoot-red">
+        <input type="text" name="option_0" placeholder="Opción 1" required />
+        <button type="button" class="btn-remove-option" style="display:none;">✕</button>
+      </div>
+      <div class="kahoot-option kahoot-blue">
+        <input type="text" name="option_1" placeholder="Opción 2" required />
+        <button type="button" class="btn-remove-option" style="display:none;">✕</button>
+      </div>
+      <div class="kahoot-option kahoot-yellow" style="display:none;">
+        <input type="text" name="option_2" placeholder="Opción 3" />
+        <button type="button" class="btn-remove-option">✕</button>
+      </div>
+      <div class="kahoot-option kahoot-green" style="display:none;">
+        <input type="text" name="option_3" placeholder="Opción 4" />
+        <button type="button" class="btn-remove-option">✕</button>
+      </div>
+    </div>
+    <div class="kahoot-btn-row">
+      <button type="button" id="add-option-btn" class="btn kahoot-btn">Agregar opción</button>
+      <button type="button" id="new-question-btn" class="btn kahoot-btn">Crear otra pregunta</button>
+      <button type="submit" class="btn kahoot-btn kahoot-finish">Terminar formulario</button>
+    </div>
+    <div class="kahoot-extra-fields">
+      <label for="time-limit">Tiempo para responder (segundos):</label>
+      <input type="number" id="time-limit" name="time_limit" min="5" max="120" value="30" required />
+      <label for="media-file">Agregar imagen o video (opcional):</label>
+      <input type="file" id="media-file" name="media_file" accept="image/*,video/*" />
+    </div>
+  </form>
+</div>
+<script>
+  // Manejo de opciones tipo Kahoot
+  const optionsContainer = document.getElementById('options-container');
+  const addOptionBtn = document.getElementById('add-option-btn');
+  const optionDivs = optionsContainer.getElementsByClassName('kahoot-option');
+  let optionCount = 2;
+
+  addOptionBtn.addEventListener('click', () => {
+    if (optionCount >= 4) {
+      alert('Máximo 4 opciones permitidas.');
+      return;
+    }
+    optionDivs[optionCount].style.display = '';
+    optionDivs[optionCount].querySelector('input[type="text"]').required = true;
+    // Mostrar botón eliminar solo si hay más de 2 opciones
+    if(optionCount >= 2) {
+      optionDivs[optionCount].querySelector('.btn-remove-option').style.display = '';
+    }
+    optionCount++;
+  });
+
+  // Eliminar opción
+  Array.from(document.getElementsByClassName('btn-remove-option')).forEach((btn, idx) => {
+    btn.addEventListener('click', function() {
+      if(optionCount <= 2) {
+        alert('Debe haber al menos 2 opciones.');
+        return;
+      }
+      optionDivs[idx].style.display = 'none';
+      optionDivs[idx].querySelector('input[type="text"]').required = false;
+      optionCount--;
+    });
+  });
+
+  // Botón para crear otra pregunta (puedes personalizar la acción)
+  document.getElementById('new-question-btn').addEventListener('click', function(e) {
+    e.preventDefault();
+    document.getElementById('question-form').reset();
+    for (let i = 2; i < 4; i++) {
+      optionDivs[i].style.display = 'none';
+      optionDivs[i].querySelector('input[type="text"]').required = false;
+    }
+    // Ocultar botones eliminar de las dos primeras opciones
+    for (let i = 0; i < 2; i++) {
+      optionDivs[i].querySelector('.btn-remove-option').style.display = 'none';
+    }
+    optionCount = 2;
+  });
+</script>
+{% endblock %}

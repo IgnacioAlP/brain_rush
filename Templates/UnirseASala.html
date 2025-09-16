@@ -1,0 +1,18 @@
+{% extends 'Maestra.html' %}
+{% block title %}Unirse a una Sala{% endblock %}
+{% block content %}
+<div class="join-room-container">
+    <h2>UNIRSE A UNA SALA</h2>
+    <form>
+        <input type="text" placeholder="Codigo de la sala" required>
+        <div class="btn-group">
+            <button type="submit" class="btn btn-login">Unirse a Sala</button>
+        </div>
+    </form> <p></p>
+    <form action="{{ url_for('crear_sala') }}">
+      <div class="btn-group">
+        <button type="submit" class="btn btn-create">Crear Sala</button>
+      </div>
+    </form>
+</div>
+{% endblock %}
