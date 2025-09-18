@@ -16,7 +16,7 @@ def generar_preguntas():
     # lógica para crear la sala o redirigir
     return render_template('GenerarPreguntas.html', nombre_sala=nombre_sala)
 
-@app.route('/maestra')
+@app.route('/')
 def maestra():
 	return render_template('Maestra.html')
 
