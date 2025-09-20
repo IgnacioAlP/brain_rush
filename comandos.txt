@@ -1,6 +1,6 @@
 -Creación entorno virtual:
 py -3 -m venv .venv
-.venvScriptsActivate
+.venv\Scripts\Activate
 pip install flask
 pip install pymysql
 
