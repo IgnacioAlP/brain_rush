@@ -227,7 +227,7 @@ function finishRegister() {
   
   // Redirigir o mostrar mensaje de éxito
   alert('¡Registro completado exitosamente!');
-  window.location.href = window.location.origin + "/maestra"; // Redirigir a la página principal
+  window.location.href = window.location.origin + "/"; // Redirigir a la página principal
 }
 
 // Inicializa la primera pantalla
