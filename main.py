@@ -37,7 +37,7 @@ def unirse_a_sala():
     return render_template('UnirseASala.html')
 
 if __name__ ==  '__main__':
-    app.run(debug=5000)
+    app.run(debug=True, port=5000)
 
 
 
