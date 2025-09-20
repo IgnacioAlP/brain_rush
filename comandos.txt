@@ -1,4 +1,10 @@
+-Creación entorno virtual:
 py -3 -m venv .venv
 .venvScriptsActivate
 pip install flask
 pip install pymysql
+
+-Commit:
+git add "nombre_archivo"
+git commit -m "Cambios que realizaste"
+git push origin main
