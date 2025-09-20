@@ -1,10 +1,14 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify,Response 
-
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, Response 
 
 app = Flask(__name__)
+app.secret_key = 'clave-temporal'  # Solo para que funcionen los flash messages
+
 #---RUTAS FIJAS---#
 
-# Rutas fijas para los HTML de la carpeta Templates
+@app.route('/')
+def maestra():
+	return render_template('Maestra.html')
+
 @app.route('/crear_sala')
 def crear_sala():
 	return render_template('CrearSala.html')
@@ -16,18 +20,12 @@ def generar_preguntas():
     # lógica para crear la sala o redirigir
     return render_template('GenerarPreguntas.html', nombre_sala=nombre_sala)
 
-@app.route('/')
-def maestra():
-	return render_template('Maestra.html')
-
-
 @app.route('/registrarse', methods=['GET', 'POST'])
 def registrarse():
     if request.method == 'POST':
         # Procesar datos del formulario de registro aquí
         pass
     return render_template('Registrarse.html')
-
 
 @app.route('/unirse_a_sala', methods=['GET', 'POST'])
 def unirse_a_sala():
@@ -36,8 +34,5 @@ def unirse_a_sala():
         pass
     return render_template('UnirseASala.html')
 
-if __name__ ==  '__main__':
-    app.run(debug=True, port=5000)
-
-
-
+if __name__ == '__main__':
+    app.run(debug=True, port=8081)
