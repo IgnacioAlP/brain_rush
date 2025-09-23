@@ -273,20 +273,8 @@ function finishRegister() {
       alert('¡Registro completado exitosamente!');
       window.location.href = '/';
     } else {
-      // Mostrar errores del backend
-      if (data) {
-        const msg = [data.error, data.detail].filter(Boolean).join('\n');
-        if (data.errors) {
-          const firstKey = Object.keys(data.errors)[0];
-          showError(Object.values(data.errors).join('\n'), firstKey);
-        } else if (msg) {
-          showError(msg);
-        } else {
-          showError('No se pudo completar el registro. Intenta nuevamente.');
-        }
-      } else {
-        showError('No se pudo completar el registro. Intenta nuevamente.');
-      }
+      // Cualquier error en el registro: redirigir a página de error del sistema
+      window.location.href = '/errorsistema';
     }
   })
   .catch(() => {
