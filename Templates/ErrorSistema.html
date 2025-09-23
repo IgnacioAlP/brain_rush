@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>¡Ups! Error del Sistema</title>
+  <style>
+    body { font-family: Arial, Helvetica, sans-serif; margin:0; background: #0b1020; color: #fff; display:flex; align-items:center; justify-content:center; min-height:100vh; }
+    .wrap { text-align:center; padding: 24px; }
+    .robot { width: 220px; height: 220px; margin: 0 auto 16px; position: relative; }
+    .head { width: 140px; height: 110px; background:#1e2a5a; border-radius: 24px; position:absolute; left:50%; top:20px; transform:translateX(-50%); box-shadow: 0 10px 30px rgba(0,0,0,0.3) inset, 0 0 0 4px #2d3b7b; }
+    .eye { width: 26px; height: 26px; background:#00e6ff; border-radius: 50%; position:absolute; top:36px; animation: blink 4s infinite; }
+    .eye.left { left: 34px; }
+    .eye.right { right: 34px; }
+    .mouth { width: 64px; height: 10px; background:#00e6ff; border-radius: 6px; position:absolute; left:50%; transform:translateX(-50%); bottom:18px; }
+    .antenna { width: 8px; height: 40px; background:#2d3b7b; position:absolute; left:50%; transform:translateX(-50%); top:-18px; border-radius:4px; }
+    .antenna::after { content:""; width: 16px; height: 16px; background:#ff3d6e; border-radius:50%; position:absolute; left:50%; transform:translateX(-50%); top:-10px; box-shadow: 0 0 12px 4px rgba(255,61,110,0.6); animation: ping 1.8s infinite; }
+    .spark { position:absolute; width: 6px; height: 6px; background:#ffdf3d; border-radius:50%; box-shadow: 0 0 10px 3px rgba(255,223,61,0.7); }
+    .spark.s1 { top: 20px; left: 0; animation: float 3s infinite; }
+    .spark.s2 { top: 0; right: 20px; animation: float 2.4s infinite reverse; }
+    .spark.s3 { bottom: 10px; left: 10px; animation: float 2.8s infinite; }
+    @keyframes blink { 0%, 92%, 100% { transform: scaleY(1); } 96% { transform: scaleY(0.1);} }
+    @keyframes ping { 0% { transform: translateX(-50%) scale(1); opacity:1; } 100% { transform: translateX(-50%) scale(1.6); opacity:0; } }
+    @keyframes float { 0% { transform: translateY(0); } 50% { transform: translateY(-6px); } 100% { transform: translateY(0); } }
+    h1 { font-size: 34px; margin: 8px 0; }
+    p { color:#c6d4ff; margin: 8px 0 18px; }
+    .btns { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+    a.btn { background:#00e6ff; color:#0b1020; padding: 10px 16px; border-radius: 10px; text-decoration:none; font-weight:600; }
+    a.btn.alt { background:#2d3b7b; color:#fff; }
+  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+</head>
+<body>
+  <div class="wrap">
+    <div class="robot" aria-hidden="true">
+      <div class="head">
+        <div class="antenna"></div>
+        <div class="eye left"></div>
+        <div class="eye right"></div>
+        <div class="mouth"></div>
+        <div class="spark s1"></div>
+        <div class="spark s2"></div>
+        <div class="spark s3"></div>
+      </div>
+    </div>
+    <h1>¡Oops! El robot se mareó</h1>
+    <p>Ha ocurrido un error interno del sistema (500). Nuestro bot está reiniciando neuronas...</p>
+    <div class="btns">
+      <a class="btn" href="/">Volver al inicio</a>
+      <a class="btn alt" href="javascript:location.reload()">Reintentar</a>
+    </div>
+  </div>
+</body>
+<!-- Un diseño divertido para la ruta /errorsistema -->
+</html>

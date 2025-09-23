@@ -45,8 +45,10 @@ function renderStep4() {
   document.getElementById('register-content').innerHTML = `
     ${createStepIndicator()}
     <h2>Brain Rush</h2>
-    <div class="subtitle">Registrate con tu email</div>
+    <div class="subtitle">Regístrate con tu email y contraseña</div>
     <input type="email" placeholder="email@domain.com" id="email" required>
+    <input type="password" placeholder="Contraseña" id="password" required>
+    <input type="password" placeholder="Confirmar contraseña" id="confirm_password" required>
     <button class="btn" onclick="finishRegister()">Continuar</button>
     <hr>
     <div style="margin: 10px 0;">o continúa con</div>
@@ -209,6 +211,8 @@ function highlightSelected() {
 function finishRegister() {
   clearErrors();
   const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const confirmPassword = document.getElementById('confirm_password').value;
   
   if (!email) {
     showError('El email es requerido', 'email');
@@ -220,14 +224,75 @@ function finishRegister() {
     return;
   }
 
+  if (!password) {
+    showError('La contraseña es requerida', 'password');
+    return;
+  }
+
+  if (password.length < 4) {
+    showError('La contraseña debe tener al menos 4 caracteres', 'password');
+    return;
+  }
+
+  if (!confirmPassword) {
+    showError('Debes confirmar la contraseña', 'confirm_password');
+    return;
+  }
+
+  if (password !== confirmPassword) {
+    showError('Las contraseñas no coinciden', 'confirm_password');
+    return;
+  }
+
   userData.email = email;
-  
-  // Aquí enviarías los datos al servidor
-  console.log('Datos del usuario:', userData);
-  
-  // Redirigir o mostrar mensaje de éxito
-  alert('¡Registro completado exitosamente!');
-  window.location.href = window.location.origin + "/"; // Redirigir a la página principal
+
+  // Datos mínimos adicionales para cumplir con backend
+  // Si en pasos anteriores no se recolectó nombre/apellidos, los derivamos del username
+  const username = userData.username || email.split('@')[0];
+  const nombre = userData.nombre || username;
+  const apellidos = userData.apellidos || 'Usuario';
+  const tipo_usuario = userData.workplace === 'admin' ? 'administrador' : (userData.workplace === 'escuela' || userData.workplace === 'superior' ? 'docente' : 'estudiante');
+
+  const payload = {
+    nombre,
+    apellidos,
+    email: userData.email,
+    password,
+    confirm_password: password,
+    tipo_usuario
+  };
+
+  fetch('/registrarse', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+  .then(async (res) => {
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.success) {
+      alert('¡Registro completado exitosamente!');
+      window.location.href = '/';
+    } else {
+      // Mostrar errores del backend
+      if (data) {
+        const msg = [data.error, data.detail].filter(Boolean).join('\n');
+        if (data.errors) {
+          const firstKey = Object.keys(data.errors)[0];
+          showError(Object.values(data.errors).join('\n'), firstKey);
+        } else if (msg) {
+          showError(msg);
+        } else {
+          showError('No se pudo completar el registro. Intenta nuevamente.');
+        }
+      } else {
+        showError('No se pudo completar el registro. Intenta nuevamente.');
+      }
+    }
+  })
+  .catch(() => {
+    // Si hay un error grave, redirigir a /errorsistema
+    window.location.href = '/errorsistema';
+  });
 }
 
 // Inicializa la primera pantalla

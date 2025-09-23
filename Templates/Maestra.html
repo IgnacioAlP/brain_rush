@@ -45,9 +45,21 @@
       {% block content %}
       <div class="login-container" role="form" aria-labelledby="login-title">
         <h2 id="login-title">INICIAR SESIÓN</h2>
-        <form>
-          <input type="text" placeholder="Usuario" required aria-label="Usuario" />
-          <input type="password" placeholder="Contraseña" required aria-label="Contraseña" />
+        <form action="{{ url_for('login') }}" method="post">
+          <input
+            type="email"
+            id="login-email"
+            name="email"
+            placeholder="email@dominio.com"
+            required
+            aria-label="Correo electrónico"
+            autocomplete="email"
+            inputmode="email"
+            spellcheck="false"
+            autocapitalize="none"
+            maxlength="254"
+          />
+          <input type="password" name="password" placeholder="Contraseña" required aria-label="Contraseña" />
           <div class="remember">
             <label class="switch" for="remember">
               <input type="checkbox" id="remember" />
