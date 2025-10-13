@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sala de Juego - Brain RUSH</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header {
+      background: rgba(34, 34, 34, 0.95);
+      color: white;
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .logo {
+      font-size: 24px;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+
+    .sala-info {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      font-size: 16px;
+    }
+
+    .pin-display {
+      background: white;
+      color: #222;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-weight: bold;
+      font-size: 18px;
+      letter-spacing: 2px;
+    }
+
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      text-align: center;
+    }
+
+    .waiting-screen {
+      max-width: 600px;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 20px;
+      padding: 40px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    }
+
+    .waiting-screen h1 {
+      font-size: 36px;
+      color: #222;
+      margin-bottom: 16px;
+      font-weight: bold;
+    }
+
+    .waiting-screen h2 {
+      font-size: 24px;
+      color: #555;
+      margin-bottom: 32px;
+      font-weight: normal;
+    }
+
+    .game-pin {
+      background: #222;
+      color: white;
+      font-size: 48px;
+      font-weight: bold;
+      letter-spacing: 4px;
+      padding: 20px 40px;
+      border-radius: 12px;
+      margin-bottom: 32px;
+      display: inline-block;
+    }
+
+    .instructions {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 32px;
+      border-left: 4px solid #222;
+    }
+
+    .instructions h3 {
+      color: #222;
+      margin-bottom: 16px;
+      font-size: 20px;
+    }
+
+    .instructions ol {
+      text-align: left;
+      color: #555;
+      line-height: 1.6;
+      max-width: 400px;
+      margin: 0 auto;
+    }
+
+    .instructions li {
+      margin-bottom: 8px;
+    }
+
+    .participants-section {
+      margin-top: 32px;
+    }
+
+    .participants-count {
+      font-size: 20px;
+      color: #222;
+      margin-bottom: 16px;
+      font-weight: bold;
+    }
+
+    .participants-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .participant-badge {
+      background: #e9ecef;
+      color: #222;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .control-buttons {
+      margin-top: 40px;
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 16px 32px;
+      border: none;
+      border-radius: 8px;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .btn-primary {
+      background: #222;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #444;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+
+    .btn-secondary {
+      background: #6c757d;
+      color: white;
+    }
+
+    .btn-secondary:hover {
+      background: #545b62;
+    }
+
+    .btn:disabled {
+      background: #ccc;
+      color: #888;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .status-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 16px;
+      margin-bottom: 20px;
+    }
+
+    .status-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #28a745;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+
+    .mobile-friendly {
+      background: #d4edda;
+      color: #155724;
+      padding: 12px 20px;
+      border-radius: 8px;
+      margin-top: 24px;
+      font-size: 14px;
+    }
+
+    @media (max-width: 768px) {
+      .header {
+        flex-direction: column;
+        gap: 12px;
+        text-align: center;
+      }
+
+      .sala-info {
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .waiting-screen {
+        margin: 20px;
+        padding: 24px;
+      }
+
+      .waiting-screen h1 {
+        font-size: 28px;
+      }
+
+      .game-pin {
+        font-size: 36px;
+        padding: 16px 24px;
+        letter-spacing: 2px;
+      }
+
+      .control-buttons {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .btn {
+        width: 100%;
+        max-width: 300px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">🧠 BRAIN RUSH</div>
+    <div class="sala-info">
+      <span>📚 {{ cuestionario_titulo }}</span>
+      <div class="pin-display">PIN: {{ pin_sala }}</div>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <div class="waiting-screen">
+      <div class="status-indicator">
+        <div class="status-dot"></div>
+        <span>Sala activa - Esperando participantes</span>
+      </div>
+
+      <h1>¡Sala de Juego Lista!</h1>
+      <h2>{{ cuestionario_titulo }}</h2>
+      
+      <div class="game-pin">{{ pin_sala }}</div>
+
+      <div class="instructions">
+        <h3>📱 Instrucciones para los estudiantes:</h3>
+        <ol>
+          <li>Ve a <strong>{{ url_unirse }}</strong> desde tu dispositivo móvil</li>
+          <li>Ingresa el código PIN: <strong>{{ pin_sala }}</strong></li>
+          <li>Escribe tu nombre para unirte</li>
+          <li>¡Espera a que el profesor inicie el juego!</li>
+        </ol>
+      </div>
+
+      <div class="participants-section">
+        <div class="participants-count">
+          👥 Participantes conectados: <span id="participant-count">0</span>
+        </div>
+        <div class="participants-list" id="participants-list">
+          <!-- Los participantes aparecerán aquí -->
+        </div>
+      </div>
+
+      <div class="control-buttons">
+        <button id="start-game-btn" class="btn btn-primary" disabled>
+          🚀 Iniciar Juego
+        </button>
+        <button id="close-room-btn" class="btn btn-secondary">
+          ❌ Cerrar Sala
+        </button>
+        <a href="{{ url_for('proyectar_cuestionario', pin=pin_sala) }}" class="btn btn-primary" target="_blank">
+          📺 Modo Proyección
+        </a>
+      </div>
+
+      <div class="mobile-friendly">
+        💡 <strong>Tip:</strong> Proyecta esta pantalla para que todos puedan ver el PIN y las instrucciones.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Simulación de participantes conectándose
+    const participantes = [];
+    let participantId = 1;
+
+    function agregarParticipante(nombre) {
+      participantes.push({ id: participantId++, nombre: nombre });
+      actualizarListaParticipantes();
+    }
+
+    function actualizarListaParticipantes() {
+      const countElement = document.getElementById('participant-count');
+      const listElement = document.getElementById('participants-list');
+      const startButton = document.getElementById('start-game-btn');
+
+      countElement.textContent = participantes.length;
+
+      listElement.innerHTML = participantes.map(p => 
+        `<div class="participant-badge">${p.nombre}</div>`
+      ).join('');
+
+      // Habilitar botón de inicio si hay al menos 1 participante
+      startButton.disabled = participantes.length === 0;
+    }
+
+    // Simulación de participantes conectándose (para demo)
+    setTimeout(() => agregarParticipante('Ana García'), 2000);
+    setTimeout(() => agregarParticipante('Carlos López'), 4000);
+    setTimeout(() => agregarParticipante('María Rodríguez'), 6000);
+
+    // Event listeners
+    document.getElementById('start-game-btn').addEventListener('click', function() {
+      if (participantes.length === 0) {
+        alert('⚠️ Necesitas al menos un participante para iniciar el juego');
+        return;
+      }
+      
+      if (confirm(`🎮 ¿Iniciar juego con ${participantes.length} participante(s)?`)) {
+        // Redirigir a la pantalla de juego
+        window.location.href = `/juego/{{ pin_sala }}/iniciar`;
+      }
+    });
+
+    document.getElementById('close-room-btn').addEventListener('click', function() {
+      if (confirm('❌ ¿Estás seguro de que quieres cerrar la sala? Todos los participantes serán desconectados.')) {
+        window.location.href = '/mis-cuestionarios';
+      }
+    });
+
+    // En una implementación real, aquí conectarías WebSocket para recibir participantes en tiempo real
+    // const socket = io();
+    // socket.on('nuevo_participante', (data) => {
+    //   agregarParticipante(data.nombre);
+    // });
+  </script>
+</body>
+</html>

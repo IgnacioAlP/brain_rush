@@ -1,0 +1,524 @@
+{% extends "BrainRush_Master.html" %}
+
+{% block title %}Brain RUSH - Ranking Global{% endblock %}
+
+{% block extra_css %}
+<style>
+.ranking-page {
+    padding: var(--space-xl) 0;
+}
+
+.page-header {
+    text-align: center;
+    margin-bottom: var(--space-xxl);
+}
+
+.page-title {
+    font-family: var(--font-primary);
+    font-size: 2.5rem;
+    background: var(--gradient-secondary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: var(--space-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-md);
+}
+
+.page-subtitle {
+    color: rgba(255,255,255,0.9);
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.ranking-container {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: var(--radius-xl);
+    padding: var(--space-xxl);
+    box-shadow: var(--shadow-xl);
+    position: relative;
+    overflow: hidden;
+}
+
+.ranking-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--gradient-secondary);
+}
+
+.podium-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: var(--space-lg);
+    margin-bottom: var(--space-xxl);
+    align-items: end;
+}
+
+.podium-place {
+    text-align: center;
+    padding: var(--space-xl);
+    border-radius: var(--radius-lg);
+    position: relative;
+    transition: var(--transition-smooth);
+}
+
+.podium-place:hover {
+    transform: translateY(-4px);
+}
+
+.podium-place.first {
+    background: linear-gradient(135deg, #ffd700, #ffed4e);
+    box-shadow: 0 8px 32px rgba(255, 215, 0, 0.3);
+    order: 2;
+    min-height: 200px;
+}
+
+.podium-place.second {
+    background: linear-gradient(135deg, #c0c0c0, #e8e8e8);
+    box-shadow: 0 8px 32px rgba(192, 192, 192, 0.3);
+    order: 1;
+    min-height: 170px;
+}
+
+.podium-place.third {
+    background: linear-gradient(135deg, #cd7f32, #d4941e);
+    box-shadow: 0 8px 32px rgba(205, 127, 50, 0.3);
+    order: 3;
+    min-height: 140px;
+}
+
+.podium-crown {
+    font-size: 2rem;
+    margin-bottom: var(--space-md);
+}
+
+.podium-place.first .podium-crown {
+    color: #ff6b35;
+}
+
+.podium-place.second .podium-crown {
+    color: #666;
+}
+
+.podium-place.third .podium-crown {
+    color: #8b4513;
+}
+
+.podium-position {
+    font-size: 3rem;
+    font-weight: 900;
+    font-family: var(--font-primary);
+    color: white;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    margin-bottom: var(--space-sm);
+}
+
+.podium-name {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--dark);
+    margin-bottom: var(--space-xs);
+    text-shadow: 1px 1px 2px rgba(255,255,255,0.8);
+}
+
+.podium-score {
+    font-size: 1rem;
+    font-weight: 600;
+    color: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-xs);
+}
+
+.ranking-list {
+    margin-top: var(--space-xl);
+}
+
+.ranking-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--dark);
+    margin-bottom: var(--space-lg);
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.ranking-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-lg);
+    padding: var(--space-lg);
+    background: rgba(255,255,255,0.8);
+    border: 2px solid rgba(0,0,0,0.1);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-md);
+    transition: var(--transition-smooth);
+    position: relative;
+    overflow: hidden;
+}
+
+.ranking-item:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--secondary-color);
+}
+
+.ranking-position {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: var(--gradient-accent);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.ranking-info {
+    flex: 1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.user-details {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+.user-name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--dark);
+}
+
+.user-stats {
+    font-size: 0.9rem;
+    color: var(--gray);
+    display: flex;
+    gap: var(--space-md);
+}
+
+.score-display {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--space-xs);
+}
+
+.main-score {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--secondary-color);
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+}
+
+.score-label {
+    font-size: 0.8rem;
+    color: var(--gray);
+    font-weight: 600;
+}
+
+.empty-state {
+    text-align: center;
+    padding: var(--space-xxl);
+    color: var(--gray);
+}
+
+.empty-icon {
+    font-size: 4rem;
+    color: rgba(0,0,0,0.3);
+    margin-bottom: var(--space-lg);
+}
+
+.empty-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--dark);
+    margin-bottom: var(--space-sm);
+}
+
+.empty-message {
+    font-size: 1rem;
+    font-style: italic;
+}
+
+.ranking-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-lg);
+    margin-bottom: var(--space-xl);
+}
+
+.stat-card {
+    background: rgba(78, 205, 196, 0.1);
+    border: 1px solid var(--secondary-color);
+    border-radius: var(--radius-md);
+    padding: var(--space-lg);
+    text-align: center;
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--secondary-color);
+    margin-bottom: var(--space-xs);
+}
+
+.stat-label {
+    color: var(--dark);
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+    .podium-section {
+        grid-template-columns: 1fr;
+        gap: var(--space-md);
+    }
+    
+    .podium-place {
+        order: initial !important;
+        min-height: auto !important;
+    }
+    
+    .ranking-item {
+        flex-direction: column;
+        text-align: center;
+        gap: var(--space-md);
+    }
+    
+    .ranking-info {
+        flex-direction: column;
+        gap: var(--space-sm);
+        width: 100%;
+    }
+    
+    .user-stats {
+        justify-content: center;
+    }
+    
+    .score-display {
+        align-items: center;
+    }
+    
+    .ranking-stats {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .page-title {
+        font-size: 2rem;
+        flex-direction: column;
+        gap: var(--space-sm);
+    }
+    
+    .ranking-container {
+        margin: var(--space-md);
+        padding: var(--space-xl);
+    }
+    
+    .ranking-stats {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ranking-page">
+    <div class="page-header">
+        <h1 class="page-title">
+            <i class="fas fa-trophy"></i>
+            Ranking Global
+        </h1>
+        <p class="page-subtitle">Los mejores estudiantes de Brain RUSH</p>
+    </div>
+
+    <div class="ranking-container animate-fadeIn">
+        {% if ranking %}
+            <!-- Estadísticas globales -->
+            <div class="ranking-stats">
+                <div class="stat-card">
+                    <div class="stat-number">{{ ranking|length }}</div>
+                    <div class="stat-label">Estudiantes activos</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-number">{{ ranking[0].puntaje_acumulado or 0 }}</div>
+                    <div class="stat-label">Puntaje más alto</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-number">{{ ((ranking|sum(attribute='puntaje_acumulado') or 0) / ranking|length)|round|int }}</div>
+                    <div class="stat-label">Promedio general</div>
+                </div>
+            </div>
+
+            <!-- Podio (Top 3) -->
+            {% if ranking|length >= 3 %}
+            <div class="podium-section animate-fadeIn" style="animation-delay: 0.2s;">
+                <!-- Segundo lugar -->
+                {% if ranking|length > 1 %}
+                <div class="podium-place second">
+                    <div class="podium-crown">👑</div>
+                    <div class="podium-position">2</div>
+                    <div class="podium-name">{{ ranking[1].nombre }}</div>
+                    <div class="podium-score">
+                        <i class="fas fa-star"></i>
+                        {{ ranking[1].puntaje_acumulado or 0 }} pts
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Primer lugar -->
+                <div class="podium-place first">
+                    <div class="podium-crown">👑</div>
+                    <div class="podium-position">1</div>
+                    <div class="podium-name">{{ ranking[0].nombre }}</div>
+                    <div class="podium-score">
+                        <i class="fas fa-star"></i>
+                        {{ ranking[0].puntaje_acumulado or 0 }} pts
+                    </div>
+                </div>
+
+                <!-- Tercer lugar -->
+                {% if ranking|length > 2 %}
+                <div class="podium-place third">
+                    <div class="podium-crown">👑</div>
+                    <div class="podium-position">3</div>
+                    <div class="podium-name">{{ ranking[2].nombre }}</div>
+                    <div class="podium-score">
+                        <i class="fas fa-star"></i>
+                        {{ ranking[2].puntaje_acumulado or 0 }} pts
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Lista completa del ranking -->
+            <div class="ranking-list">
+                <h3 class="ranking-title">
+                    <i class="fas fa-list-ol"></i>
+                    Ranking Completo
+                </h3>
+                
+                {% for usuario in ranking[:20] %}
+                <div class="ranking-item animate-fadeIn" style="animation-delay: {{ (loop.index * 0.1) + 0.3 }}s;">
+                    <div class="ranking-position">{{ loop.index }}</div>
+                    
+                    <div class="ranking-info">
+                        <div class="user-details">
+                            <div class="user-name">{{ usuario.nombre }}</div>
+                            <div class="user-stats">
+                                <span><i class="fas fa-gamepad"></i> Juegos completados</span>
+                                <span><i class="fas fa-clock"></i> Miembro desde {{ usuario.fecha_registro.strftime('%b %Y') if usuario.fecha_registro else 'N/A' }}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="score-display">
+                            <div class="main-score">
+                                <i class="fas fa-star"></i>
+                                {{ usuario.puntaje_acumulado or 0 }}
+                            </div>
+                            <div class="score-label">Puntos totales</div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                
+                {% if ranking|length > 20 %}
+                <div class="ranking-item" style="background: rgba(0,0,0,0.05); border-style: dashed;">
+                    <div class="ranking-info" style="justify-content: center;">
+                        <span style="color: var(--gray); font-style: italic;">
+                            ... y {{ ranking|length - 20 }} estudiantes más
+                        </span>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+        {% else %}
+            <!-- Estado vacío -->
+            <div class="empty-state animate-fadeIn">
+                <div class="empty-icon">
+                    <i class="fas fa-trophy"></i>
+                </div>
+                <div class="empty-title">¡Sé el primero en el ranking!</div>
+                <div class="empty-message">
+                    Aún no hay datos de ranking disponibles.<br>
+                    Completa algunos cuestionarios para aparecer aquí.
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Animación de números del ranking
+    const statNumbers = document.querySelectorAll('.stat-number');
+    
+    statNumbers.forEach(number => {
+        const finalValue = parseInt(number.textContent);
+        if (finalValue > 0) {
+            animateNumber(number, 0, finalValue, 1000);
+        }
+    });
+    
+    function animateNumber(element, start, end, duration) {
+        const startTime = performance.now();
+        
+        function update(currentTime) {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            const current = Math.floor(start + (end - start) * easeOutCubic(progress));
+            element.textContent = current.toLocaleString();
+            
+            if (progress < 1) {
+                requestAnimationFrame(update);
+            }
+        }
+        
+        requestAnimationFrame(update);
+    }
+    
+    function easeOutCubic(t) {
+        return 1 - Math.pow(1 - t, 3);
+    }
+    
+    // Efecto de hover mejorado para las tarjetas del ranking
+    const rankingItems = document.querySelectorAll('.ranking-item');
+    
+    rankingItems.forEach(item => {
+        item.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-4px) scale(1.02)';
+        });
+        
+        item.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0) scale(1)';
+        });
+    });
+});
+</script>
+{% endblock %}

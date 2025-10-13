@@ -1,0 +1,335 @@
+{% extends "BrainRush_Master.html" %}
+
+{% block title %}Brain RUSH - Iniciar Sesión{% endblock %}
+
+{% block extra_css %}
+<style>
+.login-page {
+    min-height: calc(100vh - 80px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-xl) 0;
+}
+
+.login-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-xl);
+    padding: var(--space-xxl);
+    width: 100%;
+    max-width: 450px;
+    position: relative;
+    overflow: hidden;
+}
+
+.login-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--gradient-primary);
+}
+
+.login-header {
+    text-align: center;
+    margin-bottom: var(--space-xxl);
+}
+
+.login-title {
+    font-family: var(--font-primary);
+    font-size: 2.5rem;
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: var(--space-sm);
+}
+
+.login-subtitle {
+    color: var(--gray);
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.form-group {
+    margin-bottom: var(--space-lg);
+}
+
+.form-label {
+    display: block;
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: var(--space-sm);
+    font-size: 0.9rem;
+}
+
+.form-input {
+    width: 100%;
+    padding: var(--space-md);
+    border: 2px solid rgba(0,0,0,0.1);
+    border-radius: var(--radius-md);
+    font-size: 1rem;
+    font-family: var(--font-secondary);
+    transition: var(--transition-smooth);
+    background: rgba(255,255,255,0.8);
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    background: white;
+    box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+}
+
+.login-btn {
+    width: 100%;
+    padding: var(--space-lg);
+    background: var(--gradient-primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+    margin-bottom: var(--space-lg);
+}
+
+.login-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.register-link {
+    text-align: center;
+    margin-bottom: var(--space-xl);
+}
+
+.register-link a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 600;
+    transition: var(--transition-fast);
+}
+
+.register-link a:hover {
+    color: var(--secondary-color);
+}
+
+.demo-users {
+    background: rgba(78, 205, 196, 0.1);
+    border: 1px solid var(--secondary-color);
+    border-radius: var(--radius-md);
+    padding: var(--space-lg);
+    margin-top: var(--space-lg);
+}
+
+.demo-title {
+    color: var(--dark);
+    font-size: 0.9rem;
+    font-weight: 700;
+    margin-bottom: var(--space-md);
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.demo-user {
+    background: rgba(255,255,255,0.8);
+    border: 1px solid rgba(0,0,0,0.1);
+    border-radius: var(--radius-sm);
+    padding: var(--space-md);
+    margin-bottom: var(--space-sm);
+    cursor: pointer;
+    transition: var(--transition-fast);
+    font-size: 0.85rem;
+}
+
+.demo-user:last-child {
+    margin-bottom: 0;
+}
+
+.demo-user:hover {
+    background: white;
+    border-color: var(--secondary-color);
+    transform: translateY(-1px);
+}
+
+.demo-user strong {
+    color: var(--dark);
+}
+
+@media (max-width: 480px) {
+    .login-card {
+        margin: var(--space-md);
+        padding: var(--space-xl);
+    }
+    
+    .login-title {
+        font-size: 2rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="login-page">
+    <div class="login-card animate-fadeIn">
+        <div class="login-header">
+            <h1 class="login-title">¡Bienvenido!</h1>
+            <p class="login-subtitle">Inicia sesión para continuar tu aventura de aprendizaje</p>
+        </div>
+
+        <form action="{{ url_for('login') }}" method="POST" id="loginForm" novalidate>
+            <div class="form-group">
+                <label for="email" class="form-label">
+                    <i class="fas fa-envelope"></i> Correo Electrónico
+                </label>
+                <input type="email" id="email" name="email" class="form-input" placeholder="tu@email.com">
+            </div>
+
+            <div class="form-group">
+                <label for="password" class="form-label">
+                    <i class="fas fa-lock"></i> Contraseña
+                </label>
+                <input type="password" id="password" name="password" class="form-input" placeholder="••••••••">
+            </div>
+
+            <button type="submit" class="login-btn" id="loginBtn">
+                <i class="fas fa-sign-in-alt"></i>
+                Iniciar Sesión
+            </button>
+        </form>
+
+        <div class="register-link">
+            <p>¿No tienes cuenta? <a href="{{ url_for('registrarse') }}">¡Regístrate aquí!</a></p>
+        </div>
+
+        <div class="demo-users">
+            <h4 class="demo-title">
+                <i class="fas fa-user-friends"></i>
+                Usuarios de Prueba
+            </h4>
+            <div class="demo-user" onclick="fillLogin('mascarita@gmail.com', '1234')">
+                <strong>Estudiante:</strong> mascarita@gmail.com / 1234
+            </div>
+            <div class="demo-user" onclick="fillLogin('mascarita@lebano.com', 'mascarita2014!')">
+                <strong>Admin:</strong> mascarita@lebano.com / mascarita2014!
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('loginForm');
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+    const loginBtn = document.getElementById('loginBtn');
+    
+    // Validación en tiempo real
+    function validateForm() {
+        const email = emailInput.value.trim();
+        const password = passwordInput.value.trim();
+        
+        // Validar email
+        const emailValid = email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        // Validar contraseña
+        const passwordValid = password.length > 0;
+        
+        // Cambiar estilos según validación
+        emailInput.style.borderColor = email ? (emailValid ? 'var(--success-color)' : 'var(--error-color)') : 'rgba(0,0,0,0.1)';
+        passwordInput.style.borderColor = password ? 'var(--success-color)' : 'rgba(0,0,0,0.1)';
+        
+        // Habilitar/deshabilitar botón
+        const isValid = emailValid && passwordValid;
+        loginBtn.disabled = !isValid;
+        loginBtn.style.opacity = isValid ? '1' : '0.6';
+        
+        return isValid;
+    }
+    
+    // Validar al escribir
+    emailInput.addEventListener('input', validateForm);
+    passwordInput.addEventListener('input', validateForm);
+    
+    // Manejar envío del formulario
+    form.addEventListener('submit', function(e) {
+        if (!validateForm()) {
+            e.preventDefault();
+            
+            // Mostrar mensaje de error
+            if (!emailInput.value.trim()) {
+                emailInput.focus();
+                showError('Por favor, ingresa tu email');
+            } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput.value.trim())) {
+                emailInput.focus();
+                showError('Por favor, ingresa un email válido');
+            } else if (!passwordInput.value.trim()) {
+                passwordInput.focus();
+                showError('Por favor, ingresa tu contraseña');
+            }
+            return false;
+        }
+        
+        // Mostrar indicador de carga
+        loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Iniciando sesión...';
+        loginBtn.disabled = true;
+    });
+    
+    // Función para mostrar errores
+    function showError(message) {
+        // Remover error anterior
+        const existingError = document.querySelector('.login-error');
+        if (existingError) existingError.remove();
+        
+        // Crear nuevo error
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'login-error';
+        errorDiv.style.cssText = `
+            background: rgba(255, 118, 117, 0.1);
+            border: 1px solid var(--error-color);
+            color: var(--error-color);
+            padding: var(--space-md);
+            border-radius: var(--radius-md);
+            margin-bottom: var(--space-md);
+            text-align: center;
+            font-size: 0.9rem;
+        `;
+        errorDiv.textContent = message;
+        
+        form.insertBefore(errorDiv, form.firstChild);
+        
+        // Remover después de 5 segundos
+        setTimeout(() => {
+            if (errorDiv.parentNode) errorDiv.remove();
+        }, 5000);
+    }
+    
+    // Validación inicial
+    validateForm();
+});
+
+function fillLogin(email, password) {
+    document.getElementById('email').value = email;
+    document.getElementById('password').value = password;
+    
+    // Trigger validation
+    document.getElementById('email').dispatchEvent(new Event('input'));
+    document.getElementById('password').dispatchEvent(new Event('input'));
+    
+    // Añadir efecto visual
+    const form = document.getElementById('loginForm');
+    form.style.transform = 'scale(1.02)';
+    setTimeout(() => {
+        form.style.transform = 'scale(1)';
+    }, 200);
+}
+</script>
+{% endblock %}

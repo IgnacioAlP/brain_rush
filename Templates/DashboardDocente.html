@@ -1,0 +1,859 @@
+{% extends "BrainRush_Master.html" %}
+
+{% block title %}Brain RUSH - Panel Docente{% endblock %}
+
+{% block extra_css %}
+<style>
+.docente-dashboard {
+    padding: var(--space-xl) 0;
+}
+
+.dashboard-header {
+    text-align: center;
+    margin-bottom: var(--space-xxl);
+}
+
+.dashboard-title {
+    font-family: var(--font-primary);
+    font-size: 2.5rem;
+    background: var(--gradient-secondary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: var(--space-sm);
+}
+
+.dashboard-subtitle {
+    color: rgba(255,255,255,0.9);
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.welcome-message {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: var(--radius-lg);
+    padding: var(--space-xl);
+    margin-bottom: var(--space-xxl);
+    box-shadow: var(--shadow-md);
+    text-align: center;
+}
+
+.welcome-text {
+    color: var(--dark);
+    font-size: 1.1rem;
+    margin-bottom: var(--space-md);
+}
+
+.user-name {
+    font-weight: 700;
+    color: var(--secondary-color);
+}
+
+/* KPIs Específicos del Docente */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--space-lg);
+    margin-bottom: var(--space-xxl);
+}
+
+.stat-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: var(--radius-lg);
+    padding: var(--space-xl);
+    box-shadow: var(--shadow-md);
+    transition: var(--transition-smooth);
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-xl);
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--gradient-secondary);
+}
+
+.stat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-lg);
+}
+
+.stat-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: var(--gradient-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+}
+
+.stat-number {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--dark);
+    margin-bottom: var(--space-xs);
+}
+
+.stat-label {
+    color: var(--gray);
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.stat-trend {
+    color: var(--success-color);
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+/* Secciones Principales */
+.main-sections {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: var(--space-xxl);
+    margin-bottom: var(--space-xxl);
+}
+
+.section-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: var(--radius-xl);
+    padding: var(--space-xxl);
+    box-shadow: var(--shadow-md);
+    position: relative;
+    overflow: hidden;
+}
+
+.section-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--gradient-secondary);
+}
+
+.section-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--dark);
+    margin-bottom: var(--space-lg);
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+/* Cuestionarios */
+.quiz-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-lg);
+    background: rgba(0,0,0,0.05);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-md);
+    transition: var(--transition-smooth);
+}
+
+.quiz-item:hover {
+    background: rgba(78, 205, 196, 0.1);
+    transform: translateX(4px);
+}
+
+.quiz-info h4 {
+    color: var(--dark);
+    font-weight: 700;
+    margin-bottom: var(--space-xs);
+}
+
+.quiz-meta {
+    color: var(--gray);
+    font-size: 0.9rem;
+    display: flex;
+    gap: var(--space-md);
+}
+
+.quiz-actions {
+    display: flex;
+    gap: var(--space-sm);
+}
+
+.action-btn {
+    padding: var(--space-sm) var(--space-md);
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+}
+
+.btn-primary {
+    background: var(--gradient-secondary);
+    color: white;
+}
+
+.btn-secondary {
+    background: var(--gradient-accent);
+    color: white;
+}
+
+.btn-outline {
+    background: transparent;
+    color: var(--dark);
+    border: 2px solid rgba(0,0,0,0.2);
+}
+
+.action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+}
+
+/* Resultados Recientes */
+.result-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-md);
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+}
+
+.result-item:last-child {
+    border-bottom: none;
+}
+
+.student-info h5 {
+    color: var(--dark);
+    font-weight: 600;
+    margin-bottom: var(--space-xs);
+}
+
+.result-meta {
+    color: var(--gray);
+    font-size: 0.8rem;
+}
+
+.score-badge {
+    background: var(--gradient-secondary);
+    color: white;
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+/* Acciones Rápidas */
+.quick-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-lg);
+    margin-bottom: var(--space-xxl);
+}
+
+.quick-action-card {
+    background: var(--gradient-secondary);
+    color: white;
+    border-radius: var(--radius-lg);
+    padding: var(--space-xl);
+    text-align: center;
+    text-decoration: none;
+    transition: var(--transition-smooth);
+    box-shadow: var(--shadow-md);
+}
+
+.quick-action-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-xl);
+    text-decoration: none;
+    color: white;
+}
+
+.quick-action-icon {
+    font-size: 2.5rem;
+    margin-bottom: var(--space-md);
+}
+
+.quick-action-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: var(--space-sm);
+}
+
+.quick-action-desc {
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
+/* Botones de Exportación */
+.export-section {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: var(--radius-lg);
+    padding: var(--space-xl);
+    box-shadow: var(--shadow-md);
+    text-align: center;
+}
+
+.export-buttons {
+    display: flex;
+    gap: var(--space-lg);
+    justify-content: center;
+    margin-top: var(--space-lg);
+}
+
+.export-btn {
+    background: var(--gradient-accent);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    padding: var(--space-md) var(--space-lg);
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    text-decoration: none;
+}
+
+.export-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    text-decoration: none;
+    color: white;
+}
+
+.empty-state {
+    text-align: center;
+    padding: var(--space-xxl);
+    color: var(--gray);
+}
+
+.empty-icon {
+    font-size: 3rem;
+    margin-bottom: var(--space-lg);
+    opacity: 0.5;
+}
+
+@media (max-width: 768px) {
+    .main-sections {
+        grid-template-columns: 1fr;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+    
+    .quick-actions {
+        grid-template-columns: 1fr;
+    }
+    
+    .export-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .quiz-item {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--space-md);
+    }
+    
+    .quiz-actions {
+        justify-content: center;
+    }
+}
+
+/* Estilos para badges de estado */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-full);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: 2px solid transparent;
+}
+
+.status-badge i {
+    font-size: 0.6rem;
+}
+
+.status-borrador {
+    background: rgba(255, 193, 7, 0.1);
+    color: #ff8c00;
+    border-color: rgba(255, 193, 7, 0.3);
+}
+
+.status-publicado {
+    background: rgba(40, 167, 69, 0.1);
+    color: #28a745;
+    border-color: rgba(40, 167, 69, 0.3);
+}
+
+.status-programado {
+    background: rgba(23, 162, 184, 0.1);
+    color: #17a2b8;
+    border-color: rgba(23, 162, 184, 0.3);
+}
+
+.status-finalizado {
+    background: rgba(108, 117, 125, 0.1);
+    color: #6c757d;
+    border-color: rgba(108, 117, 125, 0.3);
+}
+
+/* Estilos para botones de acción */
+.btn-success {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+    border: none;
+}
+
+.btn-success:hover {
+    background: linear-gradient(135deg, #218838, #1ea085);
+    transform: translateY(-2px);
+}
+
+.btn-warning {
+    background: linear-gradient(135deg, #ffc107, #ff8c00);
+    color: #212529;
+    border: none;
+}
+
+.btn-warning:hover {
+    background: linear-gradient(135deg, #e0a800, #e6780a);
+    transform: translateY(-2px);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="docente-dashboard">
+    <!-- Header del Dashboard -->
+    <div class="dashboard-header">
+        <h1 class="dashboard-title">Panel Docente</h1>
+        <p class="dashboard-subtitle">Gestiona tus cuestionarios y evalúa a tus estudiantes</p>
+    </div>
+
+    <!-- Mensaje de Bienvenida -->
+    <div class="welcome-message animate-fadeIn">
+        <p class="welcome-text">
+            ¡Bienvenido/a, <span class="user-name">{{ usuario.nombre }} {{ usuario.apellidos }}</span>! 
+            Desde aquí puedes gestionar todos tus cuestionarios, revisar el desempeño de tus estudiantes y exportar resultados para tus evaluaciones.
+        </p>
+    </div>
+
+    <!-- KPIs del Docente -->
+    <div class="stats-grid animate-fadeIn" style="animation-delay: 0.2s;">
+        <div class="stat-card">
+            <div class="stat-header">
+                <div class="stat-icon">
+                    <i class="fas fa-clipboard-list"></i>
+                </div>
+            </div>
+            <div class="stat-number">{{ estadisticas.total_cuestionarios }}</div>
+            <div class="stat-label">Cuestionarios Creados</div>
+            <div class="stat-trend">+{{ estadisticas.cuestionarios_activos }} activos</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-header">
+                <div class="stat-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+            </div>
+            <div class="stat-number">{{ estadisticas.total_estudiantes }}</div>
+            <div class="stat-label">Estudiantes Participantes</div>
+            <div class="stat-trend">Este mes</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-header">
+                <div class="stat-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+            </div>
+            <div class="stat-number">{{ estadisticas.total_respuestas }}</div>
+            <div class="stat-label">Respuestas Recibidas</div>
+            <div class="stat-trend">Total</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-header">
+                <div class="stat-icon">
+                    <i class="fas fa-star"></i>
+                </div>
+            </div>
+            <div class="stat-number">{{ estadisticas.promedio_calificaciones }}%</div>
+            <div class="stat-label">Promedio General</div>
+            <div class="stat-trend">Calificaciones</div>
+        </div>
+    </div>
+
+    <!-- Acciones Rápidas -->
+    <div class="quick-actions animate-fadeIn" style="animation-delay: 0.4s;">
+        <a href="{{ url_for('crear_cuestionario_route') }}" class="quick-action-card">
+            <div class="quick-action-icon">
+                <i class="fas fa-plus-circle"></i>
+            </div>
+            <div class="quick-action-title">Crear Cuestionario</div>
+            <div class="quick-action-desc">Diseña un nuevo cuestionario para tus estudiantes</div>
+        </a>
+
+        <a href="{{ url_for('mis_cuestionarios') }}" class="quick-action-card" style="background: var(--gradient-accent);">
+            <div class="quick-action-icon">
+                <i class="fas fa-folder-open"></i>
+            </div>
+            <div class="quick-action-title">Mis Cuestionarios</div>
+            <div class="quick-action-desc">Administra y edita tus cuestionarios existentes</div>
+        </a>
+    </div>
+
+    <!-- Secciones Principales -->
+    <div class="main-sections animate-fadeIn" style="animation-delay: 0.6s;">
+        <!-- Cuestionarios Recientes -->
+        <div class="section-card">
+            <h3 class="section-title">
+                <i class="fas fa-clipboard-list"></i>
+                Cuestionarios Recientes
+            </h3>
+
+            {% if cuestionarios %}
+                {% for cuestionario in cuestionarios[:5] %}
+                <div class="quiz-item">
+                    <div class="quiz-info">
+                        <h4>{{ cuestionario.titulo }}</h4>
+                        <div class="quiz-meta">
+                            <span><i class="fas fa-calendar"></i> {{ cuestionario.fecha_creacion.strftime('%d/%m/%Y') if cuestionario.fecha_creacion else 'N/A' }}</span>
+                            <span><i class="fas fa-users"></i> {{ cuestionario.total_participantes or 0 }} participantes</span>
+                            <span><i class="fas fa-chart-bar"></i> {{ cuestionario.promedio_puntaje or 0 }}% promedio</span>
+                            <span class="status-badge status-{{ cuestionario.estado }}">
+                                <i class="fas fa-circle"></i>
+                                {{ cuestionario.estado.title() }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="quiz-actions">
+                        <a href="{{ url_for('ver_cuestionario', cuestionario_id=cuestionario.id_cuestionario) }}" class="action-btn btn-outline">
+                            <i class="fas fa-eye"></i>
+                            Ver Preguntas
+                        </a>
+                        <a href="{{ url_for('editar_cuestionario', cuestionario_id=cuestionario.id_cuestionario) }}" class="action-btn btn-secondary">
+                            <i class="fas fa-edit"></i>
+                            Editar
+                        </a>
+                        
+                        {% if cuestionario.estado == 'borrador' %}
+                        <button onclick="publicarCuestionario({{ cuestionario.id_cuestionario }})" class="action-btn btn-success" title="Publicar cuestionario">
+                            <i class="fas fa-share"></i>
+                            Publicar
+                        </button>
+                        {% elif cuestionario.estado == 'publicado' %}
+                        <button onclick="despublicarCuestionario({{ cuestionario.id_cuestionario }})" class="action-btn btn-warning" title="Despublicar cuestionario">
+                            <i class="fas fa-eye-slash"></i>
+                            Despublicar
+                        </button>
+                        {% endif %}
+                        
+                        <a href="#" onclick="exportarResultados({{ cuestionario.id_cuestionario }})" class="action-btn btn-primary">
+                            <i class="fas fa-download"></i>
+                            Exportar
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+
+                {% if cuestionarios|length > 5 %}
+                <div style="text-align: center; margin-top: var(--space-lg);">
+                    <a href="{{ url_for('mis_cuestionarios') }}" class="action-btn btn-primary">
+                        <i class="fas fa-arrow-right"></i>
+                        Ver Todos ({{ cuestionarios|length }})
+                    </a>
+                </div>
+                {% endif %}
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-icon">
+                        <i class="fas fa-clipboard-list"></i>
+                    </div>
+                    <p>Aún no has creado ningún cuestionario.</p>
+                    <a href="{{ url_for('crear_cuestionario_route') }}" class="action-btn btn-primary">
+                        <i class="fas fa-plus"></i>
+                        Crear Mi Primer Cuestionario
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Resultados Recientes -->
+        <div class="section-card">
+            <h3 class="section-title">
+                <i class="fas fa-chart-bar"></i>
+                Resultados Recientes
+            </h3>
+
+            {% if resultados_recientes %}
+                {% for resultado in resultados_recientes %}
+                <div class="result-item">
+                    <div class="student-info">
+                        <h5>{{ resultado.nombre_estudiante }}</h5>
+                        <div class="result-meta">
+                            {{ resultado.cuestionario_titulo }} • {{ resultado.fecha.strftime('%d/%m') if resultado.fecha else 'N/A' }}
+                        </div>
+                    </div>
+                    <div class="score-badge">{{ resultado.puntaje }}%</div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-icon">
+                        <i class="fas fa-chart-bar"></i>
+                    </div>
+                    <p>No hay resultados recientes.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Sección de Exportación -->
+    <div class="export-section animate-fadeIn" style="animation-delay: 0.8s;">
+        <h3 class="section-title">
+            <i class="fas fa-download"></i>
+            Exportar Resultados
+        </h3>
+        <p>Descarga los resultados de tus estudiantes para incluirlos en tu proceso de evaluación</p>
+        
+        <div class="export-buttons">
+            <button onclick="exportarExcel()" class="export-btn">
+                <i class="fas fa-file-excel"></i>
+                Exportar a Excel
+            </button>
+            <button onclick="exportarGoogleDrive()" class="export-btn">
+                <i class="fab fa-google-drive"></i>
+                Guardar en Google Drive
+            </button>
+            <button onclick="exportarPDF()" class="export-btn">
+                <i class="fas fa-file-pdf"></i>
+                Generar Reporte PDF
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Animaciones de números
+    const statNumbers = document.querySelectorAll('.stat-number');
+    
+    statNumbers.forEach(number => {
+        const finalValue = parseInt(number.textContent);
+        if (finalValue > 0 && !isNaN(finalValue)) {
+            animateNumber(number, 0, finalValue, 1000);
+        }
+    });
+    
+    function animateNumber(element, start, end, duration) {
+        const startTime = performance.now();
+        
+        function update(currentTime) {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            const current = Math.floor(start + (end - start) * easeOutCubic(progress));
+            element.textContent = current;
+            
+            if (progress < 1) {
+                requestAnimationFrame(update);
+            }
+        }
+        
+        requestAnimationFrame(update);
+    }
+    
+    function easeOutCubic(t) {
+        return 1 - Math.pow(1 - t, 3);
+    }
+});
+
+// Funciones de exportación
+function exportarResultados(cuestionarioId) {
+    // Implementar exportación de resultados específicos
+    fetch(`/exportar/cuestionario/${cuestionarioId}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.blob())
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = `resultados_cuestionario_${cuestionarioId}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al exportar resultados');
+    });
+}
+
+function exportarExcel() {
+    // Exportar todos los resultados a Excel
+    fetch('/exportar/excel', {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.blob())
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = `resultados_completos_${new Date().toISOString().split('T')[0]}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al exportar a Excel');
+    });
+}
+
+function exportarGoogleDrive() {
+    // Implementar integración con Google Drive
+    alert('Funcionalidad de Google Drive en desarrollo. Próximamente disponible.');
+    
+    // Aquí se implementaría la integración con Google Drive API
+    /*
+    fetch('/exportar/google-drive', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Resultados guardados en Google Drive exitosamente');
+        } else {
+            alert('Error al guardar en Google Drive');
+        }
+    });
+    */
+}
+
+function exportarPDF() {
+    // Generar reporte PDF
+    fetch('/exportar/pdf', {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.blob())
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = `reporte_evaluaciones_${new Date().toISOString().split('T')[0]}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al generar reporte PDF');
+    });
+}
+
+// Funciones para publicar/despublicar cuestionarios
+function publicarCuestionario(cuestionarioId) {
+    if (confirm('¿Estás seguro de que quieres publicar este cuestionario? Una vez publicado, los estudiantes podrán acceder a él.')) {
+        fetch(`/publicar-cuestionario/${cuestionarioId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload(); // Recargar para mostrar el cambio de estado
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al publicar el cuestionario');
+        });
+    }
+}
+
+function despublicarCuestionario(cuestionarioId) {
+    if (confirm('¿Estás seguro de que quieres despublicar este cuestionario? Los estudiantes ya no podrán acceder a él.')) {
+        fetch(`/despublicar-cuestionario/${cuestionarioId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload(); // Recargar para mostrar el cambio de estado
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al despublicar el cuestionario');
+        });
+    }
+}
+</script>
+{% endblock %}

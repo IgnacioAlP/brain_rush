@@ -1,92 +1,919 @@
-{% extends "Maestra.html" %}
+{% extends "BrainRush_Master.html" %}
 
-{% block title %}Crear Pregunta - Brain RUSH{% endblock %}
+{% block title %}Brain RUSH - Generar Preguntas{% endblock %}
+
+{% block extra_css %}
+<style>
+.generate-questions-page {
+    padding: var(--space-xl) 0;
+}
+
+.page-header {
+    text-align: center;
+    margin-bottom: var(--space-xxl);
+}
+
+.page-title {
+    font-family: var(--font-primary);
+    font-size: 2.5rem;
+    background: var(--gradient-secondary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: var(--space-sm);
+}
+
+.page-subtitle {
+    color: rgba(255,255,255,0.9);
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.question-creator {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: var(--radius-xl);
+    padding: var(--space-xxl);
+    box-shadow: var(--shadow-xl);
+    margin-bottom: var(--space-xl);
+    position: relative;
+    overflow: hidden;
+}
+
+.question-creator::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--gradient-secondary);
+}
+
+/* Información del cuestionario */
+.cuestionario-info {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    margin-bottom: var(--space-lg);
+    box-shadow: var(--shadow-lg);
+}
+
+.cuestionario-info h2 {
+    color: var(--primary-dark);
+    margin-bottom: var(--space-sm);
+    font-size: 1.5rem;
+}
+
+.cuestionario-info p {
+    color: rgba(30, 30, 30, 0.8);
+    margin-bottom: var(--space-sm);
+}
+
+/* Preguntas existentes */
+.preguntas-existentes {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    margin-bottom: var(--space-lg);
+    box-shadow: var(--shadow-lg);
+}
+
+.preguntas-existentes h3 {
+    color: var(--primary-dark);
+    margin-bottom: var(--space-md);
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.preguntas-lista {
+    display: grid;
+    gap: var(--space-md);
+}
+
+.pregunta-card {
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+    border-left: 4px solid var(--accent-color);
+    transition: all 0.3s ease;
+}
+
+.pregunta-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.pregunta-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-sm);
+}
+
+.pregunta-numero {
+    background: var(--accent-color);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 50%;
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+.pregunta-tipo {
+    background: rgba(75, 85, 99, 0.1);
+    color: var(--primary-dark);
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.pregunta-contenido p {
+    color: var(--primary-dark);
+    margin: 0;
+    line-height: 1.5;
+}
+
+.pregunta-acciones {
+    display: flex;
+    gap: var(--space-sm);
+    margin-top: var(--space-sm);
+    justify-content: flex-end;
+}
+
+.btn-editar, .btn-eliminar {
+    padding: 6px 12px;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.btn-editar {
+    background: #3b82f6;
+    color: white;
+}
+
+.btn-editar:hover {
+    background: #2563eb;
+    transform: translateY(-1px);
+}
+
+.btn-eliminar {
+    background: #ef4444;
+    color: white;
+}
+
+.btn-eliminar:hover {
+    background: #dc2626;
+    transform: translateY(-1px);
+}
+
+.question-section {
+    margin-bottom: var(--space-xxl);
+}
+
+.question-label {
+    color: var(--dark);
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: var(--space-lg);
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.question-textarea {
+    width: 100%;
+    min-height: 120px;
+    padding: var(--space-lg);
+    border: 2px solid rgba(0,0,0,0.1);
+    border-radius: var(--radius-lg);
+    font-size: 1.1rem;
+    font-family: var(--font-secondary);
+    resize: vertical;
+    transition: var(--transition-smooth);
+    background: rgba(255,255,255,0.8);
+}
+
+.question-textarea:focus {
+    outline: none;
+    border-color: var(--secondary-color);
+    background: white;
+    box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.1);
+}
+
+.options-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-lg);
+    margin-bottom: var(--space-xl);
+}
+
+.option-card {
+    background: white;
+    border: 3px solid;
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    transition: var(--transition-smooth);
+    position: relative;
+    cursor: pointer;
+    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+}
+
+.option-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+}
+
+.option-card.correct {
+    background: rgba(150, 206, 180, 0.1);
+    border-color: var(--success-color);
+}
+
+.option-card.red {
+    border-color: #e74c3c;
+    background: rgba(231, 76, 60, 0.1);
+}
+
+.option-card.blue {
+    border-color: #3498db;
+    background: rgba(52, 152, 219, 0.1);
+}
+
+.option-card.yellow {
+    border-color: #f1c40f;
+    background: rgba(241, 196, 15, 0.1);
+}
+
+.option-card.green {
+    border-color: #2ecc71;
+    background: rgba(46, 204, 113, 0.1);
+}
+
+.option-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-md);
+}
+
+.option-number {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.option-card.red .option-number {
+    background: #e74c3c;
+}
+
+.option-card.blue .option-number {
+    background: #3498db;
+}
+
+.option-card.yellow .option-number {
+    background: #f1c40f;
+    color: var(--dark);
+}
+
+.option-card.green .option-number {
+    background: #2ecc71;
+}
+
+.correct-toggle {
+    width: 24px;
+    height: 24px;
+    border: 2px solid var(--success-color);
+    border-radius: 50%;
+    position: relative;
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+
+.correct-toggle.active {
+    background: var(--success-color);
+}
+
+.correct-toggle.active::after {
+    content: '✓';
+    color: white;
+    font-weight: 700;
+    font-size: 0.8rem;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.option-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: 1rem;
+    padding: var(--space-sm);
+    color: var(--dark);
+    font-weight: 500;
+}
+
+.option-input:focus {
+    outline: none;
+    background: rgba(255,255,255,0.8);
+    border-radius: var(--radius-sm);
+}
+
+.option-input::placeholder {
+    color: rgba(0,0,0,0.5);
+    font-style: italic;
+}
+
+.remove-option {
+    position: absolute;
+    top: var(--space-sm);
+    right: var(--space-sm);
+    background: var(--error-color);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    transition: var(--transition-fast);
+}
+
+.remove-option:hover {
+    transform: scale(1.1);
+}
+
+.option-card:hover .remove-option {
+    display: flex;
+}
+
+.question-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: var(--space-xl);
+    padding-top: var(--space-xl);
+    border-top: 2px solid rgba(0,0,0,0.1);
+}
+
+.add-option-btn {
+    background: var(--gradient-accent);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    padding: var(--space-md) var(--space-lg);
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.add-option-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.add-option-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.question-info {
+    color: var(--gray);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.form-actions {
+    display: flex;
+    gap: var(--space-lg);
+    justify-content: space-between;
+    margin-top: var(--space-xxl);
+}
+
+.action-btn {
+    padding: var(--space-lg) var(--space-xxl);
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.btn-primary {
+    background: var(--gradient-secondary);
+    color: white;
+}
+
+.btn-secondary {
+    background: var(--gradient-accent);
+    color: white;
+}
+
+.btn-outline {
+    background: rgba(0,0,0,0.1);
+    color: var(--dark);
+    border: 2px solid rgba(0,0,0,0.2);
+}
+
+.action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.action-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.helper-text {
+    background: rgba(69, 183, 209, 0.1);
+    border: 1px solid var(--accent-color);
+    border-radius: var(--radius-md);
+    padding: var(--space-lg);
+    margin-bottom: var(--space-xl);
+    color: var(--dark);
+}
+
+.helper-title {
+    font-weight: 700;
+    color: var(--accent-color);
+    margin-bottom: var(--space-sm);
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.helper-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.helper-list li {
+    margin-bottom: var(--space-xs);
+    padding-left: var(--space-lg);
+    position: relative;
+}
+
+.helper-list li::before {
+    content: '•';
+    color: var(--accent-color);
+    font-weight: 700;
+    position: absolute;
+    left: 0;
+}
+
+@media (max-width: 768px) {
+    .options-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .question-controls {
+        flex-direction: column;
+        gap: var(--space-lg);
+        text-align: center;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    .question-creator {
+        margin: var(--space-md);
+        padding: var(--space-xl);
+    }
+}
+
+@media (max-width: 480px) {
+    .page-title {
+        font-size: 2rem;
+    }
+    
+    .question-textarea {
+        min-height: 100px;
+    }
+    
+    .option-card {
+        min-height: 100px;
+    }
+}
+</style>
+{% endblock %}
 
 {% block content %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/preguntas.css') }}">
-<div class="kahoot-style-container">
-  <form id="question-form" method="POST" action="{{ url_for('generar_preguntas') }}" enctype="multipart/form-data">
-    <div class="kahoot-question-bar">
-      <textarea id="question-text" name="question_text" rows="2" placeholder="Escribe la pregunta aquí..." required></textarea>
+<div class="generate-questions-page">
+    <div class="page-header">
+        <h1 class="page-title">Generar Preguntas</h1>
+        <p class="page-subtitle">Crea preguntas dinámicas e interactivas para tu cuestionario</p>
     </div>
-    <div class="kahoot-options-row" id="options-container">
-      <div class="kahoot-option kahoot-red">
-        <input type="text" name="option_0" placeholder="Opción 1" required />
-        <button type="button" class="btn-remove-option" style="display:none;">✕</button>
-      </div>
-      <div class="kahoot-option kahoot-blue">
-        <input type="text" name="option_1" placeholder="Opción 2" required />
-        <button type="button" class="btn-remove-option" style="display:none;">✕</button>
-      </div>
-      <div class="kahoot-option kahoot-yellow" style="display:none;">
-        <input type="text" name="option_2" placeholder="Opción 3" />
-        <button type="button" class="btn-remove-option">✕</button>
-      </div>
-      <div class="kahoot-option kahoot-green" style="display:none;">
-        <input type="text" name="option_3" placeholder="Opción 4" />
-        <button type="button" class="btn-remove-option">✕</button>
-      </div>
+
+    <!-- Información de ayuda -->
+    <div class="helper-text animate-fadeIn">
+        <div class="helper-title">
+            <i class="fas fa-lightbulb"></i>
+            Consejos para crear buenas preguntas
+        </div>
+        <ul class="helper-list">
+            <li>Haz preguntas claras y concisas</li>
+            <li>Incluye al menos 2 opciones, máximo 4</li>
+            <li>Marca la respuesta correcta haciendo clic en el círculo verde</li>
+            <li>Usa opciones distractoras creíbles pero incorrectas</li>
+        </ul>
     </div>
-    <div class="kahoot-btn-row">
-      <button type="button" id="add-option-btn" class="btn kahoot-btn">Agregar opción</button>
-      <button type="button" id="new-question-btn" class="btn kahoot-btn">Crear otra pregunta</button>
-      <button type="submit" class="btn kahoot-btn kahoot-finish">Terminar formulario</button>
+
+    <!-- Información del cuestionario -->
+    <div class="cuestionario-info animate-fadeIn">
+        <h2>Cuestionario: {{ cuestionario.titulo }}</h2>
+        <p>{{ cuestionario.descripcion }}</p>
+        <span class="status-badge status-{{ cuestionario.estado }}">{{ cuestionario.estado.title() }}</span>
     </div>
-    <div class="kahoot-extra-fields">
-      <label for="time-limit">Tiempo para responder (segundos):</label>
-      <input type="number" id="time-limit" name="time_limit" min="5" max="120" value="30" required />
-      <label for="media-file">Agregar imagen o video (opcional):</label>
-      <input type="file" id="media-file" name="media_file" accept="image/*,video/*" />
+
+    <!-- Preguntas existentes -->
+    {% if preguntas %}
+    <div class="preguntas-existentes animate-fadeIn" style="animation-delay: 0.1s;">
+        <h3><i class="fas fa-list"></i> Preguntas creadas ({{ preguntas|length }})</h3>
+        <div class="preguntas-lista">
+            {% for pregunta in preguntas %}
+            <div class="pregunta-card">
+                <div class="pregunta-header">
+                    <span class="pregunta-numero">{{ loop.index }}</span>
+                    <span class="pregunta-tipo">{{ pregunta.tipo.replace('_', ' ').title() }}</span>
+                </div>
+                <div class="pregunta-contenido">
+                    <p>{{ pregunta.enunciado }}</p>
+                </div>
+                <div class="pregunta-acciones">
+                    <button class="btn-editar" onclick="editarPregunta({{ pregunta.id_pregunta }})">
+                        <i class="fas fa-edit"></i> Editar
+                    </button>
+                    <button class="btn-eliminar" onclick="eliminarPregunta({{ pregunta.id_pregunta }})">
+                        <i class="fas fa-trash"></i> Eliminar
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
     </div>
-  </form>
+    {% endif %}
+
+    <!-- Creador de preguntas -->
+    <div class="question-creator animate-fadeIn" style="animation-delay: 0.2s;">
+        <form id="question-form" method="POST" action="{{ url_for('agregar_preguntas', cuestionario_id=cuestionario.id_cuestionario) }}">
+            <!-- Sección de la pregunta -->
+            <div class="question-section">
+                <label for="question-text" class="question-label">
+                    <i class="fas fa-question-circle"></i>
+                    Escribe tu pregunta
+                </label>
+                <textarea 
+                    id="question-text" 
+                    name="question_text" 
+                    class="question-textarea" 
+                    placeholder="Ejemplo: ¿Cuál es la capital de Francia?" 
+                    required></textarea>
+            </div>
+
+            <!-- Opciones de respuesta -->
+            <div class="options-section">
+                <label class="question-label">
+                    <i class="fas fa-list-ul"></i>
+                    Opciones de respuesta
+                </label>
+                
+                <div class="options-grid" id="options-container">
+                    <!-- Opción 1 (Roja) -->
+                    <div class="option-card red" data-option="0">
+                        <div class="option-header">
+                            <div class="option-number">A</div>
+                            <div class="correct-toggle" onclick="toggleCorrect(this)"></div>
+                        </div>
+                        <input type="text" name="option_0" class="option-input" placeholder="Primera opción" required />
+                        <button type="button" class="remove-option" onclick="removeOption(this)">✕</button>
+                    </div>
+
+                    <!-- Opción 2 (Azul) -->
+                    <div class="option-card blue" data-option="1">
+                        <div class="option-header">
+                            <div class="option-number">B</div>
+                            <div class="correct-toggle" onclick="toggleCorrect(this)"></div>
+                        </div>
+                        <input type="text" name="option_1" class="option-input" placeholder="Segunda opción" required />
+                        <button type="button" class="remove-option" onclick="removeOption(this)">✕</button>
+                    </div>
+
+                    <!-- Opción 3 (Amarilla) - Inicialmente oculta -->
+                    <div class="option-card yellow" data-option="2" style="display: none;">
+                        <div class="option-header">
+                            <div class="option-number">C</div>
+                            <div class="correct-toggle" onclick="toggleCorrect(this)"></div>
+                        </div>
+                        <input type="text" name="option_2" class="option-input" placeholder="Tercera opción" />
+                        <button type="button" class="remove-option" onclick="removeOption(this)">✕</button>
+                    </div>
+
+                    <!-- Opción 4 (Verde) - Inicialmente oculta -->
+                    <div class="option-card green" data-option="3" style="display: none;">
+                        <div class="option-header">
+                            <div class="option-number">D</div>
+                            <div class="correct-toggle" onclick="toggleCorrect(this)"></div>
+                        </div>
+                        <input type="text" name="option_3" class="option-input" placeholder="Cuarta opción" />
+                        <button type="button" class="remove-option" onclick="removeOption(this)">✕</button>
+                    </div>
+                </div>
+
+                <!-- Controles de opciones -->
+                <div class="question-controls">
+                    <button type="button" class="add-option-btn" id="add-option-btn" onclick="addOption()">
+                        <i class="fas fa-plus"></i>
+                        Agregar Opción
+                    </button>
+                    
+                    <div class="question-info">
+                        <span id="options-count">2</span> de 4 opciones | 
+                        <span id="correct-count">0</span> respuesta(s) correcta(s)
+                    </div>
+                </div>
+            </div>
+
+            <!-- Inputs ocultos -->
+            <input type="hidden" name="question_type" id="question-type" value="opcion_multiple">
+            <input type="hidden" name="correct_answer" id="correct-answer" value="">
+
+            <!-- Acciones del formulario -->
+            <div class="form-actions">
+                <a href="{{ url_for('mis_cuestionarios') }}" class="action-btn btn-outline">
+                    <i class="fas fa-arrow-left"></i>
+                    Volver
+                </a>
+                
+                <div style="display: flex; gap: var(--space-md);">
+                    <button type="button" class="action-btn btn-secondary" onclick="previewQuestion()">
+                        <i class="fas fa-eye"></i>
+                        Vista Previa
+                    </button>
+                    
+                    <button type="submit" class="action-btn btn-primary" id="submit-btn" disabled>
+                        <i class="fas fa-plus-circle"></i>
+                        Agregar Pregunta
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
 <script>
-  // Manejo de opciones tipo Kahoot
-  const optionsContainer = document.getElementById('options-container');
-  const addOptionBtn = document.getElementById('add-option-btn');
-  const optionDivs = optionsContainer.getElementsByClassName('kahoot-option');
-  let optionCount = 2;
-
-  addOptionBtn.addEventListener('click', () => {
-    if (optionCount >= 4) {
-      alert('Máximo 4 opciones permitidas.');
-      return;
+document.addEventListener('DOMContentLoaded', function() {
+    const questionText = document.getElementById('question-text');
+    const submitBtn = document.getElementById('submit-btn');
+    const addOptionBtn = document.getElementById('add-option-btn');
+    const optionsCount = document.getElementById('options-count');
+    const correctCount = document.getElementById('correct-count');
+    const correctAnswerInput = document.getElementById('correct-answer');
+    
+    let visibleOptions = 2;
+    let selectedCorrect = null;
+    
+    // Validar formulario
+    function validateForm() {
+        const question = questionText.value.trim();
+        const options = document.querySelectorAll('.option-card:not([style*="display: none"]) .option-input');
+        const hasCorrectAnswer = document.querySelector('.correct-toggle.active');
+        
+        let allOptionsFilled = true;
+        options.forEach(option => {
+            if (!option.value.trim()) {
+                allOptionsFilled = false;
+            }
+        });
+        
+        const isValid = question && allOptionsFilled && hasCorrectAnswer && visibleOptions >= 2;
+        submitBtn.disabled = !isValid;
+        
+        return isValid;
     }
-    optionDivs[optionCount].style.display = '';
-    optionDivs[optionCount].querySelector('input[type="text"]').required = true;
-    // Mostrar botón eliminar solo si hay más de 2 opciones
-    if(optionCount >= 2) {
-      optionDivs[optionCount].querySelector('.btn-remove-option').style.display = '';
-    }
-    optionCount++;
-  });
-
-  // Eliminar opción
-  Array.from(document.getElementsByClassName('btn-remove-option')).forEach((btn, idx) => {
-    btn.addEventListener('click', function() {
-      if(optionCount <= 2) {
-        alert('Debe haber al menos 2 opciones.');
-        return;
-      }
-      optionDivs[idx].style.display = 'none';
-      optionDivs[idx].querySelector('input[type="text"]').required = false;
-      optionCount--;
+    
+    // Event listeners para validación en tiempo real
+    questionText.addEventListener('input', validateForm);
+    
+    document.addEventListener('input', function(e) {
+        if (e.target.classList.contains('option-input')) {
+            validateForm();
+        }
     });
-  });
+    
+    // Actualizar contadores
+    function updateCounts() {
+        optionsCount.textContent = visibleOptions;
+        const correctOptions = document.querySelectorAll('.correct-toggle.active').length;
+        correctCount.textContent = correctOptions;
+        
+        // Actualizar estado del botón agregar opción
+        addOptionBtn.disabled = visibleOptions >= 4;
+        if (visibleOptions >= 4) {
+            addOptionBtn.style.opacity = '0.6';
+        } else {
+            addOptionBtn.style.opacity = '1';
+        }
+    }
+    
+    // Inicializar contadores
+    updateCounts();
+});
 
-  // Botón para crear otra pregunta (puedes personalizar la acción)
-  document.getElementById('new-question-btn').addEventListener('click', function(e) {
-    e.preventDefault();
-    document.getElementById('question-form').reset();
-    for (let i = 2; i < 4; i++) {
-      optionDivs[i].style.display = 'none';
-      optionDivs[i].querySelector('input[type="text"]').required = false;
+function toggleCorrect(element) {
+    // Remover selección anterior
+    document.querySelectorAll('.correct-toggle').forEach(toggle => {
+        toggle.classList.remove('active');
+        toggle.parentElement.parentElement.classList.remove('correct');
+    });
+    
+    // Seleccionar nueva respuesta correcta
+    element.classList.add('active');
+    const optionCard = element.parentElement.parentElement;
+    optionCard.classList.add('correct');
+    
+    // Actualizar input oculto
+    const optionIndex = optionCard.dataset.option;
+    document.getElementById('correct-answer').value = optionIndex;
+    
+    // Actualizar contador
+    document.getElementById('correct-count').textContent = '1';
+    
+    // Validar formulario
+    document.dispatchEvent(new Event('input'));
+}
+
+function addOption() {
+    const container = document.getElementById('options-container');
+    const hiddenOptions = container.querySelectorAll('.option-card[style*="display: none"]');
+    
+    if (hiddenOptions.length > 0) {
+        const nextOption = hiddenOptions[0];
+        nextOption.style.display = 'block';
+        nextOption.classList.add('animate-fadeIn');
+        
+        // Actualizar contador de opciones visibles
+        window.visibleOptions = document.querySelectorAll('.option-card:not([style*="display: none"])').length;
+        
+        // Actualizar contadores
+        updateCounts();
+        
+        // Focus en el nuevo input
+        nextOption.querySelector('.option-input').focus();
+        
+        // Validar formulario
+        setTimeout(() => {
+            document.dispatchEvent(new Event('input'));
+        }, 100);
     }
-    // Ocultar botones eliminar de las dos primeras opciones
-    for (let i = 0; i < 2; i++) {
-      optionDivs[i].querySelector('.btn-remove-option').style.display = 'none';
+}
+
+function removeOption(button) {
+    const optionCard = button.parentElement;
+    const visibleOptions = document.querySelectorAll('.option-card:not([style*="display: none"])');
+    
+    if (visibleOptions.length > 2) {
+        // Verificar si esta opción era la correcta
+        const wasCorrect = optionCard.classList.contains('correct');
+        
+        optionCard.style.display = 'none';
+        optionCard.classList.remove('correct');
+        
+        // Limpiar input
+        const input = optionCard.querySelector('.option-input');
+        input.value = '';
+        
+        // Si era la respuesta correcta, limpiar selección
+        if (wasCorrect) {
+            const toggle = optionCard.querySelector('.correct-toggle');
+            toggle.classList.remove('active');
+            document.getElementById('correct-answer').value = '';
+        }
+        
+        // Actualizar contador de opciones visibles
+        window.visibleOptions = document.querySelectorAll('.option-card:not([style*="display: none"])').length;
+        
+        // Actualizar contadores
+        updateCounts();
+        
+        // Validar formulario
+        document.dispatchEvent(new Event('input'));
     }
-    optionCount = 2;
-  });
+}
+
+function updateCounts() {
+    const visibleOptionsCount = document.querySelectorAll('.option-card:not([style*="display: none"])').length;
+    const correctOptionsCount = document.querySelectorAll('.correct-toggle.active').length;
+    
+    document.getElementById('options-count').textContent = visibleOptionsCount;
+    document.getElementById('correct-count').textContent = correctOptionsCount;
+    
+    const addBtn = document.getElementById('add-option-btn');
+    addBtn.disabled = visibleOptionsCount >= 4;
+    addBtn.style.opacity = visibleOptionsCount >= 4 ? '0.6' : '1';
+    
+    window.visibleOptions = visibleOptionsCount;
+}
+
+function previewQuestion() {
+    const questionText = document.getElementById('question-text').value;
+    const options = [];
+    const correctIndex = document.getElementById('correct-answer').value;
+    
+    document.querySelectorAll('.option-card:not([style*="display: none"]) .option-input').forEach((input, index) => {
+        if (input.value.trim()) {
+            options.push({
+                text: input.value,
+                correct: index.toString() === correctIndex
+            });
+        }
+    });
+    
+    if (questionText && options.length >= 2) {
+        let previewHTML = `
+            <div style="background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); max-width: 500px;">
+                <h3 style="color: #333; margin-bottom: 20px;">${questionText}</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        `;
+        
+        const colors = ['#e74c3c', '#3498db', '#f1c40f', '#2ecc71'];
+        const letters = ['A', 'B', 'C', 'D'];
+        
+        options.forEach((option, index) => {
+            const bgColor = option.correct ? 'rgba(150, 206, 180, 0.3)' : 'rgba(0,0,0,0.05)';
+            const borderColor = option.correct ? '#2ecc71' : colors[index];
+            
+            previewHTML += `
+                <div style="background: ${bgColor}; border: 2px solid ${borderColor}; border-radius: 8px; padding: 15px; text-align: center;">
+                    <strong>${letters[index]}.</strong> ${option.text}
+                    ${option.correct ? ' ✓' : ''}
+                </div>
+            `;
+        });
+        
+        previewHTML += '</div></div>';
+        
+        // Crear modal para vista previa
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.8); display: flex; align-items: center; 
+            justify-content: center; z-index: 1000; animation: fadeIn 0.3s ease;
+        `;
+        modal.innerHTML = `
+            <div style="position: relative;">
+                ${previewHTML}
+                <button onclick="this.parentElement.parentElement.remove()" 
+                        style="position: absolute; top: -10px; right: -10px; 
+                               background: #e74c3c; color: white; border: none; 
+                               border-radius: 50%; width: 30px; height: 30px; 
+                               cursor: pointer; font-weight: bold;">✕</button>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+    } else {
+        alert('Por favor completa la pregunta y al menos 2 opciones antes de previsualizar.');
+    }
+}
+
+// Inicializar variables globales
+window.visibleOptions = 2;
 </script>
 {% endblock %}

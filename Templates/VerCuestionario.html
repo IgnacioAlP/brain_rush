@@ -1,0 +1,325 @@
+{% extends "BrainRush_Master.html" %}
+
+{% block title %}Brain RUSH - {{ cuestionario.titulo }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.ver-cuestionario-page {
+    padding: var(--space-xl) 0;
+}
+
+.cuestionario-header {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: var(--radius-xl);
+    padding: var(--space-xxl);
+    margin-bottom: var(--space-xl);
+    box-shadow: var(--shadow-xl);
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.cuestionario-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--gradient-secondary);
+}
+
+.cuestionario-title {
+    font-family: var(--font-primary);
+    font-size: 2.5rem;
+    background: var(--gradient-secondary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: var(--space-md);
+}
+
+.cuestionario-description {
+    color: rgba(30, 30, 30, 0.8);
+    font-size: 1.1rem;
+    margin-bottom: var(--space-lg);
+}
+
+.cuestionario-meta {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-lg);
+    flex-wrap: wrap;
+}
+
+.meta-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+    background: rgba(79, 70, 229, 0.1);
+    border-radius: var(--radius-lg);
+    color: var(--primary-dark);
+    font-weight: 600;
+}
+
+.preguntas-section {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: var(--radius-xl);
+    padding: var(--space-xxl);
+    box-shadow: var(--shadow-xl);
+    margin-bottom: var(--space-xl);
+}
+
+.section-title {
+    font-size: 1.8rem;
+    color: var(--primary-dark);
+    margin-bottom: var(--space-xl);
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+}
+
+.pregunta-card {
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: var(--radius-lg);
+    padding: var(--space-xl);
+    margin-bottom: var(--space-lg);
+    border-left: 4px solid var(--accent-color);
+    box-shadow: var(--shadow-md);
+    transition: all 0.3s ease;
+}
+
+.pregunta-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.pregunta-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-md);
+}
+
+.pregunta-numero {
+    background: var(--accent-color);
+    color: white;
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-full);
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.pregunta-tipo {
+    background: rgba(75, 85, 99, 0.1);
+    color: var(--primary-dark);
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-md);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.pregunta-enunciado {
+    font-size: 1.2rem;
+    color: var(--primary-dark);
+    line-height: 1.6;
+    margin-bottom: var(--space-lg);
+}
+
+.opciones-list {
+    display: grid;
+    gap: var(--space-md);
+}
+
+.opcion-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    background: rgba(249, 250, 251, 0.8);
+    border-radius: var(--radius-md);
+    transition: all 0.3s ease;
+}
+
+.opcion-item.correcta {
+    background: rgba(34, 197, 94, 0.1);
+    border: 2px solid rgba(34, 197, 94, 0.3);
+}
+
+.opcion-letra {
+    width: 30px;
+    height: 30px;
+    background: var(--primary-color);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+.opcion-item.correcta .opcion-letra {
+    background: rgb(34, 197, 94);
+}
+
+.empty-state {
+    text-align: center;
+    padding: var(--space-xxl);
+    color: rgba(30, 30, 30, 0.6);
+}
+
+.empty-state i {
+    font-size: 4rem;
+    color: var(--accent-color);
+    margin-bottom: var(--space-lg);
+}
+
+.action-buttons {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-md);
+    margin-top: var(--space-xl);
+}
+
+.action-btn {
+    padding: var(--space-md) var(--space-xl);
+    border: none;
+    border-radius: var(--radius-lg);
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.btn-primary {
+    background: var(--gradient-primary);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.btn-outline {
+    background: transparent;
+    color: var(--primary-color);
+    border: 2px solid var(--primary-color);
+}
+
+.btn-outline:hover {
+    background: var(--primary-color);
+    color: white;
+    transform: translateY(-2px);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container ver-cuestionario-page">
+    <!-- Header del Cuestionario -->
+    <div class="cuestionario-header animate-fadeIn">
+        <h1 class="cuestionario-title">{{ cuestionario.titulo }}</h1>
+        <p class="cuestionario-description">{{ cuestionario.descripcion or 'Sin descripción' }}</p>
+        
+        <div class="cuestionario-meta">
+            <div class="meta-item">
+                <i class="fas fa-calendar"></i>
+                Creado: {{ cuestionario.fecha_creacion.strftime('%d/%m/%Y') if cuestionario.fecha_creacion else 'N/A' }}
+            </div>
+            <div class="meta-item">
+                <i class="fas fa-list"></i>
+                {{ preguntas|length }} pregunta{{ 's' if preguntas|length != 1 else '' }}
+            </div>
+            <div class="meta-item">
+                <i class="fas fa-info-circle"></i>
+                Estado: {{ cuestionario.estado.title() }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Sección de Preguntas -->
+    <div class="preguntas-section animate-fadeIn" style="animation-delay: 0.2s;">
+        <h2 class="section-title">
+            <i class="fas fa-question-circle"></i>
+            Preguntas del Cuestionario
+        </h2>
+
+        {% if preguntas %}
+            {% for pregunta in preguntas %}
+            <div class="pregunta-card animate-slideIn" style="animation-delay: {{ loop.index0 * 0.1 }}s;">
+                <div class="pregunta-header">
+                    <span class="pregunta-numero">{{ loop.index }}</span>
+                    <span class="pregunta-tipo">{{ pregunta.tipo.replace('_', ' ').title() }}</span>
+                </div>
+                
+                <div class="pregunta-enunciado">{{ pregunta.enunciado }}</div>
+                
+                {% if pregunta.tipo == 'opcion_multiple' and pregunta.opciones %}
+                <div class="opciones-list">
+                    {% for opcion in pregunta.opciones %}
+                    <div class="opcion-item {% if opcion.es_correcta %}correcta{% endif %}">
+                        <span class="opcion-letra">{{ ['A', 'B', 'C', 'D'][loop.index0] }}</span>
+                        <span>{{ opcion.texto_opcion }}</span>
+                        {% if opcion.es_correcta %}
+                            <i class="fas fa-check-circle" style="color: rgb(34, 197, 94); margin-left: auto;"></i>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% elif pregunta.tipo == 'opcion_multiple' %}
+                <div class="opciones-list">
+                    <div class="opcion-item" style="background: rgba(239, 68, 68, 0.1); border: 2px solid rgba(239, 68, 68, 0.3);">
+                        <span class="opcion-letra">!</span>
+                        <span style="color: rgb(239, 68, 68);">Esta pregunta no tiene opciones configuradas</span>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <i class="fas fa-question-circle"></i>
+                <h3>No hay preguntas aún</h3>
+                <p>Este cuestionario no tiene preguntas creadas.</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Botones de Acción -->
+    <div class="action-buttons animate-fadeIn" style="animation-delay: 0.4s;">
+        <a href="{{ url_for('mis_cuestionarios') }}" class="action-btn btn-outline">
+            <i class="fas fa-arrow-left"></i>
+            Volver a Mis Cuestionarios
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Agregar animaciones cuando la página carga
+document.addEventListener('DOMContentLoaded', function() {
+    // Animación para las cards de preguntas
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    });
+
+    document.querySelectorAll('.pregunta-card').forEach(card => {
+        observer.observe(card);
+    });
+});
+</script>
+{% endblock %}

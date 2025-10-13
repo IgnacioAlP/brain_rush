@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Unirse - Brain RUSH</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .background-logo {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 200px;
+      height: 200px;
+      opacity: 0.1;
+      z-index: -1;
+      font-size: 120px;
+      color: #222;
+    }
+
+    .join-container {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 20px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+      padding: 40px;
+      max-width: 450px;
+      width: 100%;
+      text-align: center;
+    }
+
+    .logo {
+      font-size: 36px;
+      font-weight: bold;
+      color: #222;
+      margin-bottom: 12px;
+      letter-spacing: 1px;
+    }
+
+    .subtitle {
+      color: #666;
+      font-size: 18px;
+      margin-bottom: 32px;
+    }
+
+    .step-indicator {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .step {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #e0e0e0;
+      color: #888;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      transition: all 0.3s;
+    }
+
+    .step.active {
+      background: #222;
+      color: white;
+    }
+
+    .step.completed {
+      background: #28a745;
+      color: white;
+    }
+
+    .form-group {
+      margin-bottom: 24px;
+      text-align: left;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #222;
+      font-size: 16px;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 16px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 18px;
+      text-align: center;
+      font-weight: bold;
+      letter-spacing: 1px;
+      transition: border-color 0.3s;
+      background: #f8f9fa;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: #222;
+      background: white;
+    }
+
+    .pin-input {
+      font-size: 24px !important;
+      letter-spacing: 3px !important;
+      text-transform: uppercase;
+    }
+
+    .name-input {
+      text-transform: capitalize;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 16px;
+      border: none;
+      border-radius: 10px;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-bottom: 16px;
+    }
+
+    .btn-primary {
+      background: #222;
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #444;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+
+    .btn:disabled {
+      background: #ccc;
+      color: #888;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: #666;
+      border: 2px solid #e0e0e0;
+    }
+
+    .btn-secondary:hover {
+      border-color: #222;
+      color: #222;
+    }
+
+    .error-message {
+      background: #f8d7da;
+      color: #721c24;
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-weight: 500;
+      display: none;
+    }
+
+    .success-message {
+      background: #d1eddd;
+      color: #155724;
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-weight: 500;
+      display: none;
+    }
+
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #e0e0e0;
+      border-top: 4px solid #222;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .help-text {
+      color: #888;
+      font-size: 14px;
+      margin-top: 12px;
+      line-height: 1.4;
+    }
+
+    .step-content {
+      min-height: 200px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    @media (max-width: 480px) {
+      .join-container {
+        margin: 10px;
+        padding: 24px;
+      }
+
+      .logo {
+        font-size: 28px;
+      }
+
+      .subtitle {
+        font-size: 16px;
+      }
+
+      .form-group input {
+        padding: 14px;
+        font-size: 16px;
+      }
+
+      .pin-input {
+        font-size: 20px !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="background-logo">🧠</div>
+  
+  <div class="join-container">
+    <div class="logo">BRAIN RUSH</div>
+    <div class="subtitle">Únete a la diversión</div>
+
+    <div class="step-indicator">
+      <div class="step active" id="step-1">1</div>
+      <div class="step" id="step-2">2</div>
+      <div class="step" id="step-3">3</div>
+    </div>
+
+    <div class="error-message" id="error-message"></div>
+    <div class="success-message" id="success-message"></div>
+
+    <!-- Paso 1: Ingresar PIN -->
+    <div class="step-content" id="content-step-1">
+      <div class="form-group">
+        <label for="pin-input">🔑 Código PIN de la sala</label>
+        <input type="text" id="pin-input" class="pin-input" placeholder="123456" maxlength="6" autocomplete="off">
+        <div class="help-text">
+          Ingresa el código de 6 dígitos que te proporcionó tu profesor
+        </div>
+      </div>
+      <button class="btn btn-primary" id="verify-pin-btn">
+        Verificar PIN
+      </button>
+    </div>
+
+    <!-- Paso 2: Ingresar nombre -->
+    <div class="step-content" id="content-step-2" style="display: none;">
+      <div class="form-group">
+        <label for="name-input">👤 Tu nombre</label>
+        <input type="text" id="name-input" class="name-input" placeholder="Escribe tu nombre" maxlength="30">
+        <div class="help-text">
+          Este nombre aparecerá en el ranking. Máximo 30 caracteres.
+        </div>
+      </div>
+      <button class="btn btn-primary" id="join-game-btn" disabled>
+        Unirse al juego
+      </button>
+      <button class="btn btn-secondary" id="back-to-pin-btn">
+        ← Cambiar PIN
+      </button>
+    </div>
+
+    <!-- Paso 3: Cargando -->
+    <div class="step-content loading" id="content-step-3">
+      <div class="spinner"></div>
+      <h3>Conectando...</h3>
+      <p>Te estamos conectando a la sala de juego</p>
+    </div>
+  </div>
+
+  <script>
+    let currentStep = 1;
+    let gamePin = '';
+    let gameData = null;
+
+    // Referencias a elementos
+    const errorMessage = document.getElementById('error-message');
+    const successMessage = document.getElementById('success-message');
+    const pinInput = document.getElementById('pin-input');
+    const nameInput = document.getElementById('name-input');
+    const verifyPinBtn = document.getElementById('verify-pin-btn');
+    const joinGameBtn = document.getElementById('join-game-btn');
+    const backToPinBtn = document.getElementById('back-to-pin-btn');
+
+    function showError(message) {
+      errorMessage.textContent = message;
+      errorMessage.style.display = 'block';
+      successMessage.style.display = 'none';
+    }
+
+    function showSuccess(message) {
+      successMessage.textContent = message;
+      successMessage.style.display = 'block';
+      errorMessage.style.display = 'none';
+    }
+
+    function hideMessages() {
+      errorMessage.style.display = 'none';
+      successMessage.style.display = 'none';
+    }
+
+    function updateStep(step) {
+      // Ocultar todos los contenidos
+      for (let i = 1; i <= 3; i++) {
+        document.getElementById(`content-step-${i}`).style.display = 'none';
+        const stepElement = document.getElementById(`step-${i}`);
+        stepElement.classList.remove('active', 'completed');
+        
+        if (i < step) {
+          stepElement.classList.add('completed');
+        } else if (i === step) {
+          stepElement.classList.add('active');
+        }
+      }
+
+      // Mostrar contenido actual
+      document.getElementById(`content-step-${step}`).style.display = 'flex';
+      currentStep = step;
+      hideMessages();
+    }
+
+    function validatePin(pin) {
+      // Validación básica del PIN
+      if (!pin || pin.length !== 6) {
+        return false;
+      }
+      return /^[0-9]{6}$/.test(pin);
+    }
+
+    function validateName(name) {
+      name = name.trim();
+      return name.length >= 2 && name.length <= 30;
+    }
+
+    async function verifyGamePin(pin) {
+      try {
+        // Simular llamada al servidor
+        const response = await fetch(`/api/verificar-pin/${pin}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          return { success: true, data: data };
+        } else if (response.status === 404) {
+          return { success: false, error: 'PIN no válido o sala cerrada' };
+        } else {
+          return { success: false, error: 'Error del servidor' };
+        }
+      } catch (error) {
+        // Para demo, simular algunas validaciones
+        if (pin === '123456') {
+          return { 
+            success: true, 
+            data: { 
+              titulo: 'Matemáticas - Álgebra Básica',
+              estado: 'esperando',
+              participantes: 3
+            } 
+          };
+        } else {
+          return { success: false, error: 'PIN no válido. Intenta con 123456 para la demo.' };
+        }
+      }
+    }
+
+    async function joinGame(pin, name) {
+      try {
+        const response = await fetch('/api/unirse-juego', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ pin: pin, nombre: name })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          return { success: true, data: data };
+        } else {
+          const error = await response.json();
+          return { success: false, error: error.message || 'Error al unirse' };
+        }
+      } catch (error) {
+        // Para demo
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Simular carga
+        return { 
+          success: true, 
+          data: { 
+            jugador_id: Math.floor(Math.random() * 1000),
+            redirect: `/jugar/${pin}`
+          } 
+        };
+      }
+    }
+
+    // Event Listeners
+    pinInput.addEventListener('input', function() {
+      const pin = this.value.replace(/\D/g, '').slice(0, 6);
+      this.value = pin;
+      
+      verifyPinBtn.disabled = pin.length !== 6;
+    });
+
+    pinInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter' && !verifyPinBtn.disabled) {
+        verifyPinBtn.click();
+      }
+    });
+
+    nameInput.addEventListener('input', function() {
+      const name = this.value.trim();
+      joinGameBtn.disabled = !validateName(name);
+    });
+
+    nameInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter' && !joinGameBtn.disabled) {
+        joinGameBtn.click();
+      }
+    });
+
+    verifyPinBtn.addEventListener('click', async function() {
+      const pin = pinInput.value;
+      
+      if (!validatePin(pin)) {
+        showError('Ingresa un PIN válido de 6 dígitos');
+        return;
+      }
+
+      this.disabled = true;
+      this.textContent = 'Verificando...';
+
+      const result = await verifyGamePin(pin);
+      
+      if (result.success) {
+        gamePin = pin;
+        gameData = result.data;
+        showSuccess(`¡PIN válido! Sala: ${gameData.titulo}`);
+        setTimeout(() => {
+          updateStep(2);
+          nameInput.focus();
+        }, 1000);
+      } else {
+        showError(result.error);
+      }
+
+      this.disabled = false;
+      this.textContent = 'Verificar PIN';
+    });
+
+    joinGameBtn.addEventListener('click', async function() {
+      const name = nameInput.value.trim();
+      
+      if (!validateName(name)) {
+        showError('El nombre debe tener entre 2 y 30 caracteres');
+        return;
+      }
+
+      updateStep(3);
+
+      const result = await joinGame(gamePin, name);
+      
+      if (result.success) {
+        // Redirigir a la sala de juego
+        window.location.href = result.data.redirect || `/jugar/${gamePin}`;
+      } else {
+        showError(result.error);
+        updateStep(2);
+      }
+    });
+
+    backToPinBtn.addEventListener('click', function() {
+      updateStep(1);
+      pinInput.focus();
+    });
+
+    // Inicialización
+    pinInput.focus();
+
+    // Autocompletado del PIN desde URL si está presente
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlPin = urlParams.get('pin');
+    if (urlPin && validatePin(urlPin)) {
+      pinInput.value = urlPin;
+      verifyPinBtn.disabled = false;
+    }
+  </script>
+</body>
+</html>

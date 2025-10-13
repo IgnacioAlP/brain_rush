@@ -1,16 +1,464 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Brain Rush - Registrarse</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/registro.css') }}">
-</head>
-<body>
-  <img class="background-img" src="/static/img/ChatGPT Image Aug 19, 2025, 05_52_47 PM.png" alt="Brain RUSH Logo">
-  <div class="register-container" id="register-content">
-    <!-- El contenido se genera dinámicamente -->
-  </div>
-  <script src="{{ url_for('static', filename='js/registro.js') }}"></script>
-</body>
-</html>
+{% extends "BrainRush_Master.html" %}
+
+{% block title %}Brain RUSH - Registrarse{% endblock %}
+
+{% block extra_css %}
+<style>
+.register-page {
+    min-height: calc(100vh - 80px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-xl) 0;
+}
+
+.register-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-xl);
+    padding: var(--space-xxl);
+    width: 100%;
+    max-width: 500px;
+    position: relative;
+    overflow: hidden;
+}
+
+.register-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--gradient-secondary);
+}
+
+.register-header {
+    text-align: center;
+    margin-bottom: var(--space-xxl);
+}
+
+.register-title {
+    font-family: var(--font-primary);
+    font-size: 2.5rem;
+    background: var(--gradient-secondary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: var(--space-sm);
+}
+
+.register-subtitle {
+    color: var(--gray);
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-md);
+}
+
+.form-group {
+    margin-bottom: var(--space-lg);
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.form-label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: var(--space-sm);
+    font-size: 0.9rem;
+}
+
+.form-input, .form-select {
+    width: 100%;
+    padding: var(--space-md);
+    border: 2px solid rgba(0,0,0,0.1);
+    border-radius: var(--radius-md);
+    font-size: 1rem;
+    font-family: var(--font-secondary);
+    transition: var(--transition-smooth);
+    background: rgba(255,255,255,0.8);
+}
+
+.form-input:focus, .form-select:focus {
+    outline: none;
+    border-color: var(--secondary-color);
+    background: white;
+    box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.1);
+}
+
+.register-btn {
+    width: 100%;
+    padding: var(--space-lg);
+    background: var(--gradient-secondary);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+    margin-bottom: var(--space-lg);
+}
+
+.register-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.login-link {
+    text-align: center;
+}
+
+.login-link a {
+    color: var(--secondary-color);
+    text-decoration: none;
+    font-weight: 600;
+    transition: var(--transition-fast);
+}
+
+.login-link a:hover {
+    color: var(--primary-color);
+}
+
+.step-indicator {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-md);
+    margin-bottom: var(--space-xxl);
+}
+
+.step {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.1);
+    color: var(--gray);
+    font-weight: 600;
+    transition: var(--transition-smooth);
+}
+
+.step.active {
+    background: var(--gradient-secondary);
+    color: white;
+}
+
+.step.completed {
+    background: var(--gradient-primary);
+    color: white;
+}
+
+.requirements {
+    background: rgba(69, 183, 209, 0.1);
+    border: 1px solid var(--accent-color);
+    border-radius: var(--radius-md);
+    padding: var(--space-lg);
+    margin-bottom: var(--space-lg);
+}
+
+.requirements-title {
+    color: var(--dark);
+    font-size: 0.9rem;
+    font-weight: 700;
+    margin-bottom: var(--space-md);
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.requirement {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    font-size: 0.85rem;
+    color: var(--gray);
+    margin-bottom: var(--space-sm);
+}
+
+.requirement.valid {
+    color: var(--success-color);
+}
+
+.requirement i {
+    width: 16px;
+    text-align: center;
+}
+
+@media (max-width: 768px) {
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .register-card {
+        margin: var(--space-md);
+        padding: var(--space-xl);
+    }
+    
+    .register-title {
+        font-size: 2rem;
+    }
+    
+    .step-indicator {
+        gap: var(--space-sm);
+    }
+    
+    .step {
+        width: 32px;
+        height: 32px;
+        font-size: 0.9rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="register-page">
+    <div class="register-card animate-fadeIn">
+        <div class="register-header">
+            <h1 class="register-title">¡Únete a Brain RUSH!</h1>
+            <p class="register-subtitle">Crea tu cuenta y comienza tu aventura de aprendizaje</p>
+        </div>
+
+        <div class="step-indicator">
+            <div class="step active" id="step1">1</div>
+            <div class="step" id="step2">2</div>
+            <div class="step" id="step3">3</div>
+        </div>
+
+        <form action="{{ url_for('registrarse') }}" method="POST" id="registerForm">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="nombre" class="form-label">
+                        <i class="fas fa-user"></i>
+                        Nombre
+                    </label>
+                    <input type="text" id="nombre" name="nombre" required class="form-input" placeholder="Tu nombre">
+                </div>
+                
+                <div class="form-group">
+                    <label for="apellidos" class="form-label">
+                        <i class="fas fa-user"></i>
+                        Apellidos
+                    </label>
+                    <input type="text" id="apellidos" name="apellidos" required class="form-input" placeholder="Tus apellidos">
+                </div>
+            </div>
+
+            <div class="form-group full-width">
+                <label for="email" class="form-label">
+                    <i class="fas fa-envelope"></i>
+                    Correo Electrónico
+                </label>
+                <input type="email" id="email" name="email" required class="form-input" placeholder="tu@email.com">
+            </div>
+
+            <div class="form-group full-width">
+                <label for="tipo_usuario" class="form-label">
+                    <i class="fas fa-user-tag"></i>
+                    Tipo de Usuario
+                </label>
+                <select id="tipo_usuario" name="tipo_usuario" required class="form-select">
+                    <option value="">Selecciona tu rol</option>
+                    <option value="estudiante">🎓 Estudiante</option>
+                    <option value="docente">👨‍🏫 Docente</option>
+                </select>
+            </div>
+
+            <div class="form-group full-width">
+                <label for="password" class="form-label">
+                    <i class="fas fa-lock"></i>
+                    Contraseña
+                </label>
+                <input type="password" id="password" name="password" required class="form-input" placeholder="••••••••">
+            </div>
+
+            <div class="requirements">
+                <h4 class="requirements-title">
+                    <i class="fas fa-shield-alt"></i>
+                    Requisitos de Contraseña
+                </h4>
+                <div class="requirement" id="req-length">
+                    <i class="fas fa-times"></i>
+                    <span>Mínimo 8 caracteres</span>
+                </div>
+                <div class="requirement" id="req-uppercase">
+                    <i class="fas fa-times"></i>
+                    <span>Al menos una mayúscula</span>
+                </div>
+                <div class="requirement" id="req-lowercase">
+                    <i class="fas fa-times"></i>
+                    <span>Al menos una minúscula</span>
+                </div>
+                <div class="requirement" id="req-number">
+                    <i class="fas fa-times"></i>
+                    <span>Al menos un número</span>
+                </div>
+            </div>
+
+            <div class="form-group full-width">
+                <label for="confirm_password" class="form-label">
+                    <i class="fas fa-lock"></i>
+                    Confirmar Contraseña
+                </label>
+                <input type="password" id="confirm_password" name="confirm_password" required class="form-input" placeholder="••••••••">
+            </div>
+
+            <button type="submit" class="register-btn" id="submitBtn" disabled>
+                <i class="fas fa-user-plus"></i>
+                Crear Cuenta
+            </button>
+        </form>
+
+        <div class="login-link">
+            <p>¿Ya tienes cuenta? <a href="{{ url_for('login') }}">¡Inicia sesión aquí!</a></p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('registerForm');
+    const passwordInput = document.getElementById('password');
+    const confirmPasswordInput = document.getElementById('confirm_password');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    // Campos para validación de pasos
+    const step1Fields = ['nombre', 'apellidos'];
+    const step2Fields = ['email', 'tipo_usuario'];
+    const step3Fields = ['password', 'confirm_password'];
+    
+    // Elementos de requisitos
+    const requirements = {
+        length: document.getElementById('req-length'),
+        uppercase: document.getElementById('req-uppercase'),
+        lowercase: document.getElementById('req-lowercase'),
+        number: document.getElementById('req-number')
+    };
+    
+    // Validación de contraseña en tiempo real
+    passwordInput.addEventListener('input', function() {
+        const password = this.value;
+        
+        // Verificar longitud
+        updateRequirement('length', password.length >= 8);
+        
+        // Verificar mayúscula
+        updateRequirement('uppercase', /[A-Z]/.test(password));
+        
+        // Verificar minúscula
+        updateRequirement('lowercase', /[a-z]/.test(password));
+        
+        // Verificar número
+        updateRequirement('number', /\d/.test(password));
+        
+        validateForm();
+        updateSteps();
+    });
+    
+    // Validación de confirmación de contraseña
+    confirmPasswordInput.addEventListener('input', function() {
+        validateForm();
+        updateSteps();
+    });
+    
+    // Validar campos en tiempo real
+    form.addEventListener('input', function() {
+        updateSteps();
+        validateForm();
+    });
+    
+    function updateRequirement(type, isValid) {
+        const req = requirements[type];
+        const icon = req.querySelector('i');
+        
+        if (isValid) {
+            req.classList.add('valid');
+            icon.className = 'fas fa-check';
+        } else {
+            req.classList.remove('valid');
+            icon.className = 'fas fa-times';
+        }
+    }
+    
+    function updateSteps() {
+        const steps = [
+            { element: document.getElementById('step1'), fields: step1Fields },
+            { element: document.getElementById('step2'), fields: step2Fields },
+            { element: document.getElementById('step3'), fields: step3Fields }
+        ];
+        
+        steps.forEach((step, index) => {
+            const isComplete = step.fields.every(fieldName => {
+                const field = document.getElementById(fieldName);
+                return field && field.value.trim() !== '';
+            });
+            
+            if (isComplete) {
+                step.element.classList.remove('active');
+                step.element.classList.add('completed');
+                if (index < steps.length - 1) {
+                    steps[index + 1].element.classList.add('active');
+                }
+            } else {
+                step.element.classList.remove('completed');
+                if (index === 0 || steps[index - 1].element.classList.contains('completed')) {
+                    step.element.classList.add('active');
+                }
+            }
+        });
+    }
+    
+    function validateForm() {
+        const password = passwordInput.value;
+        const confirmPassword = confirmPasswordInput.value;
+        
+        // Verificar todos los requisitos de contraseña
+        const passwordValid = password.length >= 8 && 
+                            /[A-Z]/.test(password) && 
+                            /[a-z]/.test(password) && 
+                            /\d/.test(password);
+        
+        // Verificar que las contraseñas coincidan
+        const passwordsMatch = password === confirmPassword && password !== '';
+        
+        // Verificar que todos los campos estén llenos
+        const allFieldsFilled = [...step1Fields, ...step2Fields, ...step3Fields].every(fieldName => {
+            const field = document.getElementById(fieldName);
+            return field && field.value.trim() !== '';
+        });
+        
+        // Habilitar/deshabilitar botón de submit
+        if (allFieldsFilled && passwordValid && passwordsMatch) {
+            submitBtn.disabled = false;
+            submitBtn.style.opacity = '1';
+        } else {
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = '0.6';
+        }
+    }
+    
+    // Animación al enviar formulario
+    form.addEventListener('submit', function() {
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando cuenta...';
+        submitBtn.disabled = true;
+    });
+});
+</script>
+{% endblock %}

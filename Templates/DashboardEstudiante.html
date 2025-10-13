@@ -1,0 +1,533 @@
+{% extends "BrainRush_Master.html" %}
+
+{% block title %}Brain RUSH - Dashboard Estudiante{% endblock %}
+
+{% block extra_css %}
+<style>
+.student-dashboard {
+    padding: var(--space-xl) 0;
+}
+
+.welcome-section {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: var(--radius-xl);
+    padding: var(--space-xxl);
+    margin-bottom: var(--space-xxl);
+    box-shadow: var(--shadow-lg);
+    position: relative;
+    overflow: hidden;
+}
+
+.welcome-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--gradient-secondary);
+}
+
+.welcome-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-lg);
+}
+
+.welcome-text h1 {
+    font-family: var(--font-primary);
+    font-size: 2.5rem;
+    background: var(--gradient-secondary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: var(--space-sm);
+}
+
+.welcome-text p {
+    color: var(--gray);
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.level-badge {
+    background: var(--gradient-accent);
+    color: white;
+    padding: var(--space-md) var(--space-lg);
+    border-radius: var(--radius-lg);
+    font-weight: 700;
+    font-size: 1.1rem;
+    box-shadow: var(--shadow-md);
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.progress-section {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: var(--space-lg);
+    align-items: center;
+}
+
+.progress-info h3 {
+    color: var(--dark);
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: var(--space-sm);
+}
+
+.progress-bar {
+    width: 100%;
+    height: 12px;
+    background: rgba(0,0,0,0.1);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-bottom: var(--space-sm);
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--gradient-secondary);
+    border-radius: var(--radius-lg);
+    width: 65%;
+    transition: width 1s ease;
+}
+
+.progress-text {
+    color: var(--gray);
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.xp-display {
+    text-align: center;
+    background: rgba(78, 205, 196, 0.1);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+}
+
+.xp-number {
+    font-family: var(--font-primary);
+    font-size: 2rem;
+    color: var(--secondary-color);
+    display: block;
+}
+
+.xp-label {
+    color: var(--gray);
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.action-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: var(--space-lg);
+    margin-bottom: var(--space-xxl);
+}
+
+.action-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: var(--radius-lg);
+    padding: var(--space-xl);
+    box-shadow: var(--shadow-md);
+    transition: var(--transition-smooth);
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+}
+
+.action-card:hover {
+    transform: translateY(-8px);
+    box-shadow: var(--shadow-xl);
+}
+
+.action-card.primary::before {
+    background: var(--gradient-primary);
+}
+
+.action-card.secondary::before {
+    background: var(--gradient-secondary);
+}
+
+.action-card.accent::before {
+    background: var(--gradient-accent);
+}
+
+.action-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+}
+
+.card-icon {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: var(--space-lg);
+    font-size: 2rem;
+    color: white;
+}
+
+.card-icon.primary {
+    background: var(--gradient-primary);
+}
+
+.card-icon.secondary {
+    background: var(--gradient-secondary);
+}
+
+.card-icon.accent {
+    background: var(--gradient-accent);
+}
+
+.card-title {
+    font-family: var(--font-primary);
+    font-size: 1.5rem;
+    color: var(--dark);
+    margin-bottom: var(--space-sm);
+}
+
+.card-description {
+    color: var(--gray);
+    line-height: 1.6;
+    margin-bottom: var(--space-lg);
+}
+
+.card-action {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    color: var(--primary-color);
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-lg);
+    margin-bottom: var(--space-xxl);
+}
+
+.stat-item {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: var(--radius-lg);
+    padding: var(--space-xl);
+    text-align: center;
+    box-shadow: var(--shadow-md);
+    transition: var(--transition-smooth);
+}
+
+.stat-item:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+}
+
+.stat-icon {
+    width: 50px;
+    height: 50px;
+    background: var(--gradient-accent);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto var(--space-md);
+    color: white;
+    font-size: 1.5rem;
+}
+
+.stat-number {
+    font-family: var(--font-primary);
+    font-size: 2rem;
+    color: var(--accent-color);
+    margin-bottom: var(--space-sm);
+}
+
+.stat-label {
+    color: var(--gray);
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.recent-section {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: var(--radius-lg);
+    padding: var(--space-xl);
+    box-shadow: var(--shadow-md);
+}
+
+.recent-header {
+    display: flex;
+    align-items: center;
+    justify-content: between;
+    margin-bottom: var(--space-lg);
+    padding-bottom: var(--space-md);
+    border-bottom: 2px solid rgba(0,0,0,0.1);
+}
+
+.recent-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    color: var(--dark);
+    font-size: 1.3rem;
+    font-weight: 700;
+}
+
+.recent-games {
+    display: grid;
+    gap: var(--space-md);
+}
+
+.game-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    transition: var(--transition-fast);
+    cursor: pointer;
+}
+
+.game-item:hover {
+    background: rgba(0,0,0,0.05);
+}
+
+.game-icon {
+    width: 40px;
+    height: 40px;
+    background: var(--gradient-secondary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.game-info {
+    flex: 1;
+}
+
+.game-name {
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: var(--space-xs);
+}
+
+.game-details {
+    color: var(--gray);
+    font-size: 0.85rem;
+}
+
+.game-score {
+    text-align: right;
+    font-weight: 700;
+    color: var(--secondary-color);
+    font-size: 1.1rem;
+}
+
+@media (max-width: 768px) {
+    .welcome-header {
+        flex-direction: column;
+        text-align: center;
+        gap: var(--space-lg);
+    }
+    
+    .progress-section {
+        grid-template-columns: 1fr;
+    }
+    
+    .action-cards {
+        grid-template-columns: 1fr;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .welcome-text h1 {
+        font-size: 2rem;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="student-dashboard">
+    <!-- Sección de Bienvenida -->
+    <div class="welcome-section animate-fadeIn">
+        <div class="welcome-header">
+            <div class="welcome-text">
+                <h1>¡Hola, {{ session.usuario_nombre or 'Estudiante' }}!</h1>
+                <p>¿Listo para tu próxima aventura de aprendizaje?</p>
+            </div>
+            <div class="level-badge">
+                <i class="fas fa-star"></i>
+                Nivel 5 - Explorador
+            </div>
+        </div>
+        
+        <div class="progress-section">
+            <div class="progress-info">
+                <h3>Progreso hacia Nivel 6</h3>
+                <div class="progress-bar">
+                    <div class="progress-fill"></div>
+                </div>
+                <div class="progress-text">650 / 1000 XP</div>
+            </div>
+            <div class="xp-display">
+                <span class="xp-number">2,450</span>
+                <span class="xp-label">XP Total</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Acciones Principales -->
+    <div class="action-cards">
+        <a href="{{ url_for('unirse_a_sala') }}" class="action-card primary animate-fadeIn" style="animation-delay: 0.1s;">
+            <div class="card-icon primary">
+                <i class="fas fa-gamepad"></i>
+            </div>
+            <h3 class="card-title">Unirse a Juego</h3>
+            <p class="card-description">
+                ¿Tienes un código de sala? ¡Únete y demuestra tus conocimientos en tiempo real!
+            </p>
+            <div class="card-action">
+                <span>Comenzar ahora</span>
+                <i class="fas fa-arrow-right"></i>
+            </div>
+        </a>
+
+        <a href="{{ url_for('historial_estudiante') }}" class="action-card secondary animate-fadeIn" style="animation-delay: 0.2s;">
+            <div class="card-icon secondary">
+                <i class="fas fa-history"></i>
+            </div>
+            <h3 class="card-title">Mi Historial</h3>
+            <p class="card-description">
+                Revisa todas tus partidas anteriores, puntuaciones y tu evolución académica.
+            </p>
+            <div class="card-action">
+                <span>Ver historial</span>
+                <i class="fas fa-arrow-right"></i>
+            </div>
+        </a>
+
+        <a href="{{ url_for('ranking_global') }}" class="action-card accent animate-fadeIn" style="animation-delay: 0.3s;">
+            <div class="card-icon accent">
+                <i class="fas fa-trophy"></i>
+            </div>
+            <h3 class="card-title">Ranking Global</h3>
+            <p class="card-description">
+                ¡Compite con estudiantes de todo el mundo y escala hasta la cima!
+            </p>
+            <div class="card-action">
+                <span>Ver ranking</span>
+                <i class="fas fa-arrow-right"></i>
+            </div>
+        </a>
+    </div>
+
+    <!-- Estadísticas Personales -->
+    <div class="stats-grid">
+        <div class="stat-item animate-fadeIn" style="animation-delay: 0.4s;">
+            <div class="stat-icon">
+                <i class="fas fa-gamepad"></i>
+            </div>
+            <div class="stat-number">47</div>
+            <div class="stat-label">Partidas Jugadas</div>
+        </div>
+
+        <div class="stat-item animate-fadeIn" style="animation-delay: 0.5s;">
+            <div class="stat-icon">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <div class="stat-number">78%</div>
+            <div class="stat-label">Promedio Aciertos</div>
+        </div>
+
+        <div class="stat-item animate-fadeIn" style="animation-delay: 0.6s;">
+            <div class="stat-icon">
+                <i class="fas fa-fire"></i>
+            </div>
+            <div class="stat-number">12</div>
+            <div class="stat-label">Racha Actual</div>
+        </div>
+
+        <div class="stat-item animate-fadeIn" style="animation-delay: 0.7s;">
+            <div class="stat-icon">
+                <i class="fas fa-medal"></i>
+            </div>
+            <div class="stat-number">5</div>
+            <div class="stat-label">Logros Desbloqueados</div>
+        </div>
+    </div>
+
+    <!-- Juegos Recientes -->
+    <div class="recent-section animate-fadeIn" style="animation-delay: 0.8s;">
+        <div class="recent-header">
+            <h2 class="recent-title">
+                <i class="fas fa-clock"></i>
+                Partidas Recientes
+            </h2>
+        </div>
+
+        <div class="recent-games">
+            <div class="game-item">
+                <div class="game-icon">
+                    <i class="fas fa-calculator"></i>
+                </div>
+                <div class="game-info">
+                    <div class="game-name">Matemáticas Avanzadas</div>
+                    <div class="game-details">Hace 2 horas • 15 preguntas</div>
+                </div>
+                <div class="game-score">890 pts</div>
+            </div>
+
+            <div class="game-item">
+                <div class="game-icon">
+                    <i class="fas fa-flask"></i>
+                </div>
+                <div class="game-info">
+                    <div class="game-name">Química Orgánica</div>
+                    <div class="game-details">Ayer • 20 preguntas</div>
+                </div>
+                <div class="game-score">750 pts</div>
+            </div>
+
+            <div class="game-item">
+                <div class="game-icon">
+                    <i class="fas fa-globe"></i>
+                </div>
+                <div class="game-info">
+                    <div class="game-name">Historia Mundial</div>
+                    <div class="game-details">Hace 3 días • 12 preguntas</div>
+                </div>
+                <div class="game-score">950 pts</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

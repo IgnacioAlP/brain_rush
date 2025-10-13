@@ -1,0 +1,219 @@
+﻿{% extends "BrainRush_Master.html" %}
+
+{% block title %}Brain RUSH - Monitoreo de Sala{% endblock %}
+
+{% block extra_css %}
+<style>
+.monitoreo-page {
+    padding: 1.5rem 0;
+}
+
+.sala-header {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 2rem;
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+}
+
+.sala-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.info-card {
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 1.5rem;
+    padding: 1.5rem;
+    text-align: center;
+    border: 2px solid rgba(79, 70, 229, 0.1);
+}
+
+.pin-display {
+    background: linear-gradient(135deg, #FF6B35, #4ECDC4);
+    color: white;
+    font-size: 3rem;
+    font-weight: bold;
+    letter-spacing: 0.2em;
+    padding: 1.5rem;
+    border-radius: 1.5rem;
+    text-align: center;
+    margin: 1.5rem 0;
+    cursor: pointer;
+}
+
+.control-panel {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: 2rem;
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+}
+
+.control-btn {
+    padding: 1rem 2rem;
+    border: none;
+    border-radius: 1.5rem;
+    font-weight: 600;
+    margin: 0.5rem;
+    cursor: pointer;
+}
+
+.btn-success {
+    background: linear-gradient(135deg, rgb(34, 197, 94), rgb(16, 185, 129));
+    color: white;
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, rgb(239, 68, 68), rgb(220, 38, 38));
+    color: white;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container monitoreo-page">
+    <div class="sala-header">
+        <div class="sala-info">
+            <div class="info-card">
+                <h3>Sala ID</h3>
+                <p>{{ sala.id }}</p>
+            </div>
+            <div class="info-card">
+                <h3>Participantes</h3>
+                <p>{{ participantes|length }}</p>
+            </div>
+        </div>
+        
+        <div class="pin-display" onclick="copiarCodigo()">
+            Código: {{ sala.pin_sala }}
+        </div>
+    </div>
+
+    <div class="control-panel">
+        <h2>Panel de Control</h2>
+        <button class="control-btn btn-success" onclick="iniciarJuego()">Iniciar Juego</button>
+        <button class="control-btn btn-danger" onclick="finalizarJuego()">Finalizar</button>
+        <a href="{{ url_for('mis_cuestionarios') }}" class="control-btn" style="background: #ccc; color: #333; text-decoration: none;">Volver</a>
+    </div>
+
+    <div class="control-panel">
+        <h2>Participantes (<span id="participantes-count">{{ participantes|length }}</span>)</h2>
+        <div id="participantes-container">
+            {% if participantes %}
+                <div id="participantes-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">
+                    {% for participante in participantes %}
+                    <div class="participante-card" style="background: rgba(79, 70, 229, 0.1); border-radius: 1rem; padding: 1rem; text-align: center;">
+                        <h4>{{ participante.nombre_participante }}</h4>
+                        <p style="color: #4F46E5; font-weight: 600;">{{ participante.estado|title }}</p>
+                        <small>Unido: {{ participante.fecha_union.strftime('%H:%M:%S') if participante.fecha_union else 'N/A' }}</small>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div id="no-participantes" style="text-align: center; padding: 2rem;">
+                    <p>No hay participantes aún</p>
+                    <p>Los estudiantes aparecerán cuando se unan con el código {{ sala.pin_sala }}</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const codigoSala = "{{ sala.pin_sala }}";
+
+// Actualizar participantes en tiempo real
+function actualizarParticipantes() {
+    fetch(`/api/participantes/${codigoSala}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const countElement = document.getElementById('participantes-count');
+                const containerElement = document.getElementById('participantes-container');
+                
+                countElement.textContent = data.total;
+                
+                if (data.participantes.length > 0) {
+                    let html = '<div id="participantes-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">';
+                    
+                    data.participantes.forEach(participante => {
+                        html += `
+                            <div class="participante-card" style="background: rgba(79, 70, 229, 0.1); border-radius: 1rem; padding: 1rem; text-align: center;">
+                                <h4>${participante.nombre}</h4>
+                                <p style="color: #4F46E5; font-weight: 600;">${participante.estado.charAt(0).toUpperCase() + participante.estado.slice(1)}</p>
+                                <small>Unido: ${new Date(participante.fecha_union).toLocaleTimeString()}</small>
+                            </div>
+                        `;
+                    });
+                    
+                    html += '</div>';
+                    containerElement.innerHTML = html;
+                } else {
+                    containerElement.innerHTML = `
+                        <div id="no-participantes" style="text-align: center; padding: 2rem;">
+                            <p>No hay participantes aún</p>
+                            <p>Los estudiantes aparecerán cuando se unan con el código ${codigoSala}</p>
+                        </div>
+                    `;
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error actualizando participantes:', error);
+        });
+}
+
+// Actualizar cada 3 segundos
+setInterval(actualizarParticipantes, 3000);
+
+function iniciarJuego() {
+    const participantesCount = parseInt(document.getElementById('participantes-count').textContent);
+    
+    if (participantesCount === 0) {
+        alert('No hay participantes para iniciar el juego');
+        return;
+    }
+    
+    if (confirm(`¿Iniciar juego con ${participantesCount} participante(s)?`)) {
+        fetch(`/api/iniciar-juego/${codigoSala}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('¡Juego iniciado!');
+                // Redirigir o actualizar interfaz según necesites
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Error al iniciar juego: ' + error);
+        });
+    }
+}
+
+function finalizarJuego() {
+    if (confirm('¿Está seguro de que desea finalizar la sala?')) {
+        window.location.href = "{{ url_for('mis_cuestionarios') }}";
+    }
+}
+
+function copiarCodigo() {
+    navigator.clipboard.writeText(codigoSala).then(() => {
+        alert('Código copiado: ' + codigoSala);
+    }).catch(() => {
+        alert('Código: ' + codigoSala);
+    });
+}
+</script>
+{% endblock %}

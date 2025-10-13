@@ -1,149 +1,141 @@
-from typing import Dict, Any, Optional, Tuple, List
+﻿from bd import obtener_conexion
+import hashlib
+import pymysql
 
-from bd import obtener_conexion
+def obtener_usuario_por_id(usuario_id):
+    """Obtener un usuario por su ID"""
+    try:
+        conexion = obtener_conexion()
+        with conexion.cursor(pymysql.cursors.DictCursor) as cursor:
+            cursor.execute("""
+                SELECT id_usuario, nombre, apellidos, email, tipo_usuario, estado, fecha_registro
+                FROM usuarios 
+                WHERE id_usuario = %s AND estado = 'activo'
+            """, (usuario_id,))
+            usuario = cursor.fetchone()
+        conexion.close()
+        return usuario
+    except Exception as e:
+        print(f"Error al obtener usuario por ID: {e}")
+        return None
 
+def obtener_todos_usuarios():
+    """Obtener todos los usuarios activos"""
+    try:
+        conexion = obtener_conexion()
+        with conexion.cursor(pymysql.cursors.DictCursor) as cursor:
+            cursor.execute("""
+                SELECT id_usuario, nombre, apellidos, email, tipo_usuario, estado, fecha_registro
+                FROM usuarios 
+                WHERE estado = 'activo'
+                ORDER BY fecha_registro DESC
+            """)
+            usuarios = cursor.fetchall()
+        conexion.close()
+        return usuarios
+    except Exception as e:
+        print(f"Error al obtener usuarios: {e}")
+        return []
 
-# ---------------------------------
-# Operaciones de BD para usuarios
-# (validaciones se hacen en el frontend)
-# ---------------------------------
+def autenticar_usuario(email, password):
+    """Autenticar un usuario con email y contraseña"""
+    try:
+        if not email or not password:
+            return False, None
+            
+        # Limpiar y normalizar el email
+        email = email.strip().lower()
+        
+        conexion = obtener_conexion()
+        with conexion.cursor(pymysql.cursors.DictCursor) as cursor:
+            # Buscar el usuario por email
+            cursor.execute("""
+                SELECT id_usuario, nombre, apellidos, email, contraseña_hash, tipo_usuario, estado
+                FROM usuarios 
+                WHERE email = %s AND estado = 'activo'
+            """, (email,))
+            usuario = cursor.fetchone()
+        conexion.close()
+        
+        if not usuario:
+            print(f"Usuario no encontrado: {email}")
+            return False, None
+        
+        # Verificar la contraseña
+        # Primero intentamos con hash MD5 (método simple)
+        password_hash = hashlib.md5(password.encode()).hexdigest()
+        
+        if usuario['contraseña_hash'] == password_hash:
+            # Contraseña correcta, remover el hash antes de devolver
+            del usuario['contraseña_hash']
+            print(f"Login exitoso para usuario: {email}")
+            return True, usuario
+        else:
+            # También intentar con la contraseña en texto plano por si no está hasheada
+            if usuario['contraseña_hash'] == password:
+                del usuario['contraseña_hash']
+                print(f"Login exitoso para usuario (texto plano): {email}")
+                return True, usuario
+            else:
+                print(f"Contraseña incorrecta para usuario: {email}")
+                return False, None
+                
+    except Exception as e:
+        print(f"Error en autenticación: {e}")
+        return False, None
 
-def crear_usuario(nombre: str, apellidos: str, email: str, password_plano: str, tipo_usuario: str = "estudiante") -> int:
-	conexion = obtener_conexion()
-	try:
-		with conexion.cursor() as cursor:
-			cursor.execute(
-				"""
-				INSERT INTO usuarios (`nombre`, `apellidos`, `email`, `contraseña_hash`, `tipo_usuario`)
-				VALUES (%s, %s, %s, %s, %s)
-				""",
-				(nombre, apellidos, email, password_plano, tipo_usuario),
-			)
-			conexion.commit()
-			return cursor.lastrowid  # type: ignore[attr-defined]
-	finally:
-		conexion.close()
+def crear_usuario(nombre, apellidos, email, password, tipo_usuario='estudiante'):
+    """Crear un nuevo usuario"""
+    try:
+        print(f"DEBUG crear_usuario: nombre='{nombre}', apellidos='{apellidos}', email='{email}', password='{password}', tipo='{tipo_usuario}'")
+        
+        if not all([nombre, apellidos, email, password]):
+            print(f"DEBUG: Campos faltantes - nombre: {bool(nombre)}, apellidos: {bool(apellidos)}, email: {bool(email)}, password: {bool(password)}")
+            return False, "Todos los campos son requeridos"
+        
+        # Limpiar y normalizar datos
+        email = email.strip().lower()
+        nombre = nombre.strip()
+        apellidos = apellidos.strip()
+        
+        # Hash de la contraseña
+        password_hash = hashlib.md5(password.encode()).hexdigest()
+        
+        conexion = obtener_conexion()
+        with conexion.cursor() as cursor:
+            # Verificar si el email ya existe
+            cursor.execute("SELECT id_usuario FROM usuarios WHERE email = %s", (email,))
+            if cursor.fetchone():
+                conexion.close()
+                return False, "El email ya está registrado"
+            
+            # Insertar nuevo usuario
+            cursor.execute("""
+                INSERT INTO usuarios (nombre, apellidos, email, contraseña_hash, tipo_usuario, estado)
+                VALUES (%s, %s, %s, %s, %s, 'activo')
+            """, (nombre, apellidos, email, password_hash, tipo_usuario))
+            
+            conexion.commit()
+            usuario_id = cursor.lastrowid
+        conexion.close()
+        
+        print(f"Usuario creado exitosamente: {email}")
+        return True, usuario_id
+        
+    except Exception as e:
+        print(f"Error al crear usuario: {e}")
+        return False, str(e)
 
-
-def obtener_usuarios() -> List[tuple]:
-	conexion = obtener_conexion()
-	try:
-		with conexion.cursor() as cursor:
-			cursor.execute(
-				"""
-				SELECT `id_usuario`, `nombre`, `apellidos`, `email`, `tipo_usuario`, `estado`, `fecha_registro`
-				FROM `usuarios`
-				ORDER BY `fecha_registro` DESC
-				"""
-			)
-			return cursor.fetchall()
-	finally:
-		conexion.close()
-
-
-def obtener_usuario_por_id(id_usuario: int) -> Optional[tuple]:
-	conexion = obtener_conexion()
-	try:
-		with conexion.cursor() as cursor:
-			cursor.execute(
-				"""
-				SELECT `id_usuario`, `nombre`, `apellidos`, `email`, `tipo_usuario`, `estado`, `fecha_registro`
-				FROM `usuarios` WHERE `id_usuario` = %s
-				""",
-				(id_usuario,),
-			)
-			return cursor.fetchone()
-	finally:
-		conexion.close()
-
-
-def obtener_usuario_por_email(email: str) -> Optional[tuple]:
-	conexion = obtener_conexion()
-	try:
-		with conexion.cursor() as cursor:
-			cursor.execute(
-				"SELECT `id_usuario`, `nombre`, `apellidos`, `email`, `contraseña_hash`, `tipo_usuario`, `estado` FROM `usuarios` WHERE `email` = %s",
-				(email,),
-			)
-			return cursor.fetchone()
-	finally:
-		conexion.close()
-
-
-def eliminar_usuario(id_usuario: int) -> None:
-	conexion = obtener_conexion()
-	try:
-		with conexion.cursor() as cursor:
-			cursor.execute("DELETE FROM `usuarios` WHERE `id_usuario` = %s", (id_usuario,))
-		conexion.commit()
-	finally:
-		conexion.close()
-
-
-def actualizar_password(id_usuario: int, password_plano: str) -> None:
-	conexion = obtener_conexion()
-	try:
-		with conexion.cursor() as cursor:
-			cursor.execute(
-				"UPDATE `usuarios` SET `contraseña_hash` = %s WHERE `id_usuario` = %s",
-				(password_plano, id_usuario),
-			)
-		conexion.commit()
-	finally:
-		conexion.close()
-
-
-def actualizar_datos_usuario(id_usuario: int, nombre: str, apellidos: str, tipo_usuario: str, estado: str) -> None:
-	conexion = obtener_conexion()
-	try:
-		with conexion.cursor() as cursor:
-			cursor.execute(
-				"""
-				UPDATE `usuarios`
-				SET `nombre` = %s, `apellidos` = %s, `tipo_usuario` = %s, `estado` = %s
-				WHERE `id_usuario` = %s
-				""",
-				(nombre, apellidos, tipo_usuario, estado, id_usuario),
-			)
-		conexion.commit()
-	finally:
-		conexion.close()
-
-
-def suspender_usuario(id_usuario: int) -> None:
-	conexion = obtener_conexion()
-	try:
-		with conexion.cursor() as cursor:
-			cursor.execute("UPDATE `usuarios` SET `estado` = 'inactivo' WHERE `id_usuario` = %s", (id_usuario,))
-		conexion.commit()
-	finally:
-		conexion.close()
-
-
-def activar_usuario(id_usuario: int) -> None:
-	conexion = obtener_conexion()
-	try:
-		with conexion.cursor() as cursor:
-			cursor.execute("UPDATE `usuarios` SET `estado` = 'activo' WHERE `id_usuario` = %s", (id_usuario,))
-		conexion.commit()
-	finally:
-		conexion.close()
-
-
-def autenticar(email: str, password_plano: str) -> Tuple[bool, Optional[Dict[str, Any]]]:
-	fila = obtener_usuario_por_email(email)
-	if not fila:
-		return False, None
-	# fila: (id_usuario, nombre, apellidos, email, contraseña_hash, tipo_usuario, estado)
-	if fila[4] != password_plano:
-		return False, None
-	usuario = {
-		"id_usuario": fila[0],
-		"nombre": fila[1],
-		"apellidos": fila[2],
-		"email": fila[3],
-		"tipo_usuario": fila[5],
-		"estado": fila[6],
-	}
-	return True, usuario
-
+def verificar_email_disponible(email):
+    """Verificar si un email está disponible para registro"""
+    try:
+        email = email.strip().lower()
+        conexion = obtener_conexion()
+        with conexion.cursor() as cursor:
+            cursor.execute("SELECT id_usuario FROM usuarios WHERE email = %s", (email,))
+            resultado = cursor.fetchone()
+        conexion.close()
+        return resultado is None
+    except Exception as e:
+        print(f"Error al verificar email: {e}")
+        return False

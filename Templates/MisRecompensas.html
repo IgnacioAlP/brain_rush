@@ -1,0 +1,41 @@
+{% extends "Maestra_v2.html" %}
+
+{% block title %}Mis Recompensas - Brain Rush{% endblock %}
+
+{% block content %}
+<div class="login-container" style="width: 90%; max-width: 800px; padding: 30px;">
+    <h2 style="color: #222; text-align: center; margin-bottom: 20px;">🎁 Mis Recompensas</h2>
+    <p style="color: #666; text-align: center; margin-bottom: 30px;">Recompensas que has ganado por tu excelente desempeño</p>
+    
+    {% if recompensas %}
+        <div>
+            {% for recompensa in recompensas %}
+                <div style="padding: 20px; border: 1px solid #ccc; margin: 15px 0; border-radius: 8px; 
+                           background: rgba(249, 249, 249, 0.9); 
+                           transition: transform 0.2s, box-shadow 0.2s;"
+                     onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'"
+                     onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                    <strong style="color: #222; font-size: 1.1em; display: block; margin-bottom: 8px;">
+                        🏆 {{ recompensa.nombre }}
+                    </strong>
+                    <small style="color: #555; display: block; margin-bottom: 5px;">
+                        {{ recompensa.descripcion }}
+                    </small>
+                    <em style="color: #888; font-size: 0.9em;">
+                        Puntos requeridos: {{ recompensa.puntos_requeridos }}
+                    </em>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div style="text-align: center; color: #666; margin: 30px 0;">
+            <p style="margin: 10px 0;">¡Sigue participando para ganar recompensas!</p>
+            <p style="margin: 10px 0;">Las recompensas se otorgan automáticamente cuando alcanzas ciertos logros.</p>
+        </div>
+    {% endif %}
+    
+    <div class="btn-group" style="text-align: center; margin-top: 30px;">
+        <a href="{{ url_for('dashboard_estudiante') }}" class="btn btn-login">Volver al Dashboard</a>
+    </div>
+</div>
+{% endblock %}

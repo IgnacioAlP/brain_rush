@@ -1,13 +1,459 @@
-{% extends 'Maestra.html' %}
-{% block title %}Crear Sala{% endblock %}
+{% extends "BrainRush_Master.html" %}
+
+{% block title %}Brain RUSH - Crear Sala{% endblock %}
+
+{% block extra_css %}
+<style>
+.create-room-page {
+    min-height: calc(100vh - 80px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-xl) 0;
+}
+
+.create-room-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-xl);
+    padding: var(--space-xxl);
+    width: 100%;
+    max-width: 600px;
+    position: relative;
+    overflow: hidden;
+}
+
+.create-room-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--gradient-primary);
+}
+
+.create-room-header {
+    text-align: center;
+    margin-bottom: var(--space-xxl);
+}
+
+.create-room-title {
+    font-family: var(--font-primary);
+    font-size: 2.5rem;
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: var(--space-sm);
+}
+
+.create-room-subtitle {
+    color: var(--gray);
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.room-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-lg);
+    margin-bottom: var(--space-xxl);
+}
+
+.room-option {
+    background: rgba(255,255,255,0.8);
+    border: 2px solid rgba(0,0,0,0.1);
+    border-radius: var(--radius-lg);
+    padding: var(--space-xl);
+    text-align: center;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+    position: relative;
+    overflow: hidden;
+}
+
+.room-option:hover {
+    transform: translateY(-5px);
+    border-color: var(--primary-color);
+    box-shadow: var(--shadow-lg);
+}
+
+.room-option.selected {
+    border-color: var(--primary-color);
+    background: rgba(255, 107, 53, 0.1);
+}
+
+.option-icon {
+    width: 80px;
+    height: 80px;
+    background: var(--gradient-primary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto var(--space-lg);
+    font-size: 2rem;
+    color: white;
+}
+
+.option-title {
+    font-family: var(--font-primary);
+    font-size: 1.5rem;
+    color: var(--dark);
+    margin-bottom: var(--space-sm);
+}
+
+.option-description {
+    color: var(--gray);
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.form-section {
+    background: rgba(78, 205, 196, 0.1);
+    border-radius: var(--radius-lg);
+    padding: var(--space-xl);
+    margin-bottom: var(--space-xl);
+}
+
+.section-title {
+    color: var(--dark);
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: var(--space-lg);
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.form-group {
+    margin-bottom: var(--space-lg);
+}
+
+.form-label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: var(--space-sm);
+    font-size: 0.95rem;
+}
+
+.form-input, .form-select, .form-textarea {
+    width: 100%;
+    padding: var(--space-md);
+    border: 2px solid rgba(0,0,0,0.1);
+    border-radius: var(--radius-md);
+    font-size: 1rem;
+    font-family: var(--font-secondary);
+    transition: var(--transition-smooth);
+    background: rgba(255,255,255,0.8);
+}
+
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    background: white;
+    box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+}
+
+.form-textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.settings-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-lg);
+}
+
+.setting-item {
+    background: rgba(255,255,255,0.6);
+    border-radius: var(--radius-md);
+    padding: var(--space-lg);
+}
+
+.setting-label {
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: var(--space-sm);
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.create-btn {
+    width: 100%;
+    padding: var(--space-lg);
+    background: var(--gradient-primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 1.2rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+    margin-bottom: var(--space-lg);
+}
+
+.create-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+}
+
+.create-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.back-link {
+    text-align: center;
+}
+
+.back-link a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 600;
+    transition: var(--transition-fast);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.back-link a:hover {
+    color: var(--secondary-color);
+}
+
+@media (max-width: 768px) {
+    .room-options {
+        grid-template-columns: 1fr;
+    }
+    
+    .settings-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .create-room-card {
+        margin: var(--space-md);
+        padding: var(--space-xl);
+    }
+}
+
+@media (max-width: 480px) {
+    .create-room-title {
+        font-size: 2rem;
+    }
+    
+    .option-icon {
+        width: 60px;
+        height: 60px;
+        font-size: 1.5rem;
+    }
+    
+    .option-title {
+        font-size: 1.2rem;
+    }
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="create-room-container">
-    <h2>CREAR UNA SALA</h2>
-    <form method="POST" action="{{ url_for('generar_preguntas') }}">
-        <input type="text" name="nombre_sala" placeholder="Nombre de la sala" required>
-        <div class="btn-group">
-            <button type="submit" class="btn btn-create">Crear Sala</button>
+<div class="create-room-page">
+    <div class="create-room-card animate-fadeIn">
+        <div class="create-room-header">
+            <h1 class="create-room-title">¡Crear Nueva Sala!</h1>
+            <p class="create-room-subtitle">Configura tu sala de juego y comparte el conocimiento</p>
         </div>
-    </form>
+
+        <form method="POST" action="{{ url_for('generar_preguntas') }}" id="createRoomForm">
+            <div class="room-options">
+                <div class="room-option" data-type="quick">
+                    <div class="option-icon">
+                        <i class="fas fa-bolt"></i>
+                    </div>
+                    <h3 class="option-title">Sala Rápida</h3>
+                    <p class="option-description">Crear una sala inmediata con configuración automática</p>
+                </div>
+                
+                <div class="room-option selected" data-type="custom">
+                    <div class="option-icon">
+                        <i class="fas fa-cogs"></i>
+                    </div>
+                    <h3 class="option-title">Sala Personalizada</h3>
+                    <p class="option-description">Configura todos los detalles de tu sala</p>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h3 class="section-title">
+                    <i class="fas fa-info-circle"></i>
+                    Información Básica
+                </h3>
+                
+                <div class="form-group">
+                    <label for="nombre_sala" class="form-label">
+                        <i class="fas fa-tag"></i>
+                        Nombre de la Sala
+                    </label>
+                    <input type="text" id="nombre_sala" name="nombre_sala" required class="form-input" 
+                           placeholder="Ej: Matemáticas Avanzadas - Grupo A">
+                </div>
+                
+                <div class="form-group">
+                    <label for="descripcion" class="form-label">
+                        <i class="fas fa-align-left"></i>
+                        Descripción (Opcional)
+                    </label>
+                    <textarea id="descripcion" name="descripcion" class="form-textarea" 
+                              placeholder="Describe el objetivo de tu sala de juego..."></textarea>
+                </div>
+            </div>
+
+            <div class="form-section" id="customSettings">
+                <h3 class="section-title">
+                    <i class="fas fa-sliders-h"></i>
+                    Configuración Avanzada
+                </h3>
+                
+                <div class="settings-grid">
+                    <div class="setting-item">
+                        <label for="tiempo_pregunta" class="setting-label">
+                            <i class="fas fa-clock"></i>
+                            Tiempo por Pregunta
+                        </label>
+                        <select id="tiempo_pregunta" name="tiempo_pregunta" class="form-select">
+                            <option value="15">15 segundos</option>
+                            <option value="30" selected>30 segundos</option>
+                            <option value="45">45 segundos</option>
+                            <option value="60">1 minuto</option>
+                        </select>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <label for="num_preguntas" class="setting-label">
+                            <i class="fas fa-list-ol"></i>
+                            Número de Preguntas
+                        </label>
+                        <select id="num_preguntas" name="num_preguntas" class="form-select">
+                            <option value="5">5 preguntas</option>
+                            <option value="10" selected>10 preguntas</option>
+                            <option value="15">15 preguntas</option>
+                            <option value="20">20 preguntas</option>
+                        </select>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <label for="dificultad" class="setting-label">
+                            <i class="fas fa-chart-bar"></i>
+                            Dificultad
+                        </label>
+                        <select id="dificultad" name="dificultad" class="form-select">
+                            <option value="facil">Fácil</option>
+                            <option value="intermedio" selected>Intermedio</option>
+                            <option value="dificil">Difícil</option>
+                            <option value="mixto">Mixto</option>
+                        </select>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <label for="max_jugadores" class="setting-label">
+                            <i class="fas fa-users"></i>
+                            Máx. Jugadores
+                        </label>
+                        <select id="max_jugadores" name="max_jugadores" class="form-select">
+                            <option value="10">10 jugadores</option>
+                            <option value="20" selected>20 jugadores</option>
+                            <option value="30">30 jugadores</option>
+                            <option value="50">50 jugadores</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="create-btn" id="submitBtn">
+                <i class="fas fa-rocket"></i>
+                Crear Sala de Juego
+            </button>
+        </form>
+
+        <div class="back-link">
+            <a href="{{ url_for('dashboard') }}">
+                <i class="fas fa-arrow-left"></i>
+                Volver al Dashboard
+            </a>
+        </div>
+    </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const roomOptions = document.querySelectorAll('.room-option');
+    const customSettings = document.getElementById('customSettings');
+    const form = document.getElementById('createRoomForm');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    // Manejo de opciones de sala
+    roomOptions.forEach(option => {
+        option.addEventListener('click', function() {
+            roomOptions.forEach(opt => opt.classList.remove('selected'));
+            this.classList.add('selected');
+            
+            const type = this.dataset.type;
+            if (type === 'quick') {
+                customSettings.style.display = 'none';
+                // Valores por defecto para sala rápida
+                document.getElementById('tiempo_pregunta').value = '30';
+                document.getElementById('num_preguntas').value = '10';
+                document.getElementById('dificultad').value = 'intermedio';
+                document.getElementById('max_jugadores').value = '20';
+            } else {
+                customSettings.style.display = 'block';
+            }
+        });
+    });
+    
+    // Validación en tiempo real
+    const requiredFields = ['nombre_sala'];
+    
+    function validateForm() {
+        const isValid = requiredFields.every(fieldName => {
+            const field = document.getElementById(fieldName);
+            return field && field.value.trim() !== '';
+        });
+        
+        submitBtn.disabled = !isValid;
+        submitBtn.style.opacity = isValid ? '1' : '0.6';
+    }
+    
+    // Validar cuando se escriba en campos requeridos
+    requiredFields.forEach(fieldName => {
+        const field = document.getElementById(fieldName);
+        if (field) {
+            field.addEventListener('input', validateForm);
+        }
+    });
+    
+    // Validación inicial
+    validateForm();
+    
+    // Animación al enviar formulario
+    form.addEventListener('submit', function() {
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando sala...';
+        submitBtn.disabled = true;
+    });
+    
+    // Inicializar con configuración personalizada visible
+    const selectedOption = document.querySelector('.room-option.selected');
+    if (selectedOption && selectedOption.dataset.type === 'quick') {
+        customSettings.style.display = 'none';
+    }
+});
+</script>
 {% endblock %}

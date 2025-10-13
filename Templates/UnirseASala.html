@@ -1,26 +1,421 @@
-{% extends 'Maestra.html' %}
-{% block title %}Unirse a una Sala{% endblock %}
+{% extends "BrainRush_Master.html" %}
+
+{% block title %}Brain RUSH - Unirse a Sala{% endblock %}
+
+{% block extra_css %}
+<style>
+.join-room-page {
+    min-height: calc(100vh - 80px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-xl) 0;
+}
+
+.join-room-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-xl);
+    padding: var(--space-xxl);
+    width: 100%;
+    max-width: 500px;
+    position: relative;
+    overflow: hidden;
+}
+
+.join-room-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--gradient-accent);
+}
+
+.join-room-header {
+    text-align: center;
+    margin-bottom: var(--space-xxl);
+}
+
+.join-room-title {
+    font-family: var(--font-primary);
+    font-size: 2.5rem;
+    background: var(--gradient-accent);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: var(--space-sm);
+}
+
+.join-room-subtitle {
+    color: var(--gray);
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.join-section {
+    background: rgba(69, 183, 209, 0.1);
+    border-radius: var(--radius-lg);
+    padding: var(--space-xl);
+    margin-bottom: var(--space-xl);
+    border: 1px solid var(--accent-color);
+}
+
+.section-icon {
+    width: 80px;
+    height: 80px;
+    background: var(--gradient-accent);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto var(--space-lg);
+    font-size: 2rem;
+    color: white;
+}
+
+.form-group {
+    margin-bottom: var(--space-lg);
+}
+
+.form-label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: var(--space-sm);
+    font-size: 1rem;
+    justify-content: center;
+}
+
+.code-input {
+    width: 100%;
+    padding: var(--space-lg);
+    border: 3px solid rgba(0,0,0,0.1);
+    border-radius: var(--radius-md);
+    font-size: 1.5rem;
+    font-family: 'Courier New', monospace;
+    font-weight: 700;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    transition: var(--transition-smooth);
+    background: rgba(255,255,255,0.8);
+}
+
+.code-input:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    background: white;
+    box-shadow: 0 0 0 3px rgba(69, 183, 209, 0.2);
+    transform: scale(1.02);
+}
+
+.join-btn {
+    width: 100%;
+    padding: var(--space-lg);
+    background: var(--gradient-accent);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 1.2rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+    margin-bottom: var(--space-lg);
+}
+
+.join-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+}
+
+.join-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.divider {
+    display: flex;
+    align-items: center;
+    margin: var(--space-xl) 0;
+    color: var(--gray);
+    font-weight: 600;
+}
+
+.divider::before,
+.divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(0,0,0,0.2);
+}
+
+.divider::before {
+    margin-right: var(--space-md);
+}
+
+.divider::after {
+    margin-left: var(--space-md);
+}
+
+.create-option {
+    background: rgba(255, 107, 53, 0.1);
+    border: 1px solid var(--primary-color);
+    border-radius: var(--radius-lg);
+    padding: var(--space-xl);
+    text-align: center;
+    margin-bottom: var(--space-xl);
+}
+
+.create-title {
+    color: var(--dark);
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: var(--space-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+}
+
+.create-description {
+    color: var(--gray);
+    margin-bottom: var(--space-lg);
+    line-height: 1.5;
+}
+
+.create-btn {
+    background: var(--gradient-primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    padding: var(--space-md) var(--space-xl);
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.create-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.back-link {
+    text-align: center;
+}
+
+.back-link a {
+    color: var(--accent-color);
+    text-decoration: none;
+    font-weight: 600;
+    transition: var(--transition-fast);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.back-link a:hover {
+    color: var(--primary-color);
+}
+
+.code-format-hint {
+    text-align: center;
+    color: var(--gray);
+    font-size: 0.85rem;
+    margin-top: var(--space-sm);
+}
+
+.validation-message {
+    background: rgba(255, 118, 117, 0.1);
+    border: 1px solid var(--error-color);
+    color: var(--error-color);
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    margin-top: var(--space-md);
+    display: none;
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+.validation-message.show {
+    display: block;
+    animation: fadeIn 0.3s ease;
+}
+
+@media (max-width: 480px) {
+    .join-room-card {
+        margin: var(--space-md);
+        padding: var(--space-xl);
+    }
+    
+    .join-room-title {
+        font-size: 2rem;
+    }
+    
+    .code-input {
+        font-size: 1.2rem;
+        padding: var(--space-md);
+    }
+    
+    .section-icon {
+        width: 60px;
+        height: 60px;
+        font-size: 1.5rem;
+    }
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="join-room-container">
-    <h2>UNIRSE A UNA SALA</h2>
-    <form id="form-unirse">
-        <input type="text" id="codigo_sala" placeholder="Codigo de la sala" required>
-        <div class="btn-group">
-            <button type="submit" class="btn btn-login" id="unirseSalaBtn">Unirse a Sala</button>
+<div class="join-room-page">
+    <div class="join-room-card animate-fadeIn">
+        <div class="join-room-header">
+            <h1 class="join-room-title">¡Únete al Juego!</h1>
+            <p class="join-room-subtitle">Ingresa el código de la sala para comenzar</p>
         </div>
-    </form> <p></p>
-    <form action="{{ url_for('crear_sala') }}">
-      <div class="btn-group">
-        <button type="submit" class="btn btn-create">Crear Sala</button>
-      </div>
-    </form>
+
+        <div class="join-section">
+            <div class="section-icon">
+                <i class="fas fa-key"></i>
+            </div>
+            
+            <form id="form-unirse">
+                <div class="form-group">
+                    <label for="codigo_sala" class="form-label">
+                        <i class="fas fa-hashtag"></i>
+                        Código de la Sala
+                    </label>
+                    <input type="text" id="codigo_sala" name="codigo_sala" required 
+                           class="code-input" placeholder="ABC123" maxlength="6">
+                    <div class="code-format-hint">
+                        Formato: 6 caracteres (letras y números)
+                    </div>
+                    <div class="validation-message" id="validationMessage">
+                        Por favor, ingresa un código válido de 6 caracteres
+                    </div>
+                </div>
+
+                <button type="submit" class="join-btn" id="unirseSalaBtn">
+                    <i class="fas fa-sign-in-alt"></i>
+                    Unirse a la Sala
+                </button>
+            </form>
+        </div>
+
+        <div class="divider">O</div>
+
+        <div class="create-option">
+            <h3 class="create-title">
+                <i class="fas fa-plus-circle"></i>
+                ¿No tienes código?
+            </h3>
+            <p class="create-description">
+                Crea tu propia sala de juego y comparte el código con tus amigos
+            </p>
+            <a href="{{ url_for('crear_sala') }}" class="create-btn">
+                <i class="fas fa-rocket"></i>
+                Crear Nueva Sala
+            </a>
+        </div>
+
+        <div class="back-link">
+            <a href="{{ url_for('dashboard') }}">
+                <i class="fas fa-arrow-left"></i>
+                Volver al Dashboard
+            </a>
+        </div>
+    </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
 <script src="/static/js/unirse_validaciones.js"></script>
 <script>
-document.getElementById('form-unirse').onsubmit = function(e) {
-    if (!validarCodigoSala()) {
-        e.preventDefault();
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('form-unirse');
+    const codigoInput = document.getElementById('codigo_sala');
+    const submitBtn = document.getElementById('unirseSalaBtn');
+    const validationMessage = document.getElementById('validationMessage');
+    
+    // Formateo automático del código
+    codigoInput.addEventListener('input', function() {
+        // Convertir a mayúsculas y limitar caracteres
+        this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 6);
+        
+        // Validación en tiempo real
+        validateCode();
+    });
+    
+    function validateCode() {
+        const code = codigoInput.value;
+        const isValid = code.length === 6 && /^[A-Z0-9]{6}$/.test(code);
+        
+        if (code.length > 0 && !isValid) {
+            validationMessage.classList.add('show');
+            submitBtn.disabled = true;
+        } else {
+            validationMessage.classList.remove('show');
+            submitBtn.disabled = code.length < 6;
+        }
+        
+        // Cambiar apariencia del input según validación
+        if (code.length === 6 && isValid) {
+            codigoInput.style.borderColor = 'var(--success-color)';
+            codigoInput.style.backgroundColor = 'rgba(150, 206, 180, 0.1)';
+        } else if (code.length > 0) {
+            codigoInput.style.borderColor = code.length < 6 ? 'var(--warning-color)' : 'var(--error-color)';
+            codigoInput.style.backgroundColor = 'rgba(255, 118, 117, 0.1)';
+        } else {
+            codigoInput.style.borderColor = 'rgba(0,0,0,0.1)';
+            codigoInput.style.backgroundColor = 'rgba(255,255,255,0.8)';
+        }
     }
-};
+    
+    // Validación al enviar formulario
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        if (!validarCodigoSala()) {
+            validationMessage.textContent = 'Código inválido. Debe tener 6 caracteres alfanuméricos.';
+            validationMessage.classList.add('show');
+            return;
+        }
+        
+        // Animación de envío
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Conectando...';
+        submitBtn.disabled = true;
+        
+        // Aquí iría la lógica para unirse a la sala
+        // Por ahora simulamos un pequeño delay
+        setTimeout(() => {
+            // Redirigir o procesar la unión a la sala
+            console.log('Intentando unirse a la sala:', codigoInput.value);
+            // form.submit(); // Descomentar cuando esté lista la funcionalidad backend
+            
+            // Mostrar mensaje de éxito temporalmente
+            submitBtn.innerHTML = '<i class="fas fa-check"></i> ¡Conectado!';
+            submitBtn.style.background = 'var(--gradient-success)';
+        }, 1500);
+    });
+    
+    // Validación inicial
+    validateCode();
+    
+    // Función de validación externa (del archivo unirse_validaciones.js)
+    window.validarCodigoSala = function() {
+        const codigo = codigoInput.value;
+        return codigo.length === 6 && /^[A-Z0-9]{6}$/.test(codigo);
+    };
+});
 </script>
 {% endblock %}

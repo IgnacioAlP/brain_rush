@@ -1,0 +1,588 @@
+{% extends "BrainRush_Master.html" %}
+
+{% block title %}Brain RUSH - Panel Administrativo{% endblock %}
+
+{% block extra_css %}
+<style>
+.admin-dashboard {
+    padding: var(--space-xl) 0;
+}
+
+.dashboard-header {
+    text-align: center;
+    margin-bottom: var(--space-xxl);
+}
+
+.dashboard-title {
+    font-family: var(--font-primary);
+    font-size: 2.5rem;
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: var(--space-sm);
+}
+
+.dashboard-subtitle {
+    color: rgba(255,255,255,0.9);
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.stats-overview {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--space-lg);
+    margin-bottom: var(--space-xxl);
+}
+
+.stat-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: var(--radius-lg);
+    padding: var(--space-xl);
+    box-shadow: var(--shadow-md);
+    transition: var(--transition-smooth);
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--gradient-primary);
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+}
+
+.stat-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    margin-bottom: var(--space-lg);
+}
+
+.stat-icon {
+    width: 50px;
+    height: 50px;
+    background: var(--gradient-primary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+}
+
+.stat-info h3 {
+    color: var(--dark);
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: var(--space-xs);
+}
+
+.stat-number {
+    font-family: var(--font-primary);
+    font-size: 2rem;
+    color: var(--primary-color);
+    font-weight: bold;
+}
+
+.stat-change {
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-top: var(--space-xs);
+}
+
+.stat-change.positive {
+    color: var(--success-color);
+}
+
+.stat-change.negative {
+    color: var(--error-color);
+}
+
+.admin-sections {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-xl);
+}
+
+.admin-section {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: var(--radius-lg);
+    padding: var(--space-xl);
+    box-shadow: var(--shadow-md);
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-lg);
+    padding-bottom: var(--space-md);
+    border-bottom: 2px solid rgba(0,0,0,0.1);
+}
+
+.section-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    color: var(--dark);
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+.action-menu {
+    display: flex;
+    gap: var(--space-sm);
+}
+
+.action-btn {
+    padding: var(--space-sm) var(--space-md);
+    background: var(--gradient-primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition-fast);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+}
+
+.action-btn:hover {
+    transform: scale(1.05);
+}
+
+.action-btn.secondary {
+    background: var(--gradient-secondary);
+}
+
+.action-btn.accent {
+    background: var(--gradient-accent);
+}
+
+.quick-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-md);
+}
+
+.quick-action {
+    background: rgba(78, 205, 196, 0.1);
+    border: 1px solid var(--secondary-color);
+    border-radius: var(--radius-md);
+    padding: var(--space-lg);
+    text-align: center;
+    transition: var(--transition-smooth);
+    cursor: pointer;
+    text-decoration: none;
+    color: var(--dark);
+}
+
+.quick-action:hover {
+    background: rgba(78, 205, 196, 0.2);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.quick-action-icon {
+    width: 40px;
+    height: 40px;
+    background: var(--gradient-secondary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto var(--space-md);
+    color: white;
+    font-size: 1.2rem;
+}
+
+.quick-action-title {
+    font-weight: 600;
+    margin-bottom: var(--space-xs);
+    color: var(--dark);
+}
+
+.quick-action-desc {
+    font-size: 0.8rem;
+    color: var(--gray);
+}
+
+.recent-activity {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.activity-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    border-radius: var(--radius-sm);
+    margin-bottom: var(--space-sm);
+    transition: var(--transition-fast);
+}
+
+.activity-item:hover {
+    background: rgba(0,0,0,0.05);
+}
+
+.activity-icon {
+    width: 32px;
+    height: 32px;
+    background: var(--gradient-accent);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+}
+
+.activity-content {
+    flex: 1;
+}
+
+.activity-text {
+    font-size: 0.9rem;
+    color: var(--dark);
+    margin-bottom: var(--space-xs);
+}
+
+.activity-time {
+    font-size: 0.75rem;
+    color: var(--gray);
+}
+
+.system-status {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: var(--space-md);
+}
+
+.status-item {
+    text-align: center;
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    background: rgba(0,0,0,0.05);
+}
+
+.status-indicator {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    margin: 0 auto var(--space-sm);
+}
+
+.status-indicator.online {
+    background: var(--success-color);
+    box-shadow: 0 0 10px rgba(150, 206, 180, 0.5);
+}
+
+.status-indicator.warning {
+    background: var(--warning-color);
+    box-shadow: 0 0 10px rgba(255, 234, 167, 0.5);
+}
+
+.status-indicator.offline {
+    background: var(--error-color);
+    box-shadow: 0 0 10px rgba(255, 118, 117, 0.5);
+}
+
+.status-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--dark);
+}
+
+@media (max-width: 768px) {
+    .admin-sections {
+        grid-template-columns: 1fr;
+    }
+    
+    .stats-overview {
+        grid-template-columns: 1fr;
+    }
+    
+    .dashboard-title {
+        font-size: 2rem;
+    }
+    
+    .action-menu {
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 480px) {
+    .quick-actions {
+        grid-template-columns: 1fr;
+    }
+    
+    .system-status {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-dashboard">
+    <div class="dashboard-header">
+        <h1 class="dashboard-title">Panel de Administración</h1>
+        <p class="dashboard-subtitle">Gestiona y monitorea toda la plataforma Brain RUSH</p>
+    </div>
+
+    <!-- Estadísticas Generales -->
+    <div class="stats-overview">
+        <div class="stat-card animate-fadeIn">
+            <div class="stat-header">
+                <div class="stat-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>Usuarios Totales</h3>
+                </div>
+            </div>
+            <div class="stat-number">1,247</div>
+            <div class="stat-change positive">
+                <i class="fas fa-arrow-up"></i> +15% este mes
+            </div>
+        </div>
+
+        <div class="stat-card animate-fadeIn" style="animation-delay: 0.1s;">
+            <div class="stat-header">
+                <div class="stat-icon">
+                    <i class="fas fa-gamepad"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>Salas Activas</h3>
+                </div>
+            </div>
+            <div class="stat-number">23</div>
+            <div class="stat-change positive">
+                <i class="fas fa-arrow-up"></i> +8 hoy
+            </div>
+        </div>
+
+        <div class="stat-card animate-fadeIn" style="animation-delay: 0.2s;">
+            <div class="stat-header">
+                <div class="stat-icon">
+                    <i class="fas fa-question-circle"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>Preguntas Totales</h3>
+                </div>
+            </div>
+            <div class="stat-number">8,432</div>
+            <div class="stat-change positive">
+                <i class="fas fa-arrow-up"></i> +125 esta semana
+            </div>
+        </div>
+
+        <div class="stat-card animate-fadeIn" style="animation-delay: 0.3s;">
+            <div class="stat-header">
+                <div class="stat-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <div class="stat-info">
+                    <h3>Partidas Jugadas</h3>
+                </div>
+            </div>
+            <div class="stat-number">15,628</div>
+            <div class="stat-change positive">
+                <i class="fas fa-arrow-up"></i> +342 hoy
+            </div>
+        </div>
+    </div>
+
+    <!-- Secciones Principales -->
+    <div class="admin-sections">
+        <!-- Gestión de Usuarios -->
+        <div class="admin-section animate-fadeIn" style="animation-delay: 0.4s;">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="fas fa-users-cog"></i>
+                    Gestión de Usuarios
+                </h2>
+                <div class="action-menu">
+                    <a href="#" class="action-btn">
+                        <i class="fas fa-plus"></i> Nuevo Usuario
+                    </a>
+                    <a href="#" class="action-btn secondary">
+                        <i class="fas fa-list"></i> Ver Todos
+                    </a>
+                </div>
+            </div>
+
+            <div class="quick-actions">
+                <a href="#" class="quick-action">
+                    <div class="quick-action-icon">
+                        <i class="fas fa-user-graduate"></i>
+                    </div>
+                    <div class="quick-action-title">Estudiantes</div>
+                    <div class="quick-action-desc">Gestionar estudiantes</div>
+                </a>
+                <a href="#" class="quick-action">
+                    <div class="quick-action-icon">
+                        <i class="fas fa-chalkboard-teacher"></i>
+                    </div>
+                    <div class="quick-action-title">Profesores</div>
+                    <div class="quick-action-desc">Gestionar profesores</div>
+                </a>
+                <a href="#" class="quick-action">
+                    <div class="quick-action-icon">
+                        <i class="fas fa-ban"></i>
+                    </div>
+                    <div class="quick-action-title">Suspendidos</div>
+                    <div class="quick-action-desc">Usuarios bloqueados</div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Gestión de Contenido -->
+        <div class="admin-section animate-fadeIn" style="animation-delay: 0.5s;">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="fas fa-book"></i>
+                    Gestión de Contenido
+                </h2>
+                <div class="action-menu">
+                    <a href="{{ url_for('crear_cuestionario_route') }}" class="action-btn">
+                        <i class="fas fa-plus"></i> Nuevo Cuestionario
+                    </a>
+                    <a href="#" class="action-btn accent">
+                        <i class="fas fa-chart-bar"></i> Estadísticas
+                    </a>
+                </div>
+            </div>
+
+            <div class="quick-actions">
+                <a href="{{ url_for('mis_cuestionarios') }}" class="quick-action">
+                    <div class="quick-action-icon">
+                        <i class="fas fa-clipboard-list"></i>
+                    </div>
+                    <div class="quick-action-title">Cuestionarios</div>
+                    <div class="quick-action-desc">Administrar preguntas</div>
+                </a>
+                <a href="#" class="quick-action">
+                    <div class="quick-action-icon">
+                        <i class="fas fa-tags"></i>
+                    </div>
+                    <div class="quick-action-title">Categorías</div>
+                    <div class="quick-action-desc">Organizar temas</div>
+                </a>
+                <a href="#" class="quick-action">
+                    <div class="quick-action-icon">
+                        <i class="fas fa-flag"></i>
+                    </div>
+                    <div class="quick-action-title">Reportes</div>
+                    <div class="quick-action-desc">Contenido reportado</div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Actividad Reciente -->
+        <div class="admin-section animate-fadeIn" style="animation-delay: 0.6s;">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="fas fa-clock"></i>
+                    Actividad Reciente
+                </h2>
+                <div class="action-menu">
+                    <a href="#" class="action-btn secondary">
+                        <i class="fas fa-sync"></i> Actualizar
+                    </a>
+                </div>
+            </div>
+
+            <div class="recent-activity">
+                <div class="activity-item">
+                    <div class="activity-icon">
+                        <i class="fas fa-user-plus"></i>
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-text">Nuevo usuario registrado: María González</div>
+                        <div class="activity-time">Hace 5 minutos</div>
+                    </div>
+                </div>
+                <div class="activity-item">
+                    <div class="activity-icon">
+                        <i class="fas fa-gamepad"></i>
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-text">Sala "Matemáticas 5to" iniciada por Prof. López</div>
+                        <div class="activity-time">Hace 12 minutos</div>
+                    </div>
+                </div>
+                <div class="activity-item">
+                    <div class="activity-icon">
+                        <i class="fas fa-question"></i>
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-text">15 nuevas preguntas añadidas por Prof. Martínez</div>
+                        <div class="activity-time">Hace 1 hora</div>
+                    </div>
+                </div>
+                <div class="activity-item">
+                    <div class="activity-icon">
+                        <i class="fas fa-trophy"></i>
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-text">Partida completada: 25 estudiantes participaron</div>
+                        <div class="activity-time">Hace 2 horas</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Estado del Sistema -->
+        <div class="admin-section animate-fadeIn" style="animation-delay: 0.7s;">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="fas fa-server"></i>
+                    Estado del Sistema
+                </h2>
+                <div class="action-menu">
+                    <a href="#" class="action-btn accent">
+                        <i class="fas fa-cog"></i> Configuración
+                    </a>
+                </div>
+            </div>
+
+            <div class="system-status">
+                <div class="status-item">
+                    <div class="status-indicator online"></div>
+                    <div class="status-label">Servidor Principal</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-indicator online"></div>
+                    <div class="status-label">Base de Datos</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-indicator warning"></div>
+                    <div class="status-label">Memoria</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-indicator online"></div>
+                    <div class="status-label">Red</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resultados - Brain RUSH</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #222 0%, #444 100%);
+      min-height: 100vh;
+      color: white;
+    }
+
+    .header {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 20px;
+      text-align: center;
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .header h1 {
+      font-size: 28px;
+      margin-bottom: 10px;
+    }
+
+    .game-info {
+      opacity: 0.8;
+      font-size: 16px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 30px 20px;
+    }
+
+    .podium-section {
+      margin-bottom: 40px;
+    }
+
+    .podium {
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      gap: 20px;
+      margin: 40px 0;
+      min-height: 300px;
+    }
+
+    .podium-place {
+      text-align: center;
+      position: relative;
+      animation: slideUp 1s ease-out;
+    }
+
+    .podium-place.first {
+      order: 2;
+      animation-delay: 0.2s;
+    }
+
+    .podium-place.second {
+      order: 1;
+      animation-delay: 0.4s;
+    }
+
+    .podium-place.third {
+      order: 3;
+      animation-delay: 0.6s;
+    }
+
+    .podium-player {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 15px;
+      backdrop-filter: blur(10px);
+      border: 2px solid transparent;
+      transition: all 0.3s;
+    }
+
+    .podium-place.first .podium-player {
+      border-color: #FFD700;
+      background: rgba(255, 215, 0, 0.2);
+    }
+
+    .podium-place.second .podium-player {
+      border-color: #C0C0C0;
+      background: rgba(192, 192, 192, 0.2);
+    }
+
+    .podium-place.third .podium-player {
+      border-color: #CD7F32;
+      background: rgba(205, 127, 50, 0.2);
+    }
+
+    .player-avatar {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #4CAF50, #66BB6A);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      font-weight: bold;
+      margin: 0 auto 10px;
+      color: white;
+    }
+
+    .player-name {
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    .player-score {
+      font-size: 24px;
+      font-weight: bold;
+      color: #4CAF50;
+    }
+
+    .podium-base {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 8px 8px 0 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+      font-weight: bold;
+      color: white;
+      position: relative;
+    }
+
+    .podium-place.first .podium-base {
+      height: 120px;
+      width: 120px;
+      background: linear-gradient(135deg, #FFD700, #FFA000);
+    }
+
+    .podium-place.second .podium-base {
+      height: 90px;
+      width: 120px;
+      background: linear-gradient(135deg, #C0C0C0, #9E9E9E);
+    }
+
+    .podium-place.third .podium-base {
+      height: 60px;
+      width: 120px;
+      background: linear-gradient(135deg, #CD7F32, #8D5524);
+    }
+
+    .rankings-section {
+      margin-top: 40px;
+    }
+
+    .section-title {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .rankings-table {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      backdrop-filter: blur(10px);
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .table-header {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 15px 20px;
+      display: grid;
+      grid-template-columns: 60px 1fr 120px 120px 120px;
+      gap: 15px;
+      font-weight: bold;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .table-row {
+      padding: 15px 20px;
+      display: grid;
+      grid-template-columns: 60px 1fr 120px 120px 120px;
+      gap: 15px;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      transition: background 0.3s;
+    }
+
+    .table-row:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .table-row:last-child {
+      border-bottom: none;
+    }
+
+    .rank-number {
+      font-size: 18px;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    .rank-number.top3 {
+      color: #FFD700;
+    }
+
+    .player-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .player-info .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #4CAF50, #66BB6A);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: white;
+    }
+
+    .stat-value {
+      text-align: center;
+      font-weight: bold;
+    }
+
+    .correct-answers {
+      color: #4CAF50;
+    }
+
+    .accuracy {
+      color: #2196F3;
+    }
+
+    .final-score {
+      color: #FFD700;
+      font-size: 18px;
+    }
+
+    .stats-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin: 30px 0;
+    }
+
+    .stat-card {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .stat-card h3 {
+      font-size: 24px;
+      color: #4CAF50;
+      margin-bottom: 5px;
+    }
+
+    .stat-card p {
+      opacity: 0.8;
+      font-size: 14px;
+    }
+
+    .actions {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-top: 40px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #4CAF50, #66BB6A);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #45a049, #5cb85c);
+      transform: translateY(-2px);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      border: 2px solid rgba(255, 255, 255, 0.5);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.3);
+      border-color: white;
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(50px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        padding: 20px 15px;
+      }
+
+      .podium {
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
+        min-height: auto;
+      }
+
+      .podium-place {
+        order: unset !important;
+        width: 100%;
+        max-width: 300px;
+      }
+
+      .podium-place .podium-base {
+        width: 100%;
+        height: 60px;
+      }
+
+      .table-header,
+      .table-row {
+        grid-template-columns: 50px 1fr 80px 80px;
+        gap: 10px;
+        font-size: 14px;
+        padding: 12px 15px;
+      }
+
+      .table-header .stat-value:last-child,
+      .table-row .stat-value:last-child {
+        display: none;
+      }
+
+      .player-info .avatar {
+        width: 35px;
+        height: 35px;
+        font-size: 14px;
+      }
+
+      .actions {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .btn {
+        width: 100%;
+        max-width: 300px;
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🏆 Resultados Finales</h1>
+    <div class="game-info">
+      Sala: {{ nombre_cuestionario | default("Brain RUSH Quiz") }} | PIN: {{ pin_sala | default("123456") }}
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- Podium Top 3 -->
+    <div class="podium-section">
+      <div class="podium" id="podium">
+        <!-- Se llenará dinámicamente -->
+      </div>
+    </div>
+
+    <!-- Estadísticas generales -->
+    <div class="stats-summary">
+      <div class="stat-card">
+        <h3 id="total-players">{{ total_jugadores | default("8") }}</h3>
+        <p>Jugadores participantes</p>
+      </div>
+      <div class="stat-card">
+        <h3 id="total-questions">{{ total_preguntas | default("10") }}</h3>
+        <p>Preguntas respondidas</p>
+      </div>
+      <div class="stat-card">
+        <h3 id="avg-score">750</h3>
+        <p>Puntuación promedio</p>
+      </div>
+      <div class="stat-card">
+        <h3 id="completion-time">5:23</h3>
+        <p>Tiempo total</p>
+      </div>
+    </div>
+
+    <!-- Tabla completa de rankings -->
+    <div class="rankings-section">
+      <h2 class="section-title">📊 Clasificación Completa</h2>
+      <div class="rankings-table">
+        <div class="table-header">
+          <div>Pos.</div>
+          <div>Jugador</div>
+          <div>Correctas</div>
+          <div>Precisión</div>
+          <div>Puntuación</div>
+        </div>
+        <div id="rankings-list">
+          <!-- Se llenará dinámicamente -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Acciones -->
+    <div class="actions">
+      <a href="/crear-sala" class="btn btn-primary">
+        🎮 Nuevo Juego
+      </a>
+      <a href="/mis-cuestionarios" class="btn btn-secondary">
+        📚 Mis Cuestionarios
+      </a>
+      <button class="btn btn-secondary" onclick="exportarResultados()">
+        📊 Exportar Resultados
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // Datos de demo (en producción vendrían del servidor)
+    const resultadosDemo = [
+      { 
+        posicion: 1, 
+        nombre: "Ana García", 
+        correctas: 8, 
+        total: 10, 
+        puntuacion: 950,
+        tiempo_promedio: 12.3
+      },
+      { 
+        posicion: 2, 
+        nombre: "Carlos López", 
+        correctas: 7, 
+        total: 10, 
+        puntuacion: 820,
+        tiempo_promedio: 15.1
+      },
+      { 
+        posicion: 3, 
+        nombre: "María Santos", 
+        correctas: 7, 
+        total: 10, 
+        puntuacion: 790,
+        tiempo_promedio: 16.8
+      },
+      { 
+        posicion: 4, 
+        nombre: "Pedro Ruiz", 
+        correctas: 6, 
+        total: 10, 
+        puntuacion: 680,
+        tiempo_promedio: 18.2
+      },
+      { 
+        posicion: 5, 
+        nombre: "Laura Díez", 
+        correctas: 6, 
+        total: 10, 
+        puntuacion: 650,
+        tiempo_promedio: 19.5
+      },
+      { 
+        posicion: 6, 
+        nombre: "David Mora", 
+        correctas: 5, 
+        total: 10, 
+        puntuacion: 520,
+        tiempo_promedio: 21.3
+      },
+      { 
+        posicion: 7, 
+        nombre: "Elena Vega", 
+        correctas: 4, 
+        total: 10, 
+        puntuacion: 420,
+        tiempo_promedio: 22.8
+      },
+      { 
+        posicion: 8, 
+        nombre: "Javier Cruz", 
+        correctas: 3, 
+        total: 10, 
+        puntuacion: 350,
+        tiempo_promedio: 24.1
+      }
+    ];
+
+    function initializeResults() {
+      cargarPodium();
+      cargarTablaCompleta();
+      calcularEstadisticas();
+    }
+
+    function cargarPodium() {
+      const podium = document.getElementById('podium');
+      const top3 = resultadosDemo.slice(0, 3);
+      
+      const podiumHTML = top3.map((player, index) => {
+        const medals = ['🥇', '🥈', '🥉'];
+        const classes = ['first', 'second', 'third'];
+        const positions = ['1°', '2°', '3°'];
+        
+        return `
+          <div class="podium-place ${classes[index]}">
+            <div class="podium-player">
+              <div class="player-avatar">
+                ${player.nombre.charAt(0).toUpperCase()}
+              </div>
+              <div class="player-name">${player.nombre}</div>
+              <div class="player-score">${player.puntuacion} pts</div>
+            </div>
+            <div class="podium-base">
+              ${positions[index]}
+            </div>
+          </div>
+        `;
+      }).join('');
+      
+      podium.innerHTML = podiumHTML;
+    }
+
+    function cargarTablaCompleta() {
+      const rankingsList = document.getElementById('rankings-list');
+      
+      const tablasHTML = resultadosDemo.map(player => {
+        const precision = Math.round((player.correctas / player.total) * 100);
+        const isTop3 = player.posicion <= 3;
+        
+        return `
+          <div class="table-row">
+            <div class="rank-number ${isTop3 ? 'top3' : ''}">${player.posicion}</div>
+            <div class="player-info">
+              <div class="avatar">${player.nombre.charAt(0).toUpperCase()}</div>
+              <span>${player.nombre}</span>
+            </div>
+            <div class="stat-value correct-answers">${player.correctas}/${player.total}</div>
+            <div class="stat-value accuracy">${precision}%</div>
+            <div class="stat-value final-score">${player.puntuacion}</div>
+          </div>
+        `;
+      }).join('');
+      
+      rankingsList.innerHTML = tablasHTML;
+    }
+
+    function calcularEstadisticas() {
+      const totalPlayers = resultadosDemo.length;
+      const totalQuestions = resultadosDemo[0]?.total || 10;
+      const avgScore = Math.round(
+        resultadosDemo.reduce((sum, p) => sum + p.puntuacion, 0) / totalPlayers
+      );
+      
+      // Simular tiempo total del juego
+      const minutes = Math.floor(Math.random() * 3) + 4;
+      const seconds = Math.floor(Math.random() * 60);
+      const completionTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+      
+      document.getElementById('total-players').textContent = totalPlayers;
+      document.getElementById('total-questions').textContent = totalQuestions;
+      document.getElementById('avg-score').textContent = avgScore;
+      document.getElementById('completion-time').textContent = completionTime;
+    }
+
+    function exportarResultados() {
+      // Simular exportación de resultados
+      const csvContent = [
+        'Posición,Nombre,Respuestas Correctas,Total Preguntas,Precisión,Puntuación',
+        ...resultadosDemo.map(p => {
+          const precision = Math.round((p.correctas / p.total) * 100);
+          return `${p.posicion},${p.nombre},${p.correctas},${p.total},${precision}%,${p.puntuacion}`;
+        })
+      ].join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `resultados_brain_rush_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      // Mostrar confirmación
+      alert('📊 Resultados exportados correctamente como archivo CSV');
+    }
+
+    // Inicializar cuando se carga la página
+    document.addEventListener('DOMContentLoaded', initializeResults);
+  </script>
+</body>
+</html>
