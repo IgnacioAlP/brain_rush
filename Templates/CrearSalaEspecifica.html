@@ -1,0 +1,465 @@
+{% extends "BrainRush_Master.html" %}
+
+{% block title %}Brain RUSH - Crear Sala para {{ cuestionario.titulo }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.crear-sala-page {
+    padding: var(--space-xl) 0;
+}
+
+.sala-header {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: var(--radius-xl);
+    padding: var(--space-xxl);
+    margin-bottom: var(--space-xl);
+    box-shadow: var(--shadow-xl);
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.sala-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--gradient-secondary);
+}
+
+.page-title {
+    font-family: var(--font-primary);
+    font-size: 2.5rem;
+    background: var(--gradient-secondary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: var(--space-md);
+}
+
+.cuestionario-info {
+    background: rgba(79, 70, 229, 0.1);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    margin-bottom: var(--space-xl);
+}
+
+.cuestionario-title {
+    font-size: 1.3rem;
+    color: var(--primary-dark);
+    margin-bottom: var(--space-sm);
+    font-weight: 600;
+}
+
+.cuestionario-stats {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-lg);
+    flex-wrap: wrap;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    color: rgba(30, 30, 30, 0.7);
+    font-size: 0.95rem;
+}
+
+.form-section {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: var(--radius-xl);
+    padding: var(--space-xxl);
+    box-shadow: var(--shadow-xl);
+    margin-bottom: var(--space-xl);
+}
+
+.section-title {
+    font-size: 1.5rem;
+    color: var(--primary-dark);
+    margin-bottom: var(--space-xl);
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+}
+
+.form-group {
+    margin-bottom: var(--space-xl);
+}
+
+.form-label {
+    display: block;
+    margin-bottom: var(--space-sm);
+    color: var(--primary-dark);
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.form-input {
+    width: 100%;
+    padding: var(--space-md);
+    border: 2px solid rgba(209, 213, 219, 0.5);
+    border-radius: var(--radius-lg);
+    font-size: 1rem;
+    background: rgba(249, 250, 251, 0.8);
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    background: white;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.form-help {
+    color: rgba(30, 30, 30, 0.6);
+    font-size: 0.9rem;
+    margin-top: var(--space-sm);
+}
+
+.capacidad-selector {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: var(--space-md);
+    margin-top: var(--space-md);
+}
+
+.capacidad-option {
+    padding: var(--space-md);
+    border: 2px solid rgba(209, 213, 219, 0.5);
+    border-radius: var(--radius-lg);
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: rgba(249, 250, 251, 0.8);
+}
+
+.capacidad-option:hover {
+    border-color: var(--primary-color);
+    background: rgba(79, 70, 229, 0.05);
+}
+
+.capacidad-option.selected {
+    border-color: var(--primary-color);
+    background: var(--primary-color);
+    color: white;
+}
+
+.capacidad-number {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: var(--space-xs);
+}
+
+.action-buttons {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-md);
+    margin-top: var(--space-xl);
+}
+
+.action-btn {
+    padding: var(--space-md) var(--space-xl);
+    border: none;
+    border-radius: var(--radius-lg);
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    font-size: 1rem;
+}
+
+.btn-primary {
+    background: var(--gradient-primary);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn-outline {
+    background: transparent;
+    color: var(--primary-color);
+    border: 2px solid var(--primary-color);
+}
+
+.btn-outline:hover {
+    background: var(--primary-color);
+    color: white;
+    transform: translateY(-2px);
+}
+
+.loading-spinner {
+    display: none;
+    width: 20px;
+    height: 20px;
+    border: 2px solid transparent;
+    border-top: 2px solid currentColor;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.preview-section {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(16, 185, 129, 0.1));
+    border: 2px dashed rgba(34, 197, 94, 0.3);
+    border-radius: var(--radius-xl);
+    padding: var(--space-xl);
+    text-align: center;
+    margin-top: var(--space-xl);
+}
+
+.preview-title {
+    color: rgb(34, 197, 94);
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: var(--space-md);
+}
+
+.preview-info {
+    color: rgba(30, 30, 30, 0.7);
+    font-size: 0.95rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container crear-sala-page">
+    <!-- Header de la Página -->
+    <div class="sala-header animate-fadeIn">
+        <h1 class="page-title">🎯 Crear Sala de Juego</h1>
+        
+        <div class="cuestionario-info">
+            <h2 class="cuestionario-title">{{ cuestionario.titulo }}</h2>
+            {% if cuestionario.descripcion %}
+            <p style="color: rgba(30, 30, 30, 0.7); margin-bottom: var(--space-md);">{{ cuestionario.descripcion }}</p>
+            {% endif %}
+            <div class="cuestionario-stats">
+                <div class="stat-item">
+                    <i class="fas fa-question-circle"></i>
+                    {{ cuestionario.num_preguntas }} pregunta{{ 's' if cuestionario.num_preguntas != 1 else '' }}
+                </div>
+                <div class="stat-item">
+                    <i class="fas fa-check-circle"></i>
+                    Cuestionario publicado
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulario de Configuración -->
+    <div class="form-section animate-fadeIn" style="animation-delay: 0.2s;">
+        <h2 class="section-title">
+            <i class="fas fa-cog"></i>
+            Configuración de la Sala
+        </h2>
+
+        <form id="create-room-form" method="POST">
+            <div class="form-group">
+                <label for="nombre_sala" class="form-label">
+                    <i class="fas fa-tag"></i>
+                    Nombre de la Sala
+                </label>
+                <input type="text" 
+                       id="nombre_sala" 
+                       name="nombre_sala" 
+                       class="form-input"
+                       value="Sala - {{ cuestionario.titulo }}"
+                       placeholder="Ej: Examen Final - Matemáticas"
+                       required>
+                <div class="form-help">Este nombre ayudará a identificar la sala en el panel de control</div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fas fa-users"></i>
+                    Capacidad Máxima
+                </label>
+                <div class="capacidad-selector">
+                    <div class="capacidad-option" data-value="20">
+                        <div class="capacidad-number">20</div>
+                        <div>Pequeña</div>
+                    </div>
+                    <div class="capacidad-option selected" data-value="50">
+                        <div class="capacidad-number">50</div>
+                        <div>Mediana</div>
+                    </div>
+                    <div class="capacidad-option" data-value="100">
+                        <div class="capacidad-number">100</div>
+                        <div>Grande</div>
+                    </div>
+                    <div class="capacidad-option" data-value="200">
+                        <div class="capacidad-number">200</div>
+                        <div>Masiva</div>
+                    </div>
+                </div>
+                <input type="hidden" id="capacidad_maxima" name="capacidad_maxima" value="50">
+                <div class="form-help">Número máximo de estudiantes que pueden unirse a la sala</div>
+            </div>
+
+            <!-- Preview de la Sala -->
+            <div class="preview-section">
+                <div class="preview-title">
+                    <i class="fas fa-eye"></i>
+                    Vista Previa de la Sala
+                </div>
+                <div class="preview-info">
+                    <strong id="preview-name">Sala - {{ cuestionario.titulo }}</strong><br>
+                    Capacidad: <span id="preview-capacity">50</span> estudiantes<br>
+                    Cuestionario: {{ cuestionario.titulo }} ({{ cuestionario.num_preguntas }} preguntas)
+                </div>
+            </div>
+
+            <!-- Botones de Acción -->
+            <div class="action-buttons">
+                <a href="{{ url_for('mis_cuestionarios') }}" class="action-btn btn-outline">
+                    <i class="fas fa-arrow-left"></i>
+                    Cancelar
+                </a>
+                
+                <button type="submit" class="action-btn btn-primary" id="create-btn">
+                    <i class="fas fa-plus" id="create-icon"></i>
+                    <div class="loading-spinner" id="loading-spinner"></div>
+                    <span id="create-text">Crear Sala</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Manejo de selección de capacidad
+    const capacidadOptions = document.querySelectorAll('.capacidad-option');
+    const capacidadInput = document.getElementById('capacidad_maxima');
+    const previewCapacity = document.getElementById('preview-capacity');
+    
+    capacidadOptions.forEach(option => {
+        option.addEventListener('click', function() {
+            // Remover selección anterior
+            capacidadOptions.forEach(opt => opt.classList.remove('selected'));
+            
+            // Agregar selección actual
+            this.classList.add('selected');
+            
+            // Actualizar valor
+            const value = this.dataset.value;
+            capacidadInput.value = value;
+            previewCapacity.textContent = value;
+        });
+    });
+    
+    // Actualización del preview del nombre
+    const nombreInput = document.getElementById('nombre_sala');
+    const previewName = document.getElementById('preview-name');
+    
+    nombreInput.addEventListener('input', function() {
+        previewName.textContent = this.value || 'Sala sin nombre';
+    });
+    
+    // Manejo del formulario
+    const form = document.getElementById('create-room-form');
+    const createBtn = document.getElementById('create-btn');
+    const createIcon = document.getElementById('create-icon');
+    const loadingSpinner = document.getElementById('loading-spinner');
+    const createText = document.getElementById('create-text');
+    
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Deshabilitar botón y mostrar loading
+        createBtn.disabled = true;
+        createIcon.style.display = 'none';
+        loadingSpinner.style.display = 'block';
+        createText.textContent = 'Creando Sala...';
+        
+        // Enviar datos
+        const formData = new FormData(form);
+        
+        fetch(form.action || window.location.href, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            console.log('Response status:', response.status);
+            console.log('Response headers:', response.headers);
+            
+            if (response.ok) {
+                return response.json();
+            } else {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+        })
+        .then(data => {
+            console.log('Response data:', data);
+            
+            if (data && data.success) {
+                // Éxito - mostrar mensaje y redirigir
+                createText.textContent = '¡Sala Creada!';
+                createIcon.style.display = 'block';
+                loadingSpinner.style.display = 'none';
+                
+                setTimeout(() => {
+                    if (data.sala_id) {
+                        window.location.href = `/monitorear-sala/${data.sala_id}`;
+                    } else {
+                        window.location.href = "{{ url_for('mis_cuestionarios') }}";
+                    }
+                }, 1500);
+            } else {
+                throw new Error(data?.error || 'Error desconocido');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            
+            // Restaurar botón
+            createBtn.disabled = false;
+            createIcon.style.display = 'block';
+            loadingSpinner.style.display = 'none';
+            createText.textContent = 'Crear Sala';
+            
+            // Mostrar error
+            alert('Error al crear la sala: ' + error.message);
+        });
+    });
+    
+    // Animaciones
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    });
+    
+    document.querySelectorAll('.animate-fadeIn').forEach(el => {
+        observer.observe(el);
+    });
+});
+</script>
+{% endblock %}

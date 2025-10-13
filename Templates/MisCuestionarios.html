@@ -1,0 +1,431 @@
+{% extends "BrainRush_Master.html" %}
+
+{% block title %}Brain RUSH - Mis Cuestionarios{% endblock %}
+
+{% block extra_css %}
+<style>
+.quizzes-page {
+    padding: var(--space-xl) 0;
+}
+
+.page-header {
+    text-align: center;
+    margin-bottom: var(--space-xxl);
+}
+
+.page-title {
+    font-family: var(--font-primary);
+    font-size: 2.5rem;
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: var(--space-sm);
+}
+
+.page-subtitle {
+    color: rgba(255,255,255,0.9);
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.quizzes-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.quiz-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: var(--radius-xl);
+    padding: var(--space-xl);
+    margin-bottom: var(--space-lg);
+    box-shadow: var(--shadow-md);
+    transition: var(--transition-smooth);
+}
+
+.quiz-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-xl);
+}
+
+.quiz-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--space-lg);
+}
+
+.quiz-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--dark);
+    margin-bottom: var(--space-sm);
+}
+
+.quiz-description {
+    color: var(--gray);
+    margin-bottom: var(--space-md);
+}
+
+.quiz-meta {
+    display: flex;
+    gap: var(--space-lg);
+    align-items: center;
+    margin-bottom: var(--space-lg);
+}
+
+.meta-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    color: var(--gray);
+    font-size: 0.9rem;
+}
+
+.quiz-status {
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-borrador {
+    background: rgba(255, 193, 7, 0.2);
+    color: #856404;
+}
+
+.status-publicado {
+    background: rgba(40, 167, 69, 0.2);
+    color: #155724;
+}
+
+.quiz-actions {
+    display: flex;
+    gap: var(--space-sm);
+}
+
+.action-btn {
+    padding: var(--space-sm) var(--space-md);
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+}
+
+.btn-primary {
+    background: var(--gradient-primary);
+    color: white;
+}
+
+.btn-secondary {
+    background: var(--gradient-secondary);
+    color: white;
+}
+
+.btn-outline {
+    background: transparent;
+    color: var(--dark);
+    border: 2px solid rgba(0,0,0,0.2);
+}
+
+.action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+}
+
+.empty-state {
+    text-align: center;
+    padding: var(--space-xxl);
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: var(--radius-xl);
+}
+
+.empty-icon {
+    font-size: 3rem;
+    color: var(--gray);
+    margin-bottom: var(--space-lg);
+}
+
+.empty-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--dark);
+    margin-bottom: var(--space-md);
+}
+
+.empty-text {
+    color: var(--gray);
+    margin-bottom: var(--space-xl);
+}
+
+.create-btn {
+    background: var(--gradient-primary);
+    color: white;
+    padding: var(--space-lg) var(--space-xxl);
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 1.1rem;
+    font-weight: 700;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-sm);
+    transition: var(--transition-smooth);
+}
+
+.create-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    text-decoration: none;
+    color: white;
+}
+
+@media (max-width: 768px) {
+    .quiz-header {
+        flex-direction: column;
+        gap: var(--space-md);
+    }
+    
+    .quiz-meta {
+        flex-wrap: wrap;
+        gap: var(--space-md);
+    }
+    
+    .quiz-actions {
+        justify-content: center;
+    }
+}
+
+/* Estilos para botones de acción */
+.btn-success {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+    border: none;
+}
+
+.btn-success:hover {
+    background: linear-gradient(135deg, #218838, #1ea085);
+    transform: translateY(-2px);
+}
+
+.btn-warning {
+    background: linear-gradient(135deg, #ffc107, #ff8c00);
+    color: #212529;
+    border: none;
+}
+
+.btn-warning:hover {
+    background: linear-gradient(135deg, #e0a800, #e6780a);
+    transform: translateY(-2px);
+}
+
+/* Mejorar estilos del status badge existente */
+.quiz-status {
+    padding: 0.4rem 1rem;
+    border-radius: var(--radius-full);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: 2px solid transparent;
+}
+
+.status-borrador {
+    background: rgba(255, 193, 7, 0.1);
+    color: #ff8c00;
+    border-color: rgba(255, 193, 7, 0.3);
+}
+
+.status-publicado {
+    background: rgba(40, 167, 69, 0.1);
+    color: #28a745;
+    border-color: rgba(40, 167, 69, 0.3);
+}
+
+.status-programado {
+    background: rgba(23, 162, 184, 0.1);
+    color: #17a2b8;
+    border-color: rgba(23, 162, 184, 0.3);
+}
+
+.status-finalizado {
+    background: rgba(108, 117, 125, 0.1);
+    color: #6c757d;
+    border-color: rgba(108, 117, 125, 0.3);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="quizzes-page">
+    <div class="page-header">
+        <h1 class="page-title">Mis Cuestionarios</h1>
+        <p class="page-subtitle">Gestiona y administra todos tus cuestionarios</p>
+    </div>
+
+    <div class="quizzes-container">
+        {% if cuestionarios and cuestionarios|length > 0 %}
+            {% for cuestionario in cuestionarios %}
+            <div class="quiz-card animate-fadeIn" style="animation-delay: {{ loop.index0 * 0.1 }}s;">
+                <div class="quiz-header">
+                    <div>
+                        <h3 class="quiz-title">{{ cuestionario.titulo }}</h3>
+                        {% if cuestionario.descripcion %}
+                        <p class="quiz-description">{{ cuestionario.descripcion }}</p>
+                        {% endif %}
+                        
+                        <div class="quiz-meta">
+                            <div class="meta-item">
+                                <i class="fas fa-calendar"></i>
+                                <span>{{ cuestionario.fecha_creacion.strftime('%d/%m/%Y') if cuestionario.fecha_creacion else 'N/A' }}</span>
+                            </div>
+                            <div class="meta-item">
+                                <i class="fas fa-list-ol"></i>
+                                <span>{{ cuestionario.num_preguntas or 0 }} preguntas</span>
+                            </div>
+                            <div class="quiz-status status-{{ cuestionario.estado }}">
+                                {{ cuestionario.estado.title() }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="quiz-actions">
+                    <a href="{{ url_for('ver_cuestionario', cuestionario_id=cuestionario.id_cuestionario) }}" 
+                       class="action-btn btn-outline">
+                        <i class="fas fa-eye"></i>
+                        Ver Preguntas
+                    </a>
+                    
+                    <a href="{{ url_for('editar_cuestionario', cuestionario_id=cuestionario.id_cuestionario) }}" 
+                       class="action-btn btn-secondary">
+                        <i class="fas fa-edit"></i>
+                        Editar
+                    </a>
+                    
+                    {% if cuestionario.estado == 'borrador' %}
+                    <a href="{{ url_for('agregar_preguntas', cuestionario_id=cuestionario.id_cuestionario) }}" 
+                       class="action-btn btn-primary">
+                        <i class="fas fa-plus"></i>
+                        Agregar Preguntas
+                    </a>
+                    
+                    <button onclick="publicarCuestionario({{ cuestionario.id_cuestionario }})" 
+                            class="action-btn btn-success" title="Publicar cuestionario">
+                        <i class="fas fa-share"></i>
+                        Publicar
+                    </button>
+                    {% elif cuestionario.estado == 'publicado' %}
+                    <a href="{{ url_for('crear_sala_para_cuestionario', cuestionario_id=cuestionario.id_cuestionario) }}" 
+                       class="action-btn btn-success" title="Crear sala con este cuestionario">
+                        <i class="fas fa-users"></i>
+                        Crear Sala
+                    </a>
+                    
+                    <button onclick="despublicarCuestionario({{ cuestionario.id_cuestionario }})" 
+                            class="action-btn btn-warning" title="Despublicar cuestionario">
+                        <i class="fas fa-eye-slash"></i>
+                        Despublicar
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state animate-fadeIn">
+                <div class="empty-icon">
+                    <i class="fas fa-clipboard-list"></i>
+                </div>
+                <h2 class="empty-title">No tienes cuestionarios aún</h2>
+                <p class="empty-text">Crea tu primer cuestionario para comenzar a evaluar a tus estudiantes de manera interactiva.</p>
+                <a href="{{ url_for('crear_cuestionario_route') }}" class="create-btn">
+                    <i class="fas fa-plus"></i>
+                    Crear Mi Primer Cuestionario
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Animaciones de entrada
+    const cards = document.querySelectorAll('.quiz-card');
+    
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    });
+    
+    cards.forEach(card => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        observer.observe(card);
+    });
+});
+
+// Funciones para publicar/despublicar cuestionarios
+function publicarCuestionario(cuestionarioId) {
+    if (confirm('¿Estás seguro de que quieres publicar este cuestionario? Una vez publicado, los estudiantes podrán acceder a él.')) {
+        fetch(`/publicar-cuestionario/${cuestionarioId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload(); // Recargar para mostrar el cambio de estado
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al publicar el cuestionario');
+        });
+    }
+}
+
+function despublicarCuestionario(cuestionarioId) {
+    if (confirm('¿Estás seguro de que quieres despublicar este cuestionario? Los estudiantes ya no podrán acceder a él.')) {
+        fetch(`/despublicar-cuestionario/${cuestionarioId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload(); // Recargar para mostrar el cambio de estado
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al despublicar el cuestionario');
+        });
+    }
+}
+</script>
+{% endblock %}
