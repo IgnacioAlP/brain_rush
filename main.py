@@ -95,8 +95,23 @@ def obtener_sala_por_id_simple(id_sala):
     conexion = obtener_conexion()
     try:
         cursor = conexion.cursor()
-        cursor.execute("SELECT id_sala, pin_sala FROM salas_juego WHERE id_sala = %s", (id_sala,))
-        return cursor.fetchone()
+        cursor.execute("""
+            SELECT id_sala, pin_sala, id_cuestionario, modo_juego, estado, max_participantes, fecha_creacion
+            FROM salas_juego 
+            WHERE id_sala = %s
+        """, (id_sala,))
+        sala = cursor.fetchone()
+        if sala:
+            return {
+                'id': sala[0],
+                'pin_sala': sala[1],
+                'id_cuestionario': sala[2],
+                'modo_juego': sala[3],
+                'estado': sala[4],
+                'max_participantes': sala[5],
+                'fecha_creacion': sala[6]
+            }
+        return None
     finally:
         conexion.close()
 
@@ -693,8 +708,8 @@ def monitorear_sala(sala_id):
             flash('Sala no encontrada', 'error')
             return redirect(url_for('mis_cuestionarios'))
         
-        # Obtener participantes reales de la sala - sala[0] es el id_sala
-        participantes = controlador_salas.obtener_participantes_sala(sala[0])
+        # Obtener participantes reales de la sala
+        participantes = controlador_salas.obtener_participantes_sala(sala['id'])
         print(f"DEBUG: Participantes: {participantes}")
         
         # Verificar si existe el template MonitoreoJuego.html
@@ -703,12 +718,8 @@ def monitorear_sala(sala_id):
         except Exception as template_error:
             print(f"DEBUG: Error de template: {template_error}")
             # Template temporal hasta que se implemente MonitoreoJuego.html
-            sala_dict = {
-                'id': sala[0],
-                'pin_sala': sala[1]
-            }
             return render_template('MonitoreoJuego.html', 
-                                 sala=sala_dict,
+                                 sala=sala,
                                  participantes=participantes)
             
     except Exception as e:
