@@ -693,8 +693,8 @@ def monitorear_sala(sala_id):
             flash('Sala no encontrada', 'error')
             return redirect(url_for('mis_cuestionarios'))
         
-        # Obtener participantes reales de la sala
-        participantes = controlador_salas.obtener_participantes_sala(sala['id'])
+        # Obtener participantes reales de la sala - sala[0] es el id_sala
+        participantes = controlador_salas.obtener_participantes_sala(sala[0])
         print(f"DEBUG: Participantes: {participantes}")
         
         # Verificar si existe el template MonitoreoJuego.html
@@ -703,13 +703,13 @@ def monitorear_sala(sala_id):
         except Exception as template_error:
             print(f"DEBUG: Error de template: {template_error}")
             # Template temporal hasta que se implemente MonitoreoJuego.html
-            return f"""
-            <h1>Sala de Monitoreo</h1>
-            <p>Sala ID: {sala[0]}</p>
-            <p>PIN: {sala[1]}</p>
-            <p>Estado: Esperando participantes</p>
-            <a href="{url_for('mis_cuestionarios')}">Volver a Mis Cuestionarios</a>
-            """
+            sala_dict = {
+                'id': sala[0],
+                'pin_sala': sala[1]
+            }
+            return render_template('MonitoreoJuego.html', 
+                                 sala=sala_dict,
+                                 participantes=participantes)
             
     except Exception as e:
         print(f"DEBUG: Error en monitorear_sala: {str(e)}")
