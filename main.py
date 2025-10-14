@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, Response, session
+from flask_wtf.csrf import CSRFProtect
 from werkzeug.exceptions import InternalServerError
 from config import config
 from bd import verificar_conexion, obtener_conexion, inicializar_usuarios_prueba
@@ -179,7 +180,8 @@ app_config = config.get(env, config['default'])
 app.config.from_object(app_config)
 app.secret_key = app_config.SECRET_KEY
 
-app.secret_key = 'clave-temporal'  # Solo para que funcionen los flash messages
+# Configurar CSRF
+csrf = CSRFProtect(app)
 
 #---RUTAS FIJAS---#
 

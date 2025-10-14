@@ -1,13 +1,13 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Editar Cuestionario - Brain RUSH</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/INDEX.CSS') }}">
-  <style>
-    .main-content {
-      margin-left: 0;
+{% extends "BrainRush_Master.html" %}
+
+{% block title %}Brain RUSH - Editar Cuestionario{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Estilos específicos para la página de edición */
+    .content-wrapper {
+      max-width: 1200px;
+      margin: 0 auto;
       padding: 20px;
     }
 
@@ -66,25 +66,156 @@
     }
 
     .form-section {
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 12px;
-      padding: 25px;
-      margin-bottom: 20px;
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 30px;
+      margin-bottom: 25px;
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
     }
 
-    .form-section h3 {
+    .form-section:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+    }
+
+    .section-title {
       color: white;
-      margin-bottom: 20px;
-      font-size: 20px;
+      margin-bottom: 25px;
+      font-size: 1.5rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-title i {
+      font-size: 1.2em;
+      color: #4ECDC4;
     }
 
     .form-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 20px;
-      margin-bottom: 20px;
+      gap: 25px;
+      margin-bottom: 25px;
+    }
+
+    .form-label {
+      color: rgba(255, 255, 255, 0.9);
+      margin-bottom: 8px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .form-label i {
+      color: #4ECDC4;
+      font-size: 1em;
+    }
+
+    .input-container,
+    .select-container,
+    .textarea-container {
+      position: relative;
+    }
+
+    .form-input,
+    .form-select,
+    .form-textarea {
+      width: 100%;
+      padding: 12px 16px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      color: white;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+    }
+
+    .form-select {
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+      cursor: pointer;
+    }
+
+    .form-select option {
+      background-color: #2A2A2A;
+      color: white;
+      padding: 12px;
+    }
+
+    .form-select option:hover,
+    .form-select option:focus,
+    .form-select option:checked {
+      background-color: #4ECDC4;
+      color: white;
+    }
+
+    .form-select::-ms-expand {
+      display: none;
+    }
+
+    .form-input:hover,
+    .form-select:hover,
+    .form-textarea:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .form-input:focus,
+    .form-select:focus,
+    .form-textarea:focus {
+      outline: none;
+      background: rgba(255, 255, 255, 0.1);
+      border-color: #4ECDC4;
+      box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.2);
+    }
+
+    .input-focus-border,
+    .textarea-focus-border {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      width: 0;
+      height: 2px;
+      background: linear-gradient(90deg, #4ECDC4, #556270);
+      transition: all 0.3s ease;
+      transform: translateX(-50%);
+    }
+
+    .form-input:focus ~ .input-focus-border,
+    .form-textarea:focus ~ .textarea-focus-border {
+      width: 100%;
+    }
+
+    .select-container {
+      position: relative;
+    }
+
+    .select-arrow {
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: rgba(255, 255, 255, 0.5);
+      pointer-events: none;
+      transition: all 0.3s ease;
+    }
+
+    .form-select:focus + .select-arrow {
+      color: #4ECDC4;
+    }
+
+    .form-textarea {
+      min-height: 100px;
+      resize: vertical;
     }
 
     .form-group-full {
@@ -385,12 +516,13 @@
       }
     }
   </style>
-</head>
-<body>
-  <div class="main-content">
+{% endblock %}
+
+{% block content %}
+<div class="edit-page">
     <div class="edit-header">
-      <h1>✏️ Editar Cuestionario</h1>
-      <p>Modifica las preguntas y configuración de tu cuestionario</p>
+      <h1 class="edit-title">✏️ Editar Cuestionario</h1>
+      <p class="edit-subtitle">Modifica las preguntas y configuración de tu cuestionario</p>
     </div>
 
     <!-- Pestañas de navegación -->
@@ -400,34 +532,90 @@
       <button class="tab-button" onclick="switchTab('settings')">⚙️ Configuración</button>
     </div>
 
-    <form id="edit-form">
+    <form id="edit-form" method="POST" action="/editar-cuestionario/{{ cuestionario.id_cuestionario }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <!-- Pestaña de Información -->
       <div id="tab-info" class="tab-content active">
-        <div class="form-section">
-          <h3>📋 Información del Cuestionario</h3>
+        <div class="form-section info-section">
+          <h3 class="section-title">📋 Información del Cuestionario</h3>
           <div class="form-grid">
             <div class="form-group">
-              <label for="titulo">Título del cuestionario</label>
-              <input type="text" id="titulo" name="titulo" value="Matemáticas Básicas" required>
+              <label for="titulo" class="form-label">
+                <i class="fas fa-heading"></i>
+                Título del cuestionario *
+              </label>
+              <div class="input-container">
+                <input type="text" 
+                       id="titulo" 
+                       name="titulo" 
+                       class="form-input" 
+                       value="{{ cuestionario.titulo }}" 
+                       required
+                       minlength="3"
+                       maxlength="100"
+                       placeholder="Ingresa un título descriptivo"
+                       data-error="El título es requerido y debe tener entre 3 y 100 caracteres">
+                <div class="input-focus-border"></div>
+              </div>
             </div>
+            
             <div class="form-group">
-              <label for="categoria">Categoría</label>
-              <select id="categoria" name="categoria" required>
-                <option value="matematicas">Matemáticas</option>
-                <option value="ciencias">Ciencias</option>
-                <option value="historia">Historia</option>
-                <option value="geografia">Geografía</option>
-                <option value="literatura">Literatura</option>
-                <option value="idiomas">Idiomas</option>
-                <option value="tecnologia">Tecnología</option>
-                <option value="arte">Arte</option>
-                <option value="deportes">Deportes</option>
-                <option value="general">Conocimiento General</option>
-              </select>
+              <label for="categoria" class="form-label">
+                <i class="fas fa-tag"></i>
+                Categoría
+              </label>
+              <div class="select-container">
+                <select id="categoria" name="categoria" class="form-select" required>
+                  <option value="matematicas" {% if cuestionario.categoria == 'matematicas' %}selected{% endif %}>
+                    🔢 Matemáticas
+                  </option>
+                  <option value="ciencias" {% if cuestionario.categoria == 'ciencias' %}selected{% endif %}>
+                    🧬 Ciencias
+                  </option>
+                  <option value="historia" {% if cuestionario.categoria == 'historia' %}selected{% endif %}>
+                    📜 Historia
+                  </option>
+                  <option value="geografia" {% if cuestionario.categoria == 'geografia' %}selected{% endif %}>
+                    🌎 Geografía
+                  </option>
+                  <option value="literatura" {% if cuestionario.categoria == 'literatura' %}selected{% endif %}>
+                    📚 Literatura
+                  </option>
+                  <option value="idiomas" {% if cuestionario.categoria == 'idiomas' %}selected{% endif %}>
+                    🗣 Idiomas
+                  </option>
+                  <option value="tecnologia" {% if cuestionario.categoria == 'tecnologia' %}selected{% endif %}>
+                    💻 Tecnología
+                  </option>
+                  <option value="arte" {% if cuestionario.categoria == 'arte' %}selected{% endif %}>
+                    🎨 Arte
+                  </option>
+                  <option value="deportes" {% if cuestionario.categoria == 'deportes' %}selected{% endif %}>
+                    ⚽ Deportes
+                  </option>
+                  <option value="general" {% if cuestionario.categoria == 'general' %}selected{% endif %}>
+                    🎯 Conocimiento General
+                  </option>
+                </select>
+                <div class="select-arrow">
+                  <i class="fas fa-chevron-down"></i>
+                </div>
+              </div>
             </div>
+
             <div class="form-group form-group-full">
-              <label for="descripcion">Descripción</label>
-              <textarea id="descripcion" name="descripcion" rows="3" placeholder="Describe brevemente el contenido del cuestionario...">Cuestionario de matemáticas básicas para estudiantes de primaria</textarea>
+              <label for="descripcion" class="form-label">
+                <i class="fas fa-align-left"></i>
+                Descripción
+              </label>
+              <div class="textarea-container">
+                <textarea id="descripcion" 
+                          name="descripcion" 
+                          class="form-textarea" 
+                          rows="3" 
+                          placeholder="Describe brevemente el contenido del cuestionario...">{{ cuestionario.descripcion }}</textarea>
+                <div class="textarea-focus-border"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -438,68 +626,28 @@
         <div class="form-section">
           <h3>❓ Gestión de Preguntas</h3>
           <div class="questions-list" id="questions-list">
-            <!-- Preguntas de ejemplo -->
-            <div class="question-item" data-question-id="1">
+            {% for pregunta in preguntas %}
+            <div class="question-item" data-question-id="{{ pregunta.id_pregunta }}">
               <div class="question-header">
-                <div class="question-number">1</div>
+                <div class="question-number">{{ loop.index }}</div>
                 <div class="question-content">
-                  <div class="question-text">¿Cuál es el resultado de 2 + 2?</div>
+                  <div class="question-text">{{ pregunta.enunciado }}</div>
                   <div class="question-options">
-                    <div class="option-item">
-                      <div class="option-letter">A</div>
-                      <span>3</span>
+                    {% for opcion in pregunta.opciones %}
+                    <div class="option-item {% if opcion.es_correcta %}correct{% endif %}">
+                      <div class="option-letter">{{ loop.index }}</div>
+                      <span>{{ opcion.texto_opcion }}</span>
                     </div>
-                    <div class="option-item correct">
-                      <div class="option-letter">B</div>
-                      <span>4</span>
-                    </div>
-                    <div class="option-item">
-                      <div class="option-letter">C</div>
-                      <span>5</span>
-                    </div>
-                    <div class="option-item">
-                      <div class="option-letter">D</div>
-                      <span>6</span>
-                    </div>
+                    {% endfor %}
                   </div>
                 </div>
               </div>
               <div class="question-actions">
-                <button type="button" class="btn-small btn-edit" onclick="editQuestion(1)">✏️ Editar</button>
-                <button type="button" class="btn-small btn-delete" onclick="deleteQuestion(1)">🗑️ Eliminar</button>
+                <button type="button" class="btn-small btn-edit" onclick="editQuestion({{ pregunta.id_pregunta }})">✏️ Editar</button>
+                <button type="button" class="btn-small btn-delete" onclick="deleteQuestion({{ pregunta.id_pregunta }})">🗑️ Eliminar</button>
               </div>
             </div>
-
-            <div class="question-item" data-question-id="2">
-              <div class="question-header">
-                <div class="question-number">2</div>
-                <div class="question-content">
-                  <div class="question-text">¿Cuánto es 5 × 3?</div>
-                  <div class="question-options">
-                    <div class="option-item">
-                      <div class="option-letter">A</div>
-                      <span>12</span>
-                    </div>
-                    <div class="option-item">
-                      <div class="option-letter">B</div>
-                      <span>13</span>
-                    </div>
-                    <div class="option-item">
-                      <div class="option-letter">C</div>
-                      <span>14</span>
-                    </div>
-                    <div class="option-item correct">
-                      <div class="option-letter">D</div>
-                      <span>15</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="question-actions">
-                <button type="button" class="btn-small btn-edit" onclick="editQuestion(2)">✏️ Editar</button>
-                <button type="button" class="btn-small btn-delete" onclick="deleteQuestion(2)">🗑️ Eliminar</button>
-              </div>
-            </div>
+            {% endfor %}
           </div>
 
           <button type="button" class="add-question-btn" onclick="addNewQuestion()">
@@ -569,9 +717,9 @@
         <a href="/mis-cuestionarios" class="btn btn-outline">❌ Cancelar</a>
       </div>
     </form>
-  </div>
+</div>
 
-  <!-- Modal para editar pregunta -->
+<!-- Modal para editar pregunta -->
   <div id="question-modal" class="modal">
     <div class="modal-content">
       <div class="modal-header">
@@ -608,20 +756,13 @@
     </div>
   </div>
 
-  <script>
+{% endblock %}
+
+{% block extra_js %}
+<script>
     let currentQuestionId = null;
-    let questionsData = [
-      {
-        id: 1,
-        texto: "¿Cuál es el resultado de 2 + 2?",
-        opciones: [
-          { letra: 'A', texto: '3', correcta: false },
-          { letra: 'B', texto: '4', correcta: true },
-          { letra: 'C', texto: '5', correcta: false },
-          { letra: 'D', texto: '6', correcta: false }
-        ],
-        tiempo: 30
-      },
+    // Inicializar datos desde el servidor
+    let questionsData = {{ preguntas | tojson | safe }};
       {
         id: 2,
         texto: "¿Cuánto es 5 × 3?",
@@ -650,17 +791,42 @@
     }
 
     function editQuestion(questionId) {
-      currentQuestionId = questionId;
-      const question = questionsData.find(q => q.id === questionId);
-      
-      if (!question) return;
+      // Primero obtenemos los datos actualizados de la pregunta del servidor
+      fetch(`/pregunta/${questionId}/obtener`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            currentQuestionId = questionId;
+            const pregunta = data.pregunta;
 
-      document.getElementById('modal-title').textContent = 'Editar Pregunta';
-      document.getElementById('modal-question-text').value = question.texto;
-      document.getElementById('modal-question-time').value = question.tiempo;
-      
-      renderOptionsEditor(question.opciones);
-      document.getElementById('question-modal').style.display = 'block';
+            document.getElementById('modal-title').textContent = 'Editar Pregunta';
+            document.getElementById('modal-question-text').value = pregunta.enunciado;
+            document.getElementById('modal-question-time').value = pregunta.tiempo || 30;
+            
+            const opcionesFormateadas = pregunta.opciones.map((opcion, index) => ({
+              letra: String.fromCharCode(65 + index), // Convierte 0->A, 1->B, etc.
+              texto: opcion.texto_opcion,
+              correcta: opcion.es_correcta
+            }));
+            
+            renderOptionsEditor(opcionesFormateadas);
+            document.getElementById('question-modal').style.display = 'block';
+          } else {
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: 'No se pudo cargar la pregunta'
+            });
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Error al cargar la pregunta'
+          });
+        });
     }
 
     function addNewQuestion() {
@@ -678,6 +844,50 @@
       
       renderOptionsEditor(defaultOptions);
       document.getElementById('question-modal').style.display = 'block';
+    }
+    
+    // Función para guardar la pregunta (nueva o editada)
+    function saveQuestion(formData) {
+      const url = currentQuestionId 
+        ? `/pregunta/${currentQuestionId}/editar`
+        : `/cuestionario/{{ cuestionario.id_cuestionario }}/agregar-pregunta`;
+        
+      return fetch(url, {
+        method: 'POST',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // Actualizar la lista de preguntas en la interfaz
+          if (currentQuestionId) {
+            // Actualizar pregunta existente
+            const index = questionsData.findIndex(q => q.id_pregunta === currentQuestionId);
+            if (index !== -1) {
+              questionsData[index] = data.pregunta;
+            }
+          } else {
+            // Agregar nueva pregunta
+            questionsData.push(data.pregunta);
+          }
+          
+          renderQuestionsList();
+          closeQuestionModal();
+          
+          Swal.fire({
+            icon: 'success',
+            title: currentQuestionId ? 'Pregunta actualizada' : 'Pregunta agregada',
+            text: 'Los cambios se han guardado correctamente',
+            showConfirmButton: false,
+            timer: 1500
+          });
+        } else {
+          throw new Error(data.error || 'Error al guardar la pregunta');
+        }
+      });
     }
 
     function renderOptionsEditor(options) {
@@ -737,11 +947,49 @@
     }
 
     function deleteQuestion(questionId) {
-      if (confirm('¿Estás seguro de que quieres eliminar esta pregunta?')) {
-        questionsData = questionsData.filter(q => q.id !== questionId);
-        document.querySelector(`[data-question-id="${questionId}"]`).remove();
-        updateQuestionNumbers();
-      }
+      Swal.fire({
+        title: '¿Estás seguro?',
+        text: "Esta acción no se puede deshacer",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          fetch(`/pregunta/${questionId}/eliminar`, {
+            method: 'POST',
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest'
+            }
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              questionsData = questionsData.filter(q => q.id_pregunta !== questionId);
+              document.querySelector(`[data-question-id="${questionId}"]`).remove();
+              updateQuestionNumbers();
+              
+              Swal.fire(
+                '¡Eliminada!',
+                'La pregunta ha sido eliminada.',
+                'success'
+              );
+            } else {
+              throw new Error(data.error || 'Error al eliminar la pregunta');
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            Swal.fire(
+              'Error',
+              'No se pudo eliminar la pregunta',
+              'error'
+            );
+          });
+        }
+      });
     }
 
     function updateQuestionNumbers() {
@@ -762,15 +1010,131 @@
     }
 
     // Manejar envío del formulario principal
+    function validateForm(form) {
+      const titulo = form.querySelector('#titulo').value.trim();
+      const descripcion = form.querySelector('#descripcion').value.trim();
+      
+      if (!titulo) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Campo requerido',
+          text: 'El título del cuestionario es obligatorio'
+        });
+        return false;
+      }
+      
+      if (titulo.length < 3 || titulo.length > 100) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Valor inválido',
+          text: 'El título debe tener entre 3 y 100 caracteres'
+        });
+        return false;
+      }
+      
+      if (!descripcion) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Campo requerido',
+          text: 'La descripción del cuestionario es obligatoria'
+        });
+        return false;
+      }
+      
+      return true;
+    }
+
     document.getElementById('edit-form').addEventListener('submit', function(e) {
       e.preventDefault();
       
-      // Simular guardado
-      const formData = new FormData(this);
-      const data = Object.fromEntries(formData.entries());
+      const form = this;
       
-      console.log('Datos del cuestionario:', data);
-      alert('✅ Cuestionario actualizado correctamente');
+      if (!validateForm(form)) {
+        return;
+      }
+      
+      const formData = new FormData(form);
+      
+      // Agregar campos adicionales si no están en el form
+      if (!formData.has('titulo')) {
+        formData.append('titulo', document.getElementById('titulo').value);
+      }
+      if (!formData.has('categoria')) {
+        formData.append('categoria', document.getElementById('categoria').value);
+      }
+      if (!formData.has('descripcion')) {
+        formData.append('descripcion', document.getElementById('descripcion').value);
+      }
+      
+      // Agregar campos de configuración
+      formData.append('tiempo_pregunta', document.getElementById('tiempo_limite').value);
+      formData.append('publico', document.getElementById('publico').checked);
+      formData.append('mostrar_respuestas', document.getElementById('mostrar_respuestas').checked);
+      formData.append('permitir_reintento', document.getElementById('permitir_reintento').checked);
+      formData.append('orden_preguntas', document.getElementById('orden_preguntas').value);
+      
+      // Agregar las preguntas actuales al FormData
+      formData.append('preguntas', JSON.stringify(questionsData));
+      
+      // Mostrar indicador de carga
+      Swal.fire({
+        title: 'Guardando cambios...',
+        text: 'Por favor espera',
+        allowOutsideClick: false,
+        showConfirmButton: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+      
+      // Enviar datos al servidor
+      fetch(form.action, {
+        method: 'POST',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData
+      })
+      .then(response => {
+        if (!response.ok) {
+          return response.json().then(err => Promise.reject(err));
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (data.success) {
+          Swal.fire({
+            icon: 'success',
+            title: '¡Guardado exitoso!',
+            text: 'El cuestionario se ha actualizado correctamente',
+            showConfirmButton: true
+          }).then(() => {
+            window.location.href = '/mis-cuestionarios';
+          });
+        } else {
+          return Promise.reject(data);
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        let errorMessage = 'Error al actualizar el cuestionario';
+        
+        if (error.message) {
+          errorMessage = error.message;
+        } else if (error.error) {
+          errorMessage = error.error;
+        } else if (typeof error === 'string') {
+          errorMessage = error;
+        }
+        
+        Swal.fire({
+          icon: 'error',
+          title: 'Error al guardar',
+          text: errorMessage,
+          confirmButtonText: 'Entendido',
+          showCancelButton: false,
+        });
+      });
     });
 
     // Manejar envío del formulario de pregunta
@@ -783,39 +1147,66 @@
       const correctRadio = document.querySelector('input[name="correct-option"]:checked');
       
       if (!correctRadio) {
-        alert('Debes seleccionar una respuesta correcta');
+        Swal.fire({
+          icon: 'warning',
+          title: 'Atención',
+          text: 'Debes seleccionar una respuesta correcta'
+        });
         return;
       }
 
-      const options = Array.from(optionInputs).map((input, index) => ({
-        letra: input.dataset.letter,
-        texto: input.value,
-        correcta: index === parseInt(correctRadio.value)
-      }));
-
-      if (currentQuestionId) {
-        // Editar pregunta existente
-        const questionIndex = questionsData.findIndex(q => q.id === currentQuestionId);
-        questionsData[questionIndex] = {
-          ...questionsData[questionIndex],
-          texto: questionText,
-          opciones: options,
-          tiempo: parseInt(timeLimit)
-        };
-      } else {
-        // Crear nueva pregunta
-        const newId = Math.max(...questionsData.map(q => q.id)) + 1;
-        questionsData.push({
-          id: newId,
-          texto: questionText,
-          opciones: options,
-          tiempo: parseInt(timeLimit)
+      if (!questionText.trim()) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Atención',
+          text: 'El texto de la pregunta no puede estar vacío'
         });
+        return;
       }
 
-      // Cerrar modal y actualizar lista
-      closeQuestionModal();
-      renderQuestionsList();
+      const formData = new FormData();
+      formData.append('enunciado', questionText);
+      formData.append('tiempo', timeLimit);
+      
+      // Preparar las opciones
+      const options = Array.from(optionInputs).map((input, index) => ({
+        texto_opcion: input.value,
+        es_correcta: index === parseInt(correctRadio.value),
+        orden: index + 1
+      }));
+
+      // Validar que todas las opciones tengan texto
+      if (options.some(opt => !opt.texto_opcion.trim())) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Atención',
+          text: 'Todas las opciones deben tener texto'
+        });
+        return;
+      }
+
+      formData.append('opciones', JSON.stringify(options));
+      
+      // Mostrar indicador de carga
+      Swal.fire({
+        title: 'Guardando...',
+        text: 'Por favor espera',
+        allowOutsideClick: false,
+        showConfirmButton: false,
+        willOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      // Guardar la pregunta
+      saveQuestion(formData).catch(error => {
+        console.error('Error:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: error.message || 'Error al guardar la pregunta'
+        });
+      });
     });
 
     function renderQuestionsList() {
@@ -863,5 +1254,4 @@
       }
     });
   </script>
-</body>
-</html>
+{% endblock %}
