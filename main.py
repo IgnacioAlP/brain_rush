@@ -1470,6 +1470,285 @@ def obtener_opciones_pregunta(pregunta_id):
         return jsonify({'success': True, 'opciones': opciones})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 400
+
+@app.route('/cuestionario/<int:cuestionario_id>/agregar-pregunta', methods=['POST'])
+@login_required
+def agregar_pregunta_cuestionario(cuestionario_id):
+    """Agregar una nueva pregunta a un cuestionario"""
+    try:
+        print(f"DEBUG: agregar_pregunta_cuestionario - cuestionario_id: {cuestionario_id}")
+        
+        # Verificar que el usuario es docente
+        if session.get('usuario_tipo') != 'docente':
+            return jsonify({'success': False, 'error': 'Solo los docentes pueden agregar preguntas'}), 403
+        
+        # Verificar que el cuestionario existe y pertenece al docente
+        cuestionario = controlador_cuestionarios.obtener_cuestionario_por_id(cuestionario_id)
+        if not cuestionario:
+            return jsonify({'success': False, 'error': 'Cuestionario no encontrado'}), 404
+        
+        id_docente_actual = session.get('usuario_id')
+        if cuestionario.get('id_docente') != id_docente_actual:
+            return jsonify({'success': False, 'error': 'No tienes permisos para agregar preguntas a este cuestionario'}), 403
+        
+        # Obtener datos del formulario
+        enunciado = request.form.get('enunciado', '').strip()
+        tiempo = request.form.get('tiempo', 30)
+        opciones_json = request.form.get('opciones', '[]')
+        
+        print(f"DEBUG: Datos recibidos - enunciado: '{enunciado}', tiempo: {tiempo}")
+        print(f"DEBUG: Opciones JSON: {opciones_json}")
+        
+        if not enunciado:
+            return jsonify({'success': False, 'error': 'El enunciado de la pregunta es requerido'}), 400
+        
+        # Parsear opciones
+        import json
+        try:
+            opciones = json.loads(opciones_json)
+        except:
+            return jsonify({'success': False, 'error': 'Formato de opciones inválido'}), 400
+        
+        if len(opciones) < 2:
+            return jsonify({'success': False, 'error': 'Debe haber al menos 2 opciones'}), 400
+        
+        # Verificar que hay una opción correcta
+        tiene_correcta = any(opcion.get('es_correcta', False) for opcion in opciones)
+        if not tiene_correcta:
+            return jsonify({'success': False, 'error': 'Debe seleccionar una respuesta correcta'}), 400
+        
+        # Crear la pregunta
+        pregunta_id = controlador_preguntas.crear_pregunta(
+            enunciado=enunciado,
+            tipo='opcion_multiple',
+            puntaje_base=1,
+            tiempo_limite=int(tiempo)
+        )
+        
+        print(f"DEBUG: Pregunta creada con ID: {pregunta_id}")
+        
+        if not pregunta_id:
+            return jsonify({'success': False, 'error': 'Error al crear la pregunta'}), 500
+        
+        # Crear las opciones
+        for i, opcion in enumerate(opciones):
+            texto_opcion = opcion.get('texto_opcion', '').strip()
+            es_correcta = opcion.get('es_correcta', False)
+            
+            if texto_opcion:
+                controlador_opciones.crear_opcion(
+                    id_pregunta=pregunta_id,
+                    texto_opcion=texto_opcion,
+                    es_correcta=es_correcta,
+                    explicacion=''
+                )
+                print(f"DEBUG: Opción {i+1} creada: '{texto_opcion}' (correcta: {es_correcta})")
+        
+        # Agregar pregunta al cuestionario
+        preguntas_existentes = controlador_preguntas.obtener_preguntas_por_cuestionario(cuestionario_id)
+        orden = len(preguntas_existentes) + 1
+        controlador_preguntas.agregar_pregunta_a_cuestionario(cuestionario_id, pregunta_id, orden)
+        
+        # Obtener la pregunta completa para devolverla
+        pregunta_completa = controlador_preguntas.obtener_pregunta_por_id(pregunta_id)
+        opciones_pregunta = controlador_opciones.obtener_opciones_por_pregunta(pregunta_id)
+        
+        pregunta_response = {
+            'id_pregunta': pregunta_id,
+            'enunciado': enunciado,
+            'tiempo': tiempo,
+            'opciones': [{
+                'texto_opcion': opc.get('texto_opcion', ''),
+                'es_correcta': opc.get('es_correcta', False)
+            } for opc in opciones_pregunta]
+        }
+        
+        return jsonify({
+            'success': True,
+            'message': 'Pregunta agregada exitosamente',
+            'pregunta': pregunta_response
+        })
+        
+    except Exception as e:
+        print(f"DEBUG: Error en agregar_pregunta_cuestionario: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/pregunta/<int:pregunta_id>/obtener', methods=['GET'])
+@login_required
+def obtener_pregunta(pregunta_id):
+    """Obtener una pregunta con sus opciones"""
+    try:
+        print(f"DEBUG: obtener_pregunta - pregunta_id: {pregunta_id}")
+        
+        # Obtener la pregunta
+        pregunta = controlador_preguntas.obtener_pregunta_por_id(pregunta_id)
+        if not pregunta:
+            return jsonify({'success': False, 'error': 'Pregunta no encontrada'}), 404
+        
+        # Obtener opciones
+        opciones = controlador_opciones.obtener_opciones_por_pregunta(pregunta_id)
+        
+        print(f"DEBUG: Pregunta encontrada: {pregunta}")
+        print(f"DEBUG: Opciones: {opciones}")
+        
+        pregunta_response = {
+            'id_pregunta': pregunta_id,
+            'enunciado': pregunta.get('enunciado', ''),
+            'tiempo': pregunta.get('tiempo_limite', 30),
+            'opciones': [{
+                'id_opcion': opc.get('id_opcion'),
+                'texto_opcion': opc.get('texto_opcion', ''),
+                'es_correcta': opc.get('es_correcta', False)
+            } for opc in opciones]
+        }
+        
+        return jsonify({
+            'success': True,
+            'pregunta': pregunta_response
+        })
+        
+    except Exception as e:
+        print(f"DEBUG: Error en obtener_pregunta: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/pregunta/<int:pregunta_id>/editar', methods=['POST'])
+@login_required
+def editar_pregunta_cuestionario(pregunta_id):
+    """Editar una pregunta existente"""
+    try:
+        print(f"DEBUG: editar_pregunta_cuestionario - pregunta_id: {pregunta_id}")
+        
+        # Verificar que el usuario es docente
+        if session.get('usuario_tipo') != 'docente':
+            return jsonify({'success': False, 'error': 'Solo los docentes pueden editar preguntas'}), 403
+        
+        # Verificar que la pregunta existe
+        pregunta = controlador_preguntas.obtener_pregunta_por_id(pregunta_id)
+        if not pregunta:
+            return jsonify({'success': False, 'error': 'Pregunta no encontrada'}), 404
+        
+        # Obtener datos del formulario
+        enunciado = request.form.get('enunciado', '').strip()
+        tiempo = request.form.get('tiempo', 30)
+        opciones_json = request.form.get('opciones', '[]')
+        
+        print(f"DEBUG: Datos recibidos - enunciado: '{enunciado}', tiempo: {tiempo}")
+        
+        if not enunciado:
+            return jsonify({'success': False, 'error': 'El enunciado de la pregunta es requerido'}), 400
+        
+        # Parsear opciones
+        import json
+        try:
+            opciones = json.loads(opciones_json)
+        except:
+            return jsonify({'success': False, 'error': 'Formato de opciones inválido'}), 400
+        
+        if len(opciones) < 2:
+            return jsonify({'success': False, 'error': 'Debe haber al menos 2 opciones'}), 400
+        
+        # Verificar que hay una opción correcta
+        tiene_correcta = any(opcion.get('es_correcta', False) for opcion in opciones)
+        if not tiene_correcta:
+            return jsonify({'success': False, 'error': 'Debe seleccionar una respuesta correcta'}), 400
+        
+        # Actualizar la pregunta
+        resultado = controlador_preguntas.actualizar_pregunta(
+            id_pregunta=pregunta_id,
+            enunciado=enunciado,
+            tipo='opcion_multiple',
+            puntaje_base=1,
+            tiempo_limite=int(tiempo)
+        )
+        
+        if not resultado:
+            return jsonify({'success': False, 'error': 'Error al actualizar la pregunta'}), 500
+        
+        # Eliminar opciones anteriores
+        conexion = obtener_conexion()
+        cursor = conexion.cursor()
+        cursor.execute("DELETE FROM opciones_respuesta WHERE id_pregunta = %s", (pregunta_id,))
+        conexion.commit()
+        conexion.close()
+        
+        # Crear las nuevas opciones
+        for i, opcion in enumerate(opciones):
+            texto_opcion = opcion.get('texto_opcion', '').strip()
+            es_correcta = opcion.get('es_correcta', False)
+            
+            if texto_opcion:
+                controlador_opciones.crear_opcion(
+                    id_pregunta=pregunta_id,
+                    texto_opcion=texto_opcion,
+                    es_correcta=es_correcta,
+                    explicacion=''
+                )
+        
+        # Obtener la pregunta actualizada
+        opciones_pregunta = controlador_opciones.obtener_opciones_por_pregunta(pregunta_id)
+        
+        pregunta_response = {
+            'id_pregunta': pregunta_id,
+            'enunciado': enunciado,
+            'tiempo': tiempo,
+            'opciones': [{
+                'texto_opcion': opc.get('texto_opcion', ''),
+                'es_correcta': opc.get('es_correcta', False)
+            } for opc in opciones_pregunta]
+        }
+        
+        return jsonify({
+            'success': True,
+            'message': 'Pregunta actualizada exitosamente',
+            'pregunta': pregunta_response
+        })
+        
+    except Exception as e:
+        print(f"DEBUG: Error en editar_pregunta_cuestionario: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/pregunta/<int:pregunta_id>/eliminar', methods=['POST'])
+@login_required
+def eliminar_pregunta_cuestionario(pregunta_id):
+    """Eliminar una pregunta"""
+    try:
+        print(f"DEBUG: eliminar_pregunta_cuestionario - pregunta_id: {pregunta_id}")
+        
+        # Verificar que el usuario es docente
+        if session.get('usuario_tipo') != 'docente':
+            return jsonify({'success': False, 'error': 'Solo los docentes pueden eliminar preguntas'}), 403
+        
+        # Verificar que la pregunta existe
+        pregunta = controlador_preguntas.obtener_pregunta_por_id(pregunta_id)
+        if not pregunta:
+            return jsonify({'success': False, 'error': 'Pregunta no encontrada'}), 404
+        
+        # Eliminar la pregunta (esto también eliminará las opciones por CASCADE)
+        resultado = controlador_preguntas.eliminar_pregunta(pregunta_id)
+        
+        if resultado:
+            return jsonify({
+                'success': True,
+                'message': 'Pregunta eliminada exitosamente'
+            })
+        else:
+            return jsonify({'success': False, 'error': 'Error al eliminar la pregunta'}), 500
+        
+    except Exception as e:
+        print(f"DEBUG: Error en eliminar_pregunta_cuestionario: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/unirse-juego', methods=['GET', 'POST'])
 def unirse_juego():
     if request.method == 'POST':
@@ -2284,6 +2563,77 @@ def api_cerrar_sala(sala_id):
     except Exception as e:
         print(f"DEBUG: Error en api_cerrar_sala: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/perfil', methods=['GET', 'POST'])
+def perfil():
+    if 'usuario_id' not in session:
+        return redirect(url_for('login'))
+
+    usuario_id = session['usuario_id']
+    conexion = obtener_conexion()
+    cursor = conexion.cursor()
+
+    cursor.execute("""
+        SELECT id_usuario, nombre, apellidos, email, tipo_usuario, fecha_registro, estado
+        FROM usuarios
+        WHERE id_usuario = %s
+    """, (usuario_id,))
+    fila = cursor.fetchone()
+    columnas = [col[0] for col in cursor.description]
+    usuario = dict(zip(columnas, fila)) if fila else None
+
+    if not usuario:
+        flash("No se encontró el usuario.", "danger")
+        conexion.close()
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        print("DEBUG /perfil - request.form:", dict(request.form))
+
+    if request.method == 'POST' and request.form.get('form_type') == 'update':
+        nombre = request.form.get('nombre', '').strip()
+        apellidos = request.form.get('apellidos', '').strip()
+        email = request.form.get('email', '').strip()
+        password = request.form.get('password', '').strip()
+
+        cambios = []
+        valores = []
+
+        if nombre != usuario['nombre']:
+            cambios.append("nombre = %s")
+            valores.append(nombre)
+        if apellidos != usuario['apellidos']:
+            cambios.append("apellidos = %s")
+            valores.append(apellidos)
+        if email != usuario['email']:
+            cambios.append("email = %s")
+            valores.append(email)
+        if password:
+            cambios.append("contraseña_hash = MD5(%s)")
+            valores.append(password)
+
+        if cambios:
+            query = f"UPDATE usuarios SET {', '.join(cambios)} WHERE id_usuario = %s"
+            valores.append(usuario_id)
+            cursor.execute(query, tuple(valores))
+            conexion.commit()
+            flash('✅ Perfil actualizado correctamente.', 'success')
+        else:
+            flash('ℹ️ No se realizaron cambios.', 'info')
+
+        conexion.close()
+        return redirect(url_for('perfil'))
+
+    if request.method == 'POST' and request.form.get('form_type') == 'delete':
+        cursor.execute("DELETE FROM usuarios WHERE id_usuario = %s", (usuario_id,))
+        conexion.commit()
+        conexion.close()
+        session.clear()
+        flash('🗑️ Tu cuenta ha sido eliminada correctamente.', 'warning')
+        return redirect(url_for('login'))
+
+    conexion.close()
+    return render_template('MiPerfil.html', usuario=usuario)     
 
 if __name__ == '__main__':
     # Verificar conexión e inicializar usuarios de prueba

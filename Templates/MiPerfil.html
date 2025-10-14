@@ -1,0 +1,211 @@
+{% extends "BrainRush_Master.html" %}
+{% block title %}Mi Perfil - Brain RUSH{% endblock %}
+
+{% block content %}
+<div class="animated-bg">
+    <div class="floating-shape shape-1"></div>
+    <div class="floating-shape shape-2"></div>
+    <div class="floating-shape shape-3"></div>
+    <div class="floating-shape shape-4"></div>
+    <div class="floating-shape shape-5"></div>
+</div>
+
+<section class="main-content">
+    <div class="content-wrapper animate-fadeIn">
+        <h2 class="text-center gradient-text mb-4">Mi Perfil</h2>
+
+        <!-- 🔹 Mensajes Flash -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class="flash-container">
+              {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+
+        <!-- 🔹 FORMULARIO ACTUALIZAR PERFIL -->
+        <form method="POST" action="{{ url_for('perfil') }}" class="profile-form" id="formActualizar" autocomplete="off">
+            <input type="hidden" name="form_type" value="update">
+
+            <div class="form-group">
+                <label for="nombre">Nombre</label>
+                <input class="input-field" type="text" id="nombre" name="nombre" 
+                       value="{{ usuario.nombre }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="apellidos">Apellidos</label>
+                <input class="input-field" type="text" id="apellidos" name="apellidos" 
+                       value="{{ usuario.apellidos }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Correo electrónico</label>
+                <input class="input-field" type="email" id="email" name="email" 
+                       value="{{ usuario.email }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Nueva contraseña (opcional)</label>
+                <input class="input-field" type="password" id="password" name="password" 
+                       placeholder="Deja en blanco si no deseas cambiarla">
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">💾 Actualizar cambios</button>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">↩ Volver</a>
+            </div>
+        </form>
+
+        <!-- 🔹 SEPARADOR -->
+        <div style="max-width:500px;margin:18px auto;text-align:center;color:rgba(255,255,255,0.6)">— o —</div>
+
+        <!-- 🔹 FORMULARIO ELIMINAR CUENTA -->
+        <form method="POST" action="{{ url_for('perfil') }}" id="formEliminar" class="delete-form" style="text-align:center;">
+            <input type="hidden" name="form_type" value="delete">
+            <button type="submit" class="btn btn-danger">🗑️ Eliminar cuenta</button>
+        </form>
+    </div>
+</section>
+
+<!-- 🔹 Estilos -->
+<style>
+.flash-container { margin-bottom: 1.5rem; }
+.alert {
+    padding: 12px;
+    border-radius: 10px;
+    font-weight: 500;
+    margin-bottom: 10px;
+    text-align: center;
+    animation: fadeIn 0.5s ease;
+}
+.alert-success { background: #2ecc71; color: white; }
+.alert-info { background: #3498db; color: white; }
+.alert-danger { background: #e74c3c; color: white; }
+.alert-warning { background: #f1c40f; color: #333; }
+
+.profile-form {
+    max-width: 500px;
+    margin: 0 auto;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(20px);
+    border-radius: var(--radius-xl);
+    padding: var(--space-xxl);
+    box-shadow: var(--shadow-lg);
+    animation: fadeIn 0.6s ease-in-out;
+}
+.profile-form .form-group { margin-bottom: var(--space-lg); }
+.profile-form label {
+    display: block;
+    font-weight: 600;
+    color: white;
+    margin-bottom: var(--space-sm);
+}
+.input-field {
+    width: 100%;
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    border: none;
+    outline: none;
+    font-size: 1rem;
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--dark);
+    transition: var(--transition-smooth);
+}
+.input-field:focus {
+    background: white;
+    box-shadow: 0 0 0 3px var(--secondary-color);
+}
+.form-actions {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-lg);
+    margin-top: var(--space-xl);
+}
+.btn-primary {
+    background: linear-gradient(135deg,#FF6B35,#F7931E);
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+.btn-primary:hover { opacity: 0.9; }
+.btn-secondary {
+    background: rgba(255,255,255,0.15);
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 8px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.btn-secondary:hover { background: rgba(255,255,255,0.3); }
+.btn-danger {
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+.btn-danger:hover { background-color: #c0392b; }
+</style>
+
+<!-- 🔹 Librería SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<!-- 🔹 Confirmaciones con SweetAlert -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Confirmación al actualizar perfil
+    const formActualizar = document.getElementById('formActualizar');
+    if (formActualizar) {
+        formActualizar.addEventListener('submit', function(e) {
+            e.preventDefault();
+            Swal.fire({
+                title: '¿Deseas guardar los cambios?',
+                text: "Se actualizará la información de tu perfil.",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#FF6B35',
+                cancelButtonColor: '#aaa',
+                confirmButtonText: 'Sí, guardar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    formActualizar.submit();
+                }
+            });
+        });
+    }
+
+    // Confirmación al eliminar cuenta
+    const formEliminar = document.getElementById('formEliminar');
+    if (formEliminar) {
+        formEliminar.addEventListener('submit', function(e) {
+            e.preventDefault();
+            Swal.fire({
+                title: '¿Eliminar cuenta?',
+                text: "⚠️ Esta acción no se puede deshacer.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#e74c3c',
+                cancelButtonColor: '#aaa',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    formEliminar.submit();
+                }
+            });
+        });
+    }
+});
+</script>
+{% endblock %}
