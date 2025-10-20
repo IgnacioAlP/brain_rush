@@ -290,6 +290,7 @@
             </div>
             
             <form id="form-unirse">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="form-group">
                     <label for="codigo_sala" class="form-label">
                         <i class="fas fa-hashtag"></i>

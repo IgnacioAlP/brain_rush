@@ -591,6 +591,7 @@
     <!-- Creador de preguntas -->
     <div class="question-creator animate-fadeIn" style="animation-delay: 0.2s;">
         <form id="question-form" method="POST" action="{{ url_for('agregar_preguntas', cuestionario_id=cuestionario.id_cuestionario) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <!-- Sección de la pregunta -->
             <div class="question-section">
                 <label for="question-text" class="question-label">

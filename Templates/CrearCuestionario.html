@@ -111,6 +111,7 @@
 
     <div class="quiz-form-container">
         <form method="POST" action="{{ url_for('crear_cuestionario_route') }}" id="quizForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="form-section">
                 <h3 class="section-title">Información del Cuestionario</h3>
                 
