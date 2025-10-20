@@ -183,6 +183,11 @@ app.secret_key = app_config.SECRET_KEY
 # Configurar CSRF
 csrf = CSRFProtect(app)
 
+# Configuración adicional de CSRF
+app.config['WTF_CSRF_TIME_LIMIT'] = None  # No expirar el token
+app.config['WTF_CSRF_SSL_STRICT'] = False  # No requerir HTTPS
+app.config['WTF_CSRF_CHECK_DEFAULT'] = True
+
 #---RUTAS FIJAS---#
 
 @app.route('/')
@@ -408,7 +413,16 @@ def dashboard_estudiante():
             'recompensas_obtenidas': 0
         }
     
-    return render_template('DashboardEstudiante.html', usuario=usuario, estadisticas=estadisticas)
+    # Obtener todos los cuestionarios publicados
+    try:
+        todos_cuestionarios = controlador_cuestionarios.obtener_cuestionarios_publicados()
+    except:
+        todos_cuestionarios = []
+    
+    return render_template('DashboardEstudiante.html', 
+                         usuario=usuario, 
+                         estadisticas=estadisticas,
+                         cuestionarios=todos_cuestionarios)
 
 @app.route('/admin')
 @login_required 
@@ -1445,23 +1459,111 @@ def editar_pregunta_route(pregunta_id):
         flash(f'Error al actualizar la pregunta: {str(e)}', 'error')
         return redirect(url_for('error_sistema_page'))
 
-@app.route('/eliminar-pregunta/<int:pregunta_id>', methods=['POST'])
+@app.route('/pregunta/<int:pregunta_id>/eliminar', methods=['POST'])
+@login_required
 def eliminar_pregunta_route(pregunta_id):
     try:
+        # Verificar que el usuario es docente
+        if session.get('usuario_tipo') != 'docente':
+            return jsonify({'success': False, 'error': 'Solo los docentes pueden eliminar preguntas'}), 403
+        
         resultado = controlador_preguntas.eliminar_pregunta(pregunta_id)
         
         if not resultado:
             raise ValueError("No se pudo eliminar la pregunta")
         
-        if request.is_json:
+        if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({'success': True, 'message': 'Pregunta eliminada exitosamente'})
         flash('¡Pregunta eliminada exitosamente!', 'success')
         return redirect(request.referrer or url_for('mis_cuestionarios'))
     except Exception as e:
-        if request.is_json:
+        if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({'success': False, 'error': str(e)}), 400
         flash(f'Error al eliminar la pregunta: {str(e)}', 'error')
         return redirect(url_for('error_sistema_page'))
+
+@app.route('/pregunta/<int:pregunta_id>/editar', methods=['POST'])
+@login_required
+def editar_pregunta_ajax(pregunta_id):
+    """Editar una pregunta existente"""
+    try:
+        print(f"DEBUG: Editando pregunta ID: {pregunta_id}")
+        
+        # Verificar que el usuario es docente
+        if session.get('usuario_tipo') != 'docente':
+            return jsonify({'success': False, 'error': 'Solo los docentes pueden editar preguntas'}), 403
+        
+        # Obtener datos del formulario
+        enunciado = request.form.get('enunciado', '').strip()
+        tiempo = int(request.form.get('tiempo', 30))
+        opciones_json = request.form.get('opciones', '[]')
+        
+        print(f"DEBUG: Datos recibidos - enunciado: '{enunciado}', tiempo: {tiempo}")
+        print(f"DEBUG: Opciones JSON: {opciones_json}")
+        
+        if not enunciado:
+            return jsonify({'success': False, 'error': 'El enunciado es requerido'}), 400
+        
+        # Parsear opciones
+        import json
+        opciones = json.loads(opciones_json)
+        
+        if not opciones or len(opciones) < 2:
+            return jsonify({'success': False, 'error': 'Debe haber al menos 2 opciones'}), 400
+        
+        # Verificar que hay una opción correcta
+        if not any(opcion.get('es_correcta') for opcion in opciones):
+            return jsonify({'success': False, 'error': 'Debe seleccionar una respuesta correcta'}), 400
+        
+        # Actualizar la pregunta
+        resultado = controlador_preguntas.actualizar_pregunta(
+            pregunta_id, 
+            enunciado, 
+            'opcion_multiple', 
+            1,  # puntaje_base
+            tiempo
+        )
+        
+        if not resultado:
+            return jsonify({'success': False, 'error': 'No se pudo actualizar la pregunta'}), 500
+        
+        # Eliminar opciones anteriores
+        controlador_opciones.eliminar_opciones_pregunta(pregunta_id)
+        
+        # Crear nuevas opciones
+        for opcion in opciones:
+            controlador_opciones.crear_opcion(
+                pregunta_id,
+                opcion['texto_opcion'],
+                opcion['es_correcta'],
+                ''  # explicacion
+            )
+        
+        # Obtener la pregunta actualizada con sus opciones
+        pregunta_actualizada = controlador_preguntas.obtener_pregunta_por_id(pregunta_id)
+        opciones_actualizadas = controlador_opciones.obtener_opciones_por_pregunta(pregunta_id)
+        
+        pregunta_data = {
+            'id_pregunta': pregunta_actualizada['id_pregunta'],
+            'enunciado': pregunta_actualizada['enunciado'],
+            'tiempo': pregunta_actualizada.get('tiempo_limite', 30),
+            'opciones': opciones_actualizadas
+        }
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Pregunta actualizada exitosamente',
+            'pregunta': pregunta_data
+        })
+        
+    except json.JSONDecodeError as e:
+        print(f"DEBUG: Error parsing JSON: {str(e)}")
+        return jsonify({'success': False, 'error': 'Formato de opciones inválido'}), 400
+    except Exception as e:
+        print(f"DEBUG: Error en editar_pregunta_ajax: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/pregunta/<int:pregunta_id>/opciones')
 def obtener_opciones_pregunta(pregunta_id):
@@ -1470,6 +1572,39 @@ def obtener_opciones_pregunta(pregunta_id):
         return jsonify({'success': True, 'opciones': opciones})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 400
+
+@app.route('/pregunta/<int:pregunta_id>/obtener')
+@login_required
+def obtener_pregunta(pregunta_id):
+    """Obtener los datos de una pregunta específica"""
+    try:
+        print(f"DEBUG: Obteniendo pregunta ID: {pregunta_id}")
+        
+        # Obtener la pregunta
+        pregunta = controlador_preguntas.obtener_pregunta_por_id(pregunta_id)
+        if not pregunta:
+            return jsonify({'success': False, 'error': 'Pregunta no encontrada'}), 404
+        
+        # Obtener las opciones
+        opciones = controlador_opciones.obtener_opciones_por_pregunta(pregunta_id)
+        
+        # Formatear la respuesta
+        pregunta_data = {
+            'id_pregunta': pregunta['id_pregunta'],
+            'enunciado': pregunta['enunciado'],
+            'tipo': pregunta.get('tipo', 'opcion_multiple'),
+            'tiempo': pregunta.get('tiempo_limite', 30),
+            'opciones': opciones
+        }
+        
+        print(f"DEBUG: Pregunta encontrada: {pregunta_data}")
+        return jsonify({'success': True, 'pregunta': pregunta_data})
+        
+    except Exception as e:
+        print(f"DEBUG: Error en obtener_pregunta: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/cuestionario/<int:cuestionario_id>/agregar-pregunta', methods=['POST'])
 @login_required
@@ -1517,10 +1652,11 @@ def agregar_pregunta_cuestionario(cuestionario_id):
         if not tiene_correcta:
             return jsonify({'success': False, 'error': 'Debe seleccionar una respuesta correcta'}), 400
         
-        # Crear la pregunta
+        # Crear la pregunta (ya la asocia al cuestionario internamente)
         pregunta_id = controlador_preguntas.crear_pregunta(
             enunciado=enunciado,
             tipo='opcion_multiple',
+            cuestionario_id=cuestionario_id,
             puntaje_base=1,
             tiempo_limite=int(tiempo)
         )
@@ -1543,11 +1679,6 @@ def agregar_pregunta_cuestionario(cuestionario_id):
                     explicacion=''
                 )
                 print(f"DEBUG: Opción {i+1} creada: '{texto_opcion}' (correcta: {es_correcta})")
-        
-        # Agregar pregunta al cuestionario
-        preguntas_existentes = controlador_preguntas.obtener_preguntas_por_cuestionario(cuestionario_id)
-        orden = len(preguntas_existentes) + 1
-        controlador_preguntas.agregar_pregunta_a_cuestionario(cuestionario_id, pregunta_id, orden)
         
         # Obtener la pregunta completa para devolverla
         pregunta_completa = controlador_preguntas.obtener_pregunta_por_id(pregunta_id)
@@ -1576,144 +1707,6 @@ def agregar_pregunta_cuestionario(cuestionario_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
-@app.route('/pregunta/<int:pregunta_id>/obtener', methods=['GET'])
-@login_required
-def obtener_pregunta(pregunta_id):
-    """Obtener una pregunta con sus opciones"""
-    try:
-        print(f"DEBUG: obtener_pregunta - pregunta_id: {pregunta_id}")
-        
-        # Obtener la pregunta
-        pregunta = controlador_preguntas.obtener_pregunta_por_id(pregunta_id)
-        if not pregunta:
-            return jsonify({'success': False, 'error': 'Pregunta no encontrada'}), 404
-        
-        # Obtener opciones
-        opciones = controlador_opciones.obtener_opciones_por_pregunta(pregunta_id)
-        
-        print(f"DEBUG: Pregunta encontrada: {pregunta}")
-        print(f"DEBUG: Opciones: {opciones}")
-        
-        pregunta_response = {
-            'id_pregunta': pregunta_id,
-            'enunciado': pregunta.get('enunciado', ''),
-            'tiempo': pregunta.get('tiempo_limite', 30),
-            'opciones': [{
-                'id_opcion': opc.get('id_opcion'),
-                'texto_opcion': opc.get('texto_opcion', ''),
-                'es_correcta': opc.get('es_correcta', False)
-            } for opc in opciones]
-        }
-        
-        return jsonify({
-            'success': True,
-            'pregunta': pregunta_response
-        })
-        
-    except Exception as e:
-        print(f"DEBUG: Error en obtener_pregunta: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-
-@app.route('/pregunta/<int:pregunta_id>/editar', methods=['POST'])
-@login_required
-def editar_pregunta_cuestionario(pregunta_id):
-    """Editar una pregunta existente"""
-    try:
-        print(f"DEBUG: editar_pregunta_cuestionario - pregunta_id: {pregunta_id}")
-        
-        # Verificar que el usuario es docente
-        if session.get('usuario_tipo') != 'docente':
-            return jsonify({'success': False, 'error': 'Solo los docentes pueden editar preguntas'}), 403
-        
-        # Verificar que la pregunta existe
-        pregunta = controlador_preguntas.obtener_pregunta_por_id(pregunta_id)
-        if not pregunta:
-            return jsonify({'success': False, 'error': 'Pregunta no encontrada'}), 404
-        
-        # Obtener datos del formulario
-        enunciado = request.form.get('enunciado', '').strip()
-        tiempo = request.form.get('tiempo', 30)
-        opciones_json = request.form.get('opciones', '[]')
-        
-        print(f"DEBUG: Datos recibidos - enunciado: '{enunciado}', tiempo: {tiempo}")
-        
-        if not enunciado:
-            return jsonify({'success': False, 'error': 'El enunciado de la pregunta es requerido'}), 400
-        
-        # Parsear opciones
-        import json
-        try:
-            opciones = json.loads(opciones_json)
-        except:
-            return jsonify({'success': False, 'error': 'Formato de opciones inválido'}), 400
-        
-        if len(opciones) < 2:
-            return jsonify({'success': False, 'error': 'Debe haber al menos 2 opciones'}), 400
-        
-        # Verificar que hay una opción correcta
-        tiene_correcta = any(opcion.get('es_correcta', False) for opcion in opciones)
-        if not tiene_correcta:
-            return jsonify({'success': False, 'error': 'Debe seleccionar una respuesta correcta'}), 400
-        
-        # Actualizar la pregunta
-        resultado = controlador_preguntas.actualizar_pregunta(
-            id_pregunta=pregunta_id,
-            enunciado=enunciado,
-            tipo='opcion_multiple',
-            puntaje_base=1,
-            tiempo_limite=int(tiempo)
-        )
-        
-        if not resultado:
-            return jsonify({'success': False, 'error': 'Error al actualizar la pregunta'}), 500
-        
-        # Eliminar opciones anteriores
-        conexion = obtener_conexion()
-        cursor = conexion.cursor()
-        cursor.execute("DELETE FROM opciones_respuesta WHERE id_pregunta = %s", (pregunta_id,))
-        conexion.commit()
-        conexion.close()
-        
-        # Crear las nuevas opciones
-        for i, opcion in enumerate(opciones):
-            texto_opcion = opcion.get('texto_opcion', '').strip()
-            es_correcta = opcion.get('es_correcta', False)
-            
-            if texto_opcion:
-                controlador_opciones.crear_opcion(
-                    id_pregunta=pregunta_id,
-                    texto_opcion=texto_opcion,
-                    es_correcta=es_correcta,
-                    explicacion=''
-                )
-        
-        # Obtener la pregunta actualizada
-        opciones_pregunta = controlador_opciones.obtener_opciones_por_pregunta(pregunta_id)
-        
-        pregunta_response = {
-            'id_pregunta': pregunta_id,
-            'enunciado': enunciado,
-            'tiempo': tiempo,
-            'opciones': [{
-                'texto_opcion': opc.get('texto_opcion', ''),
-                'es_correcta': opc.get('es_correcta', False)
-            } for opc in opciones_pregunta]
-        }
-        
-        return jsonify({
-            'success': True,
-            'message': 'Pregunta actualizada exitosamente',
-            'pregunta': pregunta_response
-        })
-        
-    except Exception as e:
-        print(f"DEBUG: Error en editar_pregunta_cuestionario: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @app.route('/pregunta/<int:pregunta_id>/eliminar', methods=['POST'])
@@ -2596,6 +2589,13 @@ def perfil():
         email = request.form.get('email', '').strip()
         password = request.form.get('password', '').strip()
 
+        # Validar contraseña única si se está cambiando
+        if password:
+            if not controlador_usuario.verificar_contrasena_unica(password, usuario_id):
+                flash('❌ Esta contraseña ya está siendo utilizada por otro usuario. Por favor, elige una diferente.', 'danger')
+                conexion.close()
+                return redirect(url_for('perfil'))
+
         cambios = []
         valores = []
 
@@ -2625,12 +2625,18 @@ def perfil():
         return redirect(url_for('perfil'))
 
     if request.method == 'POST' and request.form.get('form_type') == 'delete':
-        cursor.execute("DELETE FROM usuarios WHERE id_usuario = %s", (usuario_id,))
-        conexion.commit()
-        conexion.close()
-        session.clear()
-        flash('🗑️ Tu cuenta ha sido eliminada correctamente.', 'warning')
-        return redirect(url_for('login'))
+        conexion.close()  # Cerrar la conexión actual antes de llamar a la función
+        
+        # Usar la función que elimina en cascada
+        exito, mensaje = controlador_usuario.eliminar_usuario_completo(usuario_id)
+        
+        if exito:
+            session.clear()
+            flash('🗑️ Tu cuenta y todos tus datos han sido eliminados correctamente.', 'warning')
+            return redirect(url_for('login'))
+        else:
+            flash(f'❌ Error al eliminar cuenta: {mensaje}', 'danger')
+            return redirect(url_for('perfil'))
 
     conexion.close()
     return render_template('MiPerfil.html', usuario=usuario)     

@@ -317,6 +317,10 @@
                     Confirmar Contraseña
                 </label>
                 <input type="password" id="confirm_password" name="confirm_password" required class="form-input" placeholder="••••••••">
+                <div class="requirement" id="req-match" style="margin-top: 0.5rem; display: none;">
+                    <i class="fas fa-times"></i>
+                    <span>Las contraseñas deben coincidir</span>
+                </div>
             </div>
 
             <button type="submit" class="register-btn" id="submitBtn" disabled>
@@ -333,6 +337,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Configurar el token CSRF para todas las peticiones AJAX
@@ -367,12 +372,34 @@ document.addEventListener('DOMContentLoaded', function() {
         length: document.getElementById('req-length'),
         uppercase: document.getElementById('req-uppercase'),
         lowercase: document.getElementById('req-lowercase'),
-        number: document.getElementById('req-number')
+        number: document.getElementById('req-number'),
+        match: document.getElementById('req-match')
     };
     
-    // Validación de contraseña en tiempo real
+
+    
+    // Validación de confirmación de contraseña
+    confirmPasswordInput.addEventListener('input', function() {
+        const password = passwordInput.value;
+        const confirmPassword = this.value;
+        
+        // Mostrar indicador de coincidencia solo si hay texto en ambos campos
+        if (confirmPassword.length > 0 && password.length > 0) {
+            requirements.match.style.display = 'flex';
+            const passwordsMatch = password === confirmPassword;
+            updateRequirement('match', passwordsMatch);
+        } else {
+            requirements.match.style.display = 'none';
+        }
+        
+        validateForm();
+        updateSteps();
+    });
+    
+    // También actualizar cuando se cambie la contraseña principal
     passwordInput.addEventListener('input', function() {
         const password = this.value;
+        const confirmPassword = confirmPasswordInput.value;
         
         // Verificar longitud
         updateRequirement('length', password.length >= 8);
@@ -386,12 +413,15 @@ document.addEventListener('DOMContentLoaded', function() {
         // Verificar número
         updateRequirement('number', /\d/.test(password));
         
-        validateForm();
-        updateSteps();
-    });
-    
-    // Validación de confirmación de contraseña
-    confirmPasswordInput.addEventListener('input', function() {
+        // Actualizar indicador de coincidencia si hay texto en confirmar
+        if (confirmPassword.length > 0 && password.length > 0) {
+            requirements.match.style.display = 'flex';
+            const passwordsMatch = password === confirmPassword;
+            updateRequirement('match', passwordsMatch);
+        } else {
+            requirements.match.style.display = 'none';
+        }
+        
         validateForm();
         updateSteps();
     });
@@ -473,7 +503,26 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Animación al enviar formulario
-    form.addEventListener('submit', function() {
+    form.addEventListener('submit', function(e) {
+        const password = passwordInput.value;
+        const confirmPassword = confirmPasswordInput.value;
+        
+        // Validación final antes de enviar
+        if (password !== confirmPassword) {
+            e.preventDefault();
+            Swal.fire({
+                icon: 'error',
+                title: 'Contraseñas no coinciden',
+                text: 'Las contraseñas que ingresaste no son iguales. Por favor, verifica e intenta nuevamente.',
+                confirmButtonColor: '#4ECDC4',
+                background: 'linear-gradient(135deg, rgba(255,255,255,0.95), rgba(240,240,255,0.95))',
+                customClass: {
+                    popup: 'animate-fadeIn'
+                }
+            });
+            return false;
+        }
+        
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando cuenta...';
         submitBtn.disabled = true;
     });

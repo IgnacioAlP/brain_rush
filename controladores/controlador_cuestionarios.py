@@ -5,7 +5,7 @@ def obtener_cuestionarios_por_docente(docente_id):
     """Obtiene los cuestionarios de un docente específico"""
     try:
         conexion = obtener_conexion()
-        cursor = conexion.cursor(dictionary=True)
+        cursor = conexion.cursor()
         
         query = """
         SELECT 
@@ -22,7 +22,20 @@ def obtener_cuestionarios_por_docente(docente_id):
         """
         
         cursor.execute(query, (docente_id,))
-        cuestionarios = cursor.fetchall()
+        resultados = cursor.fetchall()
+        
+        # Convertir tuplas a diccionarios
+        cuestionarios = []
+        for resultado in resultados:
+            cuestionarios.append({
+                'id_cuestionario': resultado[0],
+                'titulo': resultado[1],
+                'descripcion': resultado[2],
+                'fecha_creacion': resultado[3],
+                'fecha_programada': resultado[4],
+                'fecha_publicacion': resultado[5],
+                'estado': resultado[6]
+            })
         
         cursor.close()
         conexion.close()
@@ -154,21 +167,45 @@ def obtener_cuestionarios():
     """Obtiene todos los cuestionarios"""
     try:
         conexion = obtener_conexion()
-        cursor = conexion.cursor(dictionary=True)
+        cursor = conexion.cursor()
         
         query = """
         SELECT 
-            c.*,
+            c.id_cuestionario,
+            c.titulo,
+            c.descripcion,
+            c.id_docente,
+            c.fecha_creacion,
+            c.fecha_programada,
+            c.fecha_publicacion,
+            c.estado,
             u.nombre as nombre_docente,
             u.apellidos as apellidos_docente,
-            (SELECT COUNT(*) FROM preguntas p WHERE p.id_cuestionario = c.id_cuestionario) as total_preguntas
+            (SELECT COUNT(*) FROM cuestionario_preguntas cp WHERE cp.id_cuestionario = c.id_cuestionario) as total_preguntas
         FROM cuestionarios c
         LEFT JOIN usuarios u ON c.id_docente = u.id_usuario
         ORDER BY c.fecha_creacion DESC
         """
         
         cursor.execute(query)
-        cuestionarios = cursor.fetchall()
+        resultados = cursor.fetchall()
+        
+        # Convertir tuplas a diccionarios
+        cuestionarios = []
+        for resultado in resultados:
+            cuestionarios.append({
+                'id_cuestionario': resultado[0],
+                'titulo': resultado[1],
+                'descripcion': resultado[2],
+                'id_docente': resultado[3],
+                'fecha_creacion': resultado[4],
+                'fecha_programada': resultado[5],
+                'fecha_publicacion': resultado[6],
+                'estado': resultado[7],
+                'nombre_docente': resultado[8],
+                'apellidos_docente': resultado[9],
+                'total_preguntas': resultado[10]
+            })
         
         cursor.close()
         conexion.close()
@@ -265,23 +302,24 @@ def obtener_estadisticas_sistema():
     """Obtiene estadísticas generales del sistema"""
     try:
         conexion = obtener_conexion()
-        cursor = conexion.cursor(dictionary=True)
+        cursor = conexion.cursor()
         
         # Total de cuestionarios
         cursor.execute("SELECT COUNT(*) as total FROM cuestionarios")
-        total_cuestionarios = cursor.fetchone()['total']
+        total_cuestionarios = cursor.fetchone()[0]
         
         # Cuestionarios por estado
         cursor.execute("SELECT estado, COUNT(*) as cantidad FROM cuestionarios GROUP BY estado")
-        por_estado = cursor.fetchall()
+        por_estado_resultado = cursor.fetchall()
+        por_estado = {resultado[0]: resultado[1] for resultado in por_estado_resultado}
         
         # Total de preguntas
         cursor.execute("SELECT COUNT(*) as total FROM preguntas")
-        total_preguntas = cursor.fetchone()['total']
+        total_preguntas = cursor.fetchone()[0]
         
         # Docentes activos (que tienen cuestionarios)
         cursor.execute("SELECT COUNT(DISTINCT id_docente) as total FROM cuestionarios")
-        docentes_activos = cursor.fetchone()['total']
+        docentes_activos = cursor.fetchone()[0]
         
         cursor.close()
         conexion.close()
@@ -290,7 +328,7 @@ def obtener_estadisticas_sistema():
             'total_cuestionarios': total_cuestionarios,
             'total_preguntas': total_preguntas,
             'docentes_activos': docentes_activos,
-            'por_estado': {item['estado']: item['cantidad'] for item in por_estado}
+            'por_estado': por_estado
         }
         
         return estadisticas
@@ -385,3 +423,53 @@ def despublicar_cuestionario(cuestionario_id, id_docente):
     except Exception as e:
         print(f"Error despublicando cuestionario {cuestionario_id}: {e}")
         return False, f"Error al despublicar: {str(e)}"
+
+def obtener_cuestionarios_publicados():
+    """Obtiene todos los cuestionarios publicados disponibles para estudiantes"""
+    try:
+        conexion = obtener_conexion()
+        cursor = conexion.cursor()
+        
+        query = """
+        SELECT 
+            c.id_cuestionario,
+            c.titulo,
+            c.descripcion,
+            c.fecha_publicacion,
+            u.nombre as nombre_docente,
+            u.apellidos as apellidos_docente,
+            (SELECT COUNT(*) 
+             FROM cuestionario_preguntas cp 
+             WHERE cp.id_cuestionario = c.id_cuestionario) as total_preguntas
+        FROM cuestionarios c
+        LEFT JOIN usuarios u ON c.id_docente = u.id_usuario
+        WHERE c.estado = 'publicado'
+        ORDER BY c.fecha_publicacion DESC
+        """
+        
+        cursor.execute(query)
+        resultados = cursor.fetchall()
+        
+        # Convertir tuplas a diccionarios
+        cuestionarios = []
+        for resultado in resultados:
+            cuestionarios.append({
+                'id_cuestionario': resultado[0],
+                'titulo': resultado[1],
+                'descripcion': resultado[2],
+                'fecha_publicacion': resultado[3],
+                'nombre_docente': resultado[4],
+                'apellidos_docente': resultado[5],
+                'total_preguntas': resultado[6]
+            })
+        
+        cursor.close()
+        conexion.close()
+        
+        return cuestionarios
+        
+    except Exception as e:
+        print(f"Error obteniendo cuestionarios publicados: {e}")
+        import traceback
+        traceback.print_exc()
+        return []

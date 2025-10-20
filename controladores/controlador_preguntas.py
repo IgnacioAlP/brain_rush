@@ -77,7 +77,7 @@ def obtener_preguntas_por_cuestionario(cuestionario_id):
         print(f"DEBUG: Error obteniendo preguntas para cuestionario {cuestionario_id}: {e}")
         return []
 
-def crear_pregunta(enunciado, tipo, cuestionario_id, puntaje_base=1):
+def crear_pregunta(enunciado, tipo, cuestionario_id, puntaje_base=1, tiempo_limite=30):
     """Crea una nueva pregunta y la asocia a un cuestionario"""
     try:
         conexion = obtener_conexion()
@@ -91,7 +91,8 @@ def crear_pregunta(enunciado, tipo, cuestionario_id, puntaje_base=1):
             conexion.close()
             return None
         
-        # Insertar la pregunta usando la estructura correcta
+        # Insertar la pregunta (la tabla solo tiene: id_pregunta, enunciado, tipo, puntaje_base)
+        # NOTA: tiempo_limite no existe en la tabla actual, se ignora por ahora
         cursor.execute("""
             INSERT INTO preguntas (enunciado, tipo, puntaje_base)
             VALUES (%s, %s, %s)
@@ -211,3 +212,71 @@ def obtener_opciones_por_pregunta(pregunta_id):
     except Exception as e:
         print(f"DEBUG: Error obteniendo opciones para pregunta {pregunta_id}: {e}")
         return []
+
+def obtener_pregunta_por_id(pregunta_id):
+    """Obtiene una pregunta específica por su ID"""
+    try:
+        conexion = obtener_conexion()
+        cursor = conexion.cursor()
+        
+        # La tabla preguntas solo tiene: id_pregunta, enunciado, tipo, puntaje_base
+        query = """
+        SELECT id_pregunta, enunciado, tipo, puntaje_base
+        FROM preguntas
+        WHERE id_pregunta = %s
+        """
+        
+        cursor.execute(query, (pregunta_id,))
+        resultado = cursor.fetchone()
+        
+        if resultado:
+            pregunta = {
+                'id_pregunta': resultado[0],
+                'enunciado': resultado[1],
+                'tipo': resultado[2],
+                'puntaje_base': resultado[3],
+                'tiempo_limite': 30  # Valor por defecto ya que no existe en la BD
+            }
+            cursor.close()
+            conexion.close()
+            return pregunta
+        
+        cursor.close()
+        conexion.close()
+        return None
+        
+    except Exception as e:
+        print(f"DEBUG: Error obteniendo pregunta {pregunta_id}: {e}")
+        return None
+
+def actualizar_pregunta(pregunta_id, enunciado, tipo, puntaje_base, tiempo_limite):
+    """Actualiza una pregunta existente"""
+    try:
+        conexion = obtener_conexion()
+        cursor = conexion.cursor()
+        
+        # La tabla preguntas solo tiene: id_pregunta, enunciado, tipo, puntaje_base
+        # tiempo_limite se ignora por ahora
+        query = """
+        UPDATE preguntas
+        SET enunciado = %s, tipo = %s, puntaje_base = %s
+        WHERE id_pregunta = %s
+        """
+        
+        cursor.execute(query, (enunciado, tipo, puntaje_base, pregunta_id))
+        conexion.commit()
+        
+        cursor.close()
+        conexion.close()
+        
+        print(f"DEBUG: Pregunta {pregunta_id} actualizada exitosamente")
+        return True
+        
+    except Exception as e:
+        print(f"DEBUG: Error actualizando pregunta {pregunta_id}: {e}")
+        if 'conexion' in locals():
+            conexion.rollback()
+            cursor.close()
+            conexion.close()
+        return False
+

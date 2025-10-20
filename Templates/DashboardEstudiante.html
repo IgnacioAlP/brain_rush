@@ -450,6 +450,54 @@
         </a>
     </div>
 
+    <!-- Cuestionarios Disponibles -->
+    <div class="recent-section animate-fadeIn" style="animation-delay: 0.4s; margin-bottom: var(--space-xxl);">
+        <div class="recent-header">
+            <h2 class="recent-title">
+                <i class="fas fa-list-alt"></i>
+                Cuestionarios Disponibles
+            </h2>
+        </div>
+
+        {% if cuestionarios and cuestionarios|length > 0 %}
+        <div class="cuestionarios-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--space-lg); margin-top: var(--space-lg);">
+            {% for cuestionario in cuestionarios %}
+            <div class="cuestionario-card" style="background: rgba(255,255,255,0.95); border-radius: var(--radius-lg); padding: var(--space-lg); box-shadow: var(--shadow-md); transition: var(--transition-smooth); border-left: 4px solid var(--primary-color);">
+                <h4 style="color: var(--dark); font-size: 1.2rem; margin-bottom: var(--space-sm); font-weight: 700;">
+                    {{ cuestionario.titulo }}
+                </h4>
+                <p style="color: var(--gray); font-size: 0.9rem; margin-bottom: var(--space-md); line-height: 1.5;">
+                    {{ cuestionario.descripcion|truncate(100) }}
+                </p>
+                <div style="display: flex; align-items: center; gap: var(--space-md); margin-bottom: var(--space-md); font-size: 0.85rem; color: var(--gray);">
+                    <span>
+                        <i class="fas fa-user"></i> 
+                        {{ cuestionario.nombre_docente }} {{ cuestionario.apellidos_docente }}
+                    </span>
+                    <span>
+                        <i class="fas fa-question-circle"></i> 
+                        {{ cuestionario.total_preguntas }} preguntas
+                    </span>
+                </div>
+                <div style="display: flex; gap: var(--space-sm);">
+                    <a href="#" class="btn-primary" style="flex: 1; text-align: center; padding: var(--space-sm) var(--space-md); background: var(--gradient-primary); color: white; border-radius: var(--radius-md); text-decoration: none; font-weight: 600; transition: var(--transition-fast);">
+                        <i class="fas fa-play"></i> Jugar
+                    </a>
+                    <a href="{{ url_for('ver_cuestionario', cuestionario_id=cuestionario.id_cuestionario) }}" class="btn-secondary" style="padding: var(--space-sm) var(--space-md); background: rgba(0,0,0,0.1); color: var(--dark); border-radius: var(--radius-md); text-decoration: none; font-weight: 600; transition: var(--transition-fast);">
+                        <i class="fas fa-eye"></i>
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: var(--space-xxl); color: rgba(0,0,0,0.4);">
+            <i class="fas fa-inbox" style="font-size: 3rem; margin-bottom: var(--space-md); opacity: 0.3;"></i>
+            <p style="font-size: 1.1rem;">No hay cuestionarios publicados disponibles en este momento.</p>
+        </div>
+        {% endif %}
+    </div>
+
     <!-- Estadísticas Personales -->
     <div class="stats-grid">
         <div class="stat-item animate-fadeIn" style="animation-delay: 0.4s;">

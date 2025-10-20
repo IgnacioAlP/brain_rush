@@ -137,13 +137,31 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const submitBtn = document.getElementById('submitBtn');
+    const form = document.getElementById('quizForm');
     
-    document.getElementById('quizForm').addEventListener('submit', function() {
-        submitBtn.innerHTML = 'Creando...';
-        submitBtn.disabled = true;
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        Swal.fire({
+            title: '¿Crear cuestionario?',
+            text: "Se creará un nuevo cuestionario.",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#FF6B35',
+            cancelButtonColor: '#aaa',
+            confirmButtonText: 'Sí, crear',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando...';
+                submitBtn.disabled = true;
+                form.submit();
+            }
+        });
     });
 });
 </script>

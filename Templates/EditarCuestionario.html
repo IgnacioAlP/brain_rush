@@ -1032,10 +1032,15 @@
     function addOption() {
       const editor = document.getElementById('options-editor');
       const currentOptions = editor.querySelectorAll('.option-editor').length;
-      const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
+      const letters = ['A', 'B', 'C', 'D'];
       
-      if (currentOptions >= 6) {
-        alert('⚠️ Máximo 6 opciones permitidas');
+      if (currentOptions >= 4) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Límite alcanzado',
+          text: 'Máximo 4 opciones permitidas',
+          confirmButtonColor: '#FF6B35'
+        });
         return;
       }
 
@@ -1064,14 +1069,19 @@
       const options = editor.querySelectorAll('.option-editor');
       
       if (options.length <= 2) {
-        alert('⚠️ Debe haber al menos 2 opciones');
+        Swal.fire({
+          icon: 'warning',
+          title: 'Mínimo requerido',
+          text: 'Debe haber al menos 2 opciones',
+          confirmButtonColor: '#FF6B35'
+        });
         return;
       }
 
       options[index].remove();
       
       // Reindexar opciones restantes
-      const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
+      const letters = ['A', 'B', 'C', 'D'];
       editor.querySelectorAll('.option-editor').forEach((option, newIndex) => {
         option.dataset.index = newIndex;
         const radio = option.querySelector('input[type="radio"]');
@@ -1089,36 +1099,45 @@
     }
 
     function deleteQuestion(questionId) {
-      if (!confirm('¿Estás seguro de que deseas eliminar esta pregunta? Esta acción no se puede deshacer.')) {
-        return;
-      }
-
-      fetch(`/pregunta/${questionId}/eliminar`, {
-        method: 'POST',
-        headers: {
-          'X-Requested-With': 'XMLHttpRequest',
-          'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+      Swal.fire({
+        title: '¿Eliminar pregunta?',
+        text: "Esta acción no se puede deshacer.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#e74c3c',
+        cancelButtonColor: '#aaa',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          fetch(`/pregunta/${questionId}/eliminar`, {
+            method: 'POST',
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest',
+              'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+            }
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              // Remover de la lista local
+              questionsData = questionsData.filter(q => q.id_pregunta !== questionId);
+              // Remover del DOM
+              const questionElement = document.querySelector(`[data-question-id="${questionId}"]`);
+              if (questionElement) {
+                questionElement.remove();
+              }
+              updateQuestionNumbers();
+              Swal.fire('¡Eliminada!', 'La pregunta ha sido eliminada correctamente.', 'success');
+            } else {
+              throw new Error(data.error || 'Error al eliminar la pregunta');
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            Swal.fire('Error', 'No se pudo eliminar la pregunta', 'error');
+          });
         }
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          // Remover de la lista local
-          questionsData = questionsData.filter(q => q.id_pregunta !== questionId);
-          // Remover del DOM
-          const questionElement = document.querySelector(`[data-question-id="${questionId}"]`);
-          if (questionElement) {
-            questionElement.remove();
-          }
-          updateQuestionNumbers();
-          alert('✅ Pregunta eliminada correctamente');
-        } else {
-          throw new Error(data.error || 'Error al eliminar la pregunta');
-        }
-      })
-      .catch(error => {
-        console.error('Error:', error);
-        alert('❌ Error: No se pudo eliminar la pregunta');
       });
     }
 
@@ -1151,25 +1170,67 @@
       
       // Validaciones
       if (!questionText) {
-        alert('⚠️ El texto de la pregunta no puede estar vacío');
+        Swal.fire({
+          icon: 'warning',
+          title: 'Campo requerido',
+          text: 'El texto de la pregunta no puede estar vacío',
+          confirmButtonColor: '#FF6B35'
+        });
         return;
       }
 
+      // Preparar las opciones (solo las que tienen texto)
+      const options = Array.from(optionInputs)
+        .map((input, index) => ({
+          texto_opcion: input.value.trim(),
+          es_correcta: index === parseInt(correctRadio?.value),
+          orden: index + 1
+        }))
+        .filter(opt => opt.texto_opcion !== ''); // Filtrar opciones vacías
+
+      // Validar que haya al menos 2 opciones con texto
+      if (options.length < 2) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Opciones insuficientes',
+          text: 'Debe haber al menos 2 opciones con texto',
+          confirmButtonColor: '#FF6B35'
+        });
+        return;
+      }
+
+      // Validar que haya máximo 4 opciones
+      if (options.length > 4) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Demasiadas opciones',
+          text: 'Máximo 4 opciones permitidas',
+          confirmButtonColor: '#FF6B35'
+        });
+        return;
+      }
+
+      // Validar que se haya seleccionado una respuesta correcta
       if (!correctRadio) {
-        alert('⚠️ Debes seleccionar una respuesta correcta');
+        Swal.fire({
+          icon: 'warning',
+          title: 'Respuesta correcta requerida',
+          text: 'Debes seleccionar una respuesta correcta',
+          confirmButtonColor: '#FF6B35'
+        });
         return;
       }
 
-      // Preparar las opciones
-      const options = Array.from(optionInputs).map((input, index) => ({
-        texto_opcion: input.value.trim(),
-        es_correcta: index === parseInt(correctRadio.value),
-        orden: index + 1
-      }));
-
-      // Validar que todas las opciones tengan texto
-      if (options.some(opt => !opt.texto_opcion)) {
-        alert('⚠️ Todas las opciones deben tener texto');
+      // Validar que la respuesta correcta seleccionada tenga texto
+      const selectedOptionIndex = parseInt(correctRadio.value);
+      const selectedOptionText = optionInputs[selectedOptionIndex]?.value.trim();
+      if (!selectedOptionText) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Opción inválida',
+          text: 'La opción seleccionada como correcta debe tener texto',
+          confirmButtonColor: '#FF6B35'
+        });
         return;
       }
 
@@ -1239,14 +1300,24 @@
           renderQuestionsList();
           closeQuestionModal();
           
-          alert('✅ ' + (currentQuestionId ? 'Pregunta actualizada' : 'Pregunta agregada') + ' correctamente');
+          Swal.fire({
+            icon: 'success',
+            title: '¡Guardado!',
+            text: (currentQuestionId ? 'Pregunta actualizada' : 'Pregunta agregada') + ' correctamente',
+            confirmButtonColor: '#FF6B35'
+          });
         } else {
           throw new Error(data.error || 'Error al guardar la pregunta');
         }
       })
       .catch(error => {
         console.error('Error completo:', error);
-        alert('❌ Error: ' + (error.message || 'No se pudo guardar la pregunta'));
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: error.message || 'No se pudo guardar la pregunta',
+          confirmButtonColor: '#FF6B35'
+        });
       })
       .finally(() => {
         submitBtn.disabled = false;
@@ -1260,36 +1331,46 @@
       // Limpiar lista
       questionsList.innerHTML = '';
       
-      // Renderizar preguntas
-      questionsData.forEach((question, index) => {
-        const questionHTML = `
-          <div class="question-item" data-question-id="${question.id_pregunta}">
-            <div class="question-header">
-              <div class="question-number">${index + 1}</div>
-              <div class="question-content">
-                <div class="question-text">${question.enunciado}</div>
-                <div class="question-options">
-                  ${question.opciones.map((opcion, optIndex) => `
-                    <div class="option-item ${opcion.es_correcta ? 'correct' : ''}">
-                      <div class="option-letter">${optIndex + 1}</div>
-                      <span>${opcion.texto_opcion}</span>
-                    </div>
-                  `).join('')}
-                </div>
-              </div>
-            </div>
-            <div class="question-actions">
-              <button type="button" class="btn-small btn-edit" onclick="editQuestion(${question.id_pregunta})">
-                <i class="fas fa-edit"></i> Editar
-              </button>
-              <button type="button" class="btn-small btn-delete" onclick="deleteQuestion(${question.id_pregunta})">
-                <i class="fas fa-trash"></i> Eliminar
-              </button>
-            </div>
+      if (questionsData.length === 0) {
+        questionsList.innerHTML = `
+          <div style="text-align: center; padding: 40px; color: rgba(255, 255, 255, 0.6);">
+            <i class="fas fa-inbox" style="font-size: 3rem; margin-bottom: 15px;"></i>
+            <p style="font-size: 1.1rem;">No hay preguntas en este cuestionario</p>
+            <p style="font-size: 0.9rem;">Haz clic en "Agregar Nueva Pregunta" para comenzar</p>
           </div>
         `;
-        questionsList.insertAdjacentHTML('beforeend', questionHTML);
-      });
+      } else {
+        // Renderizar preguntas
+        questionsData.forEach((question, index) => {
+          const questionHTML = `
+            <div class="question-item" data-question-id="${question.id_pregunta}">
+              <div class="question-header">
+                <div class="question-number">${index + 1}</div>
+                <div class="question-content">
+                  <div class="question-text">${question.enunciado}</div>
+                  <div class="question-options">
+                    ${question.opciones.map((opcion, optIndex) => `
+                      <div class="option-item ${opcion.es_correcta ? 'correct' : ''}">
+                        <div class="option-letter">${optIndex + 1}</div>
+                        <span>${opcion.texto_opcion}</span>
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+              </div>
+              <div class="question-actions">
+                <button type="button" class="btn-small btn-edit" onclick="editQuestion(${question.id_pregunta})">
+                  <i class="fas fa-edit"></i> Editar
+                </button>
+                <button type="button" class="btn-small btn-delete" onclick="deleteQuestion(${question.id_pregunta})">
+                  <i class="fas fa-trash"></i> Eliminar
+                </button>
+              </div>
+            </div>
+          `;
+          questionsList.insertAdjacentHTML('beforeend', questionHTML);
+        });
+      }
       
       // Agregar botón de nueva pregunta
       const addButtonHTML = `
@@ -1300,72 +1381,80 @@
       questionsList.insertAdjacentHTML('beforeend', addButtonHTML);
     }
 
+    // Cerrar modal al hacer clic fuera
+    document.getElementById('question-modal').addEventListener('click', function(e) {
+      if (e.target === this) {
+        closeQuestionModal();
+      }
+    });
+
+    // Renderizar preguntas al cargar la página
+    document.addEventListener('DOMContentLoaded', function() {
+      renderQuestionsList();
+    });
+
     // Manejar envío del formulario principal
     document.getElementById('edit-form').addEventListener('submit', function(e) {
       e.preventDefault();
       
       const form = this;
-      const titulo = form.querySelector('#titulo').value.trim();
-      const descripcion = form.querySelector('#descripcion').value.trim();
       
-      // Validaciones
-      if (!titulo) {
-        alert('⚠️ El título del cuestionario es obligatorio');
-        return;
-      }
-      
-      if (titulo.length < 3 || titulo.length > 100) {
-        alert('⚠️ El título debe tener entre 3 y 100 caracteres');
-        return;
-      }
-      
-      const formData = new FormData(form);
-      
-      // Deshabilitar botón mientras se guarda
-      const submitBtn = form.querySelector('button[type="submit"]');
-      const originalText = submitBtn.innerHTML;
-      submitBtn.disabled = true;
-      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
-      
-      // Enviar datos al servidor
-      fetch(form.action, {
-        method: 'POST',
-        headers: {
-          'X-Requested-With': 'XMLHttpRequest'
-        },
-        body: formData
-      })
-      .then(response => {
-        if (!response.ok) {
-          return response.json().then(err => Promise.reject(err));
+      // Confirmar antes de guardar
+      Swal.fire({
+        title: '¿Guardar cambios?',
+        text: "Se actualizará la información del cuestionario.",
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#FF6B35',
+        cancelButtonColor: '#aaa',
+        confirmButtonText: 'Sí, guardar',
+        cancelButtonText: 'Cancelar'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          const formData = new FormData(form);
+          
+          // Mostrar indicador de carga
+          const submitBtn = form.querySelector('button[type="submit"]');
+          const originalText = submitBtn.innerHTML;
+          submitBtn.disabled = true;
+          submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+          
+          fetch(form.action, {
+            method: 'POST',
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              Swal.fire({
+                icon: 'success',
+                title: '¡Actualizado!',
+                text: 'Cuestionario actualizado exitosamente',
+                confirmButtonColor: '#FF6B35'
+              }).then(() => {
+                window.location.href = '/mis-cuestionarios';
+              });
+            } else {
+              throw new Error(data.error || 'Error al actualizar el cuestionario');
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: error.message,
+              confirmButtonColor: '#FF6B35'
+            });
+          })
+          .finally(() => {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+          });
         }
-        return response.json();
-      })
-      .then(data => {
-        if (data.success) {
-          alert('✅ ¡Cuestionario actualizado correctamente!');
-          window.location.href = '/mis-cuestionarios';
-        } else {
-          return Promise.reject(data);
-        }
-      })
-      .catch(error => {
-        console.error('Error:', error);
-        let errorMessage = 'Error al actualizar el cuestionario';
-        
-        if (error.message) {
-          errorMessage = error.message;
-        } else if (error.error) {
-          errorMessage = error.error;
-        } else if (typeof error === 'string') {
-          errorMessage = error;
-        }
-        
-        alert('❌ ' + errorMessage);
-      })
-      .finally(() => {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = originalText;
       });
     });
 
@@ -1385,9 +1474,10 @@
 
     // Inicializar la lista de preguntas al cargar la página
     document.addEventListener('DOMContentLoaded', function() {
-      if (questionsData && questionsData.length > 0) {
-        renderQuestionsList();
-      }
+      renderQuestionsList();
     });
-</script>
+  </script>
+
+  <!-- SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 {% endblock %}
