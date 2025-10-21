@@ -55,7 +55,7 @@ def autenticar_usuario(email, password):
         with conexion.cursor(pymysql.cursors.DictCursor) as cursor:
             # Buscar el usuario por email
             cursor.execute("""
-                SELECT id_usuario, nombre, apellidos, email, contraseña_hash, tipo_usuario, estado
+                SELECT id_usuario, nombre, apellidos, email, `contraseña_hash`, tipo_usuario, estado
                 FROM usuarios
                 WHERE email = %s
             """, (email,))
@@ -108,7 +108,7 @@ def autenticar_usuario(email, password):
         with conexion.cursor(pymysql.cursors.DictCursor) as cursor:
             # Buscar el usuario por email
             cursor.execute("""
-                SELECT id_usuario, nombre, apellidos, email, contraseña_hash, tipo_usuario, estado
+                SELECT id_usuario, nombre, apellidos, email, `contraseña_hash`, tipo_usuario, estado
                 FROM usuarios 
                 WHERE email = %s AND estado = 'activo'
             """, (email,))
@@ -179,7 +179,7 @@ def crear_usuario(nombre, apellidos, email, password, tipo_usuario='estudiante')
             
             # Insertar nuevo usuario
             cursor.execute("""
-                INSERT INTO usuarios (nombre, apellidos, email, contraseña_hash, tipo_usuario, estado)
+                INSERT INTO usuarios (nombre, apellidos, email, `contraseña_hash`, tipo_usuario, estado)
                 VALUES (%s, %s, %s, %s, %s, %s)
             """, (nombre, apellidos, email, password_hash, tipo_usuario, estado_inicial))
             
@@ -305,12 +305,12 @@ def verificar_contrasena_unica(password, excluir_usuario_id=None):
         with conexion.cursor() as cursor:
             if excluir_usuario_id:
                 cursor.execute(
-                    "SELECT id_usuario FROM usuarios WHERE contraseña_hash = %s AND id_usuario != %s", 
+                    "SELECT id_usuario FROM usuarios WHERE `contraseña_hash` = %s AND id_usuario != %s", 
                     (password_hash, excluir_usuario_id)
                 )
             else:
                 cursor.execute(
-                    "SELECT id_usuario FROM usuarios WHERE contraseña_hash = %s", 
+                    "SELECT id_usuario FROM usuarios WHERE `contraseña_hash` = %s", 
                     (password_hash,)
                 )
             resultado = cursor.fetchone()
@@ -334,7 +334,7 @@ def actualizar_usuario(usuario_id, nombre, apellidos, email, password=None):
                 password_hash = hashlib.md5(password.encode()).hexdigest()
                 cursor.execute("""
                     UPDATE usuarios
-                    SET nombre = %s, apellidos = %s, email = %s, contraseña_hash = %s
+                    SET nombre = %s, apellidos = %s, email = %s, `contraseña_hash` = %s
                     WHERE id_usuario = %s
                 """, (nombre, apellidos, email, password_hash, usuario_id))
             else:
@@ -814,13 +814,13 @@ def restablecer_contrasena(email, nueva_contrasena):
                 conexion.close()
                 return False, "Esta cuenta no estÃ¡ activa."
             
-            # Hashear la nueva contraseÃ±a
+            # Hashear la nueva contraseña
             password_hash = hashlib.md5(nueva_contrasena.encode()).hexdigest()
             
-            # Actualizar la contraseÃ±a
+            # Actualizar la contraseña (usar backticks para evitar problemas de encoding)
             cursor.execute("""
                 UPDATE usuarios 
-                SET contraseÃ±a_hash = %s
+                SET `contraseña_hash` = %s
                 WHERE email = %s
             """, (password_hash, email))
             
