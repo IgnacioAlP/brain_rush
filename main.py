@@ -1,10 +1,39 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, Response, session
-from flask_wtf.csrf import CSRFProtect
 from werkzeug.exceptions import InternalServerError
 from config import config
 from bd import verificar_conexion, obtener_conexion, inicializar_usuarios_prueba
 import random
+from flask_wtf.csrf import CSRFProtect
+import os, json
 
+# Cargar variables de entorno desde .env
+from dotenv import load_dotenv
+load_dotenv()
+
+# Importa las extensiones y librerías necesarias
+from extensions import mail
+from itsdangerous import URLSafeTimedSerializer
+
+# Crea la aplicación Flask
+app = Flask(__name__)
+
+# Carga la configuración desde config.py
+env = os.getenv('FLASK_ENV', 'development')
+app_config = config.get(env, config['default'])
+app.config.from_object(app_config)
+app.secret_key = app_config.SECRET_KEY
+
+mail.init_app(app)
+
+serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
+
+# Configurar CSRF
+csrf = CSRFProtect(app)
+
+# Configuración adicional de CSRF
+app.config['WTF_CSRF_TIME_LIMIT'] = None  # No expirar el token
+app.config['WTF_CSRF_SSL_STRICT'] = False  # No requerir HTTPS
+app.config['WTF_CSRF_CHECK_DEFAULT'] = True
 # Importar controladores
 from controladores import controlador_salas
 from controladores import controlador_usuario
@@ -169,24 +198,6 @@ def obtener_cuestionarios_por_docente_simple(id_docente):
         return cuestionarios
     finally:
         conexion.close()
-import os, json
-
-
-app = Flask(__name__)
-
-# Configurar la aplicación
-env = os.getenv('FLASK_ENV', 'development')
-app_config = config.get(env, config['default'])
-app.config.from_object(app_config)
-app.secret_key = app_config.SECRET_KEY
-
-# Configurar CSRF
-csrf = CSRFProtect(app)
-
-# Configuración adicional de CSRF
-app.config['WTF_CSRF_TIME_LIMIT'] = None  # No expirar el token
-app.config['WTF_CSRF_SSL_STRICT'] = False  # No requerir HTTPS
-app.config['WTF_CSRF_CHECK_DEFAULT'] = True
 
 #---RUTAS FIJAS---#
 
@@ -227,7 +238,6 @@ def generar_preguntas():
 @app.route('/registrarse', methods=['GET', 'POST'])
 def registrarse():
     if request.method == 'POST':
-        # Aceptar JSON o form-data. Validaciones se hacen en el frontend.
         data = request.get_json(silent=True) or request.form.to_dict()
         try:
             nombre = (data.get('nombre') or '').strip()
@@ -235,61 +245,160 @@ def registrarse():
             email = (data.get('email') or '').strip().lower()
             password = data.get('password') or ''
             tipo_usuario = (data.get('tipo_usuario') or 'estudiante').strip().lower()
-
-            print(f"DEBUG: Datos recibidos en registro:")
-            print(f"  - nombre: '{nombre}' (len: {len(nombre)})")
-            print(f"  - apellidos: '{apellidos}' (len: {len(apellidos)})")
-            print(f"  - email: '{email}' (len: {len(email)})")
-            print(f"  - password: '{'*' * len(password)}' (len: {len(password)})")
-            print(f"  - tipo_usuario: '{tipo_usuario}' (len: {len(tipo_usuario)})")
-            print(f"  - form data completo: {data}")
-
-            print(f"DEBUG: Intentando crear usuario: {email}, tipo: {tipo_usuario}")
-            
             success, result = controlador_usuario.crear_usuario(nombre, apellidos, email, password, tipo_usuario)
-            
             if not success:
                 error_msg = result or 'No se pudo registrar el usuario'
-                print(f"DEBUG: Error en registro: {error_msg}")
-                if request.is_json:
-                    return jsonify({ 'success': False, 'error': error_msg }), 400
                 flash(error_msg, 'error')
                 return render_template('Registrarse.html')
             
-            user_id = result
-            print(f"DEBUG: Usuario creado exitosamente con ID: {user_id}")
-            
-            # Iniciar sesión automáticamente después del registro
-            session['usuario_id'] = user_id
-            session['usuario_email'] = email
-            session['usuario_nombre'] = nombre
-            session['usuario_apellidos'] = apellidos
-            session['usuario_tipo'] = tipo_usuario
-            session['logged_in'] = True
-            
-            # Redirigir según el tipo de usuario
-            if tipo_usuario == 'estudiante':
-                redirect_url = url_for('dashboard_estudiante')
-            elif tipo_usuario == 'docente':
-                redirect_url = url_for('dashboard_docente')
+            # Solo intentar enviar correo si está habilitado en la configuración
+            if app.config.get('MAIL_ENABLED', False):
+                # Intentar enviar el correo de confirmación
+                correo_enviado, mensaje_correo = controlador_usuario.enviar_correo_confirmacion(email)
+                
+                if correo_enviado:
+                    flash('¡Registro exitoso! Por favor, revisa tu correo para activar tu cuenta. Verifica también la carpeta de spam.', 'success')
+                else:
+                    flash('Registro exitoso, pero no se pudo enviar el correo de confirmación. Por favor, contacta a soporte para activar tu cuenta.', 'warning')
+                    print(f"DEBUG: Error al enviar correo: {mensaje_correo}")
             else:
-                redirect_url = url_for('dashboard_admin')
+                # Correo desactivado - usuario creado directamente como activo
+                flash('¡Registro exitoso! Ya puedes iniciar sesión con tu cuenta.', 'success')
             
-            if request.is_json:
-                return jsonify({ 'success': True, 'user_id': user_id, 'redirect': redirect_url })
-            
-            flash('¡Registro completado exitosamente!', 'success')
-            return redirect(redirect_url)
-            
+            return redirect(url_for('login'))
         except Exception as e:
             print(f"DEBUG: Excepción en registro: {str(e)}")
-            error_msg = 'Error interno del sistema'
-            if request.is_json:
-                return jsonify({ 'success': False, 'error': error_msg, 'detail': str(e) }), 500
-            flash(error_msg, 'error')
+            flash('Error interno del sistema', 'error')
             return render_template('Registrarse.html')
-    
     return render_template('Registrarse.html')
+
+@app.route('/confirmar/<token>')
+def confirmar_email(token):
+    try:
+        email = serializer.loads(token, salt='email-confirm-salt', max_age=3600)
+    except:
+        flash('El enlace de confirmación es inválido o ha expirado.', 'danger')
+        return redirect(url_for('login'))
+    success, message = controlador_usuario.activar_cuenta_usuario(email)
+    if success:
+        flash(message, 'success')
+    else:
+        flash(message, 'danger')
+    return redirect(url_for('login'))
+
+# ========== RECUPERACIÓN DE CONTRASEÑA ==========
+
+@app.route('/recuperar-contrasena', methods=['GET', 'POST'])
+def recuperar_contrasena():
+    """Página para solicitar recuperación de contraseña"""
+    if request.method == 'GET':
+        return render_template('RecuperarContrasena.html')
+    
+    try:
+        # Obtener email del formulario
+        email = request.form.get('email', '').strip().lower()
+        
+        if not email:
+            return render_template('RecuperarContrasena.html', 
+                                 mensaje_error='Por favor ingresa tu correo electrónico.')
+        
+        # Validar formato de email
+        import re
+        email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_regex, email):
+            return render_template('RecuperarContrasena.html', 
+                                 mensaje_error='Por favor ingresa un correo electrónico válido.')
+        
+        # Llamar a la función de solicitar recuperación
+        success, mensaje = controlador_usuario.solicitar_recuperacion_contrasena(email)
+        
+        # Siempre mostrar mensaje de éxito por seguridad (no revelar si el email existe)
+        return render_template('RecuperarContrasena.html', 
+                             mensaje_exito='Si el correo existe en nuestro sistema, recibirás instrucciones para restablecer tu contraseña.')
+        
+    except Exception as e:
+        print(f"❌ Error en recuperar_contrasena: {e}")
+        import traceback
+        traceback.print_exc()
+        return render_template('RecuperarContrasena.html', 
+                             mensaje_error='Hubo un error al procesar tu solicitud. Por favor intenta nuevamente.')
+
+@app.route('/restablecer/<token>', methods=['GET', 'POST'])
+def restablecer_contrasena(token):
+    """Página para restablecer contraseña con token"""
+    
+    # Validar el token primero
+    success, resultado = controlador_usuario.validar_token_recuperacion(token)
+    
+    if not success:
+        # Token inválido o expirado
+        return render_template('RestablecerContrasena.html', 
+                             token=token,
+                             mensaje_error=resultado)
+    
+    # Token válido, resultado contiene el email
+    email = resultado
+    
+    if request.method == 'GET':
+        # Mostrar formulario de nueva contraseña
+        return render_template('RestablecerContrasena.html', token=token)
+    
+    # POST: Procesar nueva contraseña
+    try:
+        password = request.form.get('password', '')
+        confirm_password = request.form.get('confirm_password', '')
+        
+        # Validaciones
+        if not password or not confirm_password:
+            return render_template('RestablecerContrasena.html', 
+                                 token=token,
+                                 mensaje_error='Por favor completa todos los campos.')
+        
+        if password != confirm_password:
+            return render_template('RestablecerContrasena.html', 
+                                 token=token,
+                                 mensaje_error='Las contraseñas no coinciden.')
+        
+        # Validar fortaleza de contraseña
+        if len(password) < 8:
+            return render_template('RestablecerContrasena.html', 
+                                 token=token,
+                                 mensaje_error='La contraseña debe tener al menos 8 caracteres.')
+        
+        import re
+        if not re.search(r'[A-Z]', password):
+            return render_template('RestablecerContrasena.html', 
+                                 token=token,
+                                 mensaje_error='La contraseña debe contener al menos una mayúscula.')
+        
+        if not re.search(r'[a-z]', password):
+            return render_template('RestablecerContrasena.html', 
+                                 token=token,
+                                 mensaje_error='La contraseña debe contener al menos una minúscula.')
+        
+        if not re.search(r'[0-9]', password):
+            return render_template('RestablecerContrasena.html', 
+                                 token=token,
+                                 mensaje_error='La contraseña debe contener al menos un número.')
+        
+        # Restablecer la contraseña
+        success, mensaje = controlador_usuario.restablecer_contrasena(email, password)
+        
+        if success:
+            flash('✅ Tu contraseña ha sido actualizada exitosamente. Ya puedes iniciar sesión.', 'success')
+            return redirect(url_for('login'))
+        else:
+            return render_template('RestablecerContrasena.html', 
+                                 token=token,
+                                 mensaje_error=mensaje)
+        
+    except Exception as e:
+        print(f"❌ Error en restablecer_contrasena POST: {e}")
+        import traceback
+        traceback.print_exc()
+        return render_template('RestablecerContrasena.html', 
+                             token=token,
+                             mensaje_error='Hubo un error al actualizar tu contraseña. Por favor intenta nuevamente.')
 
 @app.route('/unirse_a_sala', methods=['GET', 'POST'])
 def unirse_a_sala():

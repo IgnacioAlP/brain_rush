@@ -1,0 +1,269 @@
+{% extends "BrainRush_Master.html" %}
+
+{% block title %}Recuperar Contraseña - Brain RUSH{% endblock %}
+
+{% block extra_css %}
+<style>
+.recovery-page {
+    min-height: calc(100vh - 80px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-xl) 0;
+}
+
+.recovery-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(20px);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-xl);
+    padding: var(--space-xxl);
+    width: 100%;
+    max-width: 500px;
+    position: relative;
+    overflow: hidden;
+}
+
+.recovery-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(135deg, #FF6B6B 0%, #C44569 100%);
+}
+
+.recovery-header {
+    text-align: center;
+    margin-bottom: var(--space-xxl);
+}
+
+.recovery-icon {
+    font-size: 4rem;
+    margin-bottom: var(--space-md);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+.recovery-title {
+    font-family: var(--font-primary);
+    font-size: 2rem;
+    background: linear-gradient(135deg, #FF6B6B 0%, #C44569 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: var(--space-sm);
+}
+
+.recovery-subtitle {
+    color: var(--gray);
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+.form-group {
+    margin-bottom: var(--space-lg);
+}
+
+.form-label {
+    display: block;
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: var(--space-sm);
+    font-size: 0.9rem;
+}
+
+.form-input {
+    width: 100%;
+    padding: var(--space-md);
+    border: 2px solid rgba(0,0,0,0.1);
+    border-radius: var(--radius-md);
+    font-size: 1rem;
+    font-family: var(--font-secondary);
+    transition: var(--transition-smooth);
+    background: rgba(255,255,255,0.8);
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: #FF6B6B;
+    box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.1);
+}
+
+.btn-recovery {
+    width: 100%;
+    padding: var(--space-md) var(--space-lg);
+    background: linear-gradient(135deg, #FF6B6B 0%, #C44569 100%);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+    font-family: var(--font-secondary);
+    margin-top: var(--space-md);
+}
+
+.btn-recovery:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(255, 107, 107, 0.3);
+}
+
+.btn-recovery:active {
+    transform: translateY(0);
+}
+
+.info-box {
+    background: linear-gradient(135deg, rgba(255, 107, 107, 0.1) 0%, rgba(196, 69, 105, 0.1) 100%);
+    border-left: 4px solid #FF6B6B;
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-lg);
+}
+
+.info-box p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #C44569;
+    line-height: 1.5;
+}
+
+.back-link {
+    text-align: center;
+    margin-top: var(--space-lg);
+}
+
+.back-link a {
+    color: #FF6B6B;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: var(--transition-smooth);
+}
+
+.back-link a:hover {
+    color: #C44569;
+    text-decoration: underline;
+}
+
+.success-message {
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(56, 142, 60, 0.1) 100%);
+    border-left: 4px solid #4CAF50;
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-lg);
+    text-align: center;
+}
+
+.success-message p {
+    margin: 0;
+    color: #2E7D32;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.error-message {
+    background: linear-gradient(135deg, rgba(244, 67, 54, 0.1) 0%, rgba(211, 47, 47, 0.1) 100%);
+    border-left: 4px solid #F44336;
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-lg);
+    text-align: center;
+}
+
+.error-message p {
+    margin: 0;
+    color: #C62828;
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="recovery-page">
+    <div class="recovery-card">
+        <div class="recovery-header">
+            <div class="recovery-icon">🔒</div>
+            <h1 class="recovery-title">¿Olvidaste tu contraseña?</h1>
+            <p class="recovery-subtitle">
+                No te preocupes, te enviaremos un correo con instrucciones para recuperarla.
+            </p>
+        </div>
+
+        {% if mensaje_exito %}
+        <div class="success-message">
+            <p>✅ {{ mensaje_exito }}</p>
+        </div>
+        {% endif %}
+
+        {% if mensaje_error %}
+        <div class="error-message">
+            <p>❌ {{ mensaje_error }}</p>
+        </div>
+        {% endif %}
+
+        <div class="info-box">
+            <p>
+                📧 Ingresa tu correo electrónico y te enviaremos un enlace para restablecer tu contraseña.
+                El enlace expirará en <strong>1 hora</strong>.
+            </p>
+        </div>
+
+        <form method="POST" action="{{ url_for('recuperar_contrasena') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <div class="form-group">
+                <label for="email" class="form-label">
+                    📧 Correo Electrónico
+                </label>
+                <input 
+                    type="email" 
+                    id="email" 
+                    name="email" 
+                    class="form-input"
+                    placeholder="tu@email.com"
+                    required
+                    autocomplete="email"
+                >
+            </div>
+
+            <button type="submit" class="btn-recovery">
+                📨 Enviar Enlace de Recuperación
+            </button>
+        </form>
+
+        <div class="back-link">
+            <a href="{{ url_for('login') }}">
+                ← Volver al inicio de sesión
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-focus en el campo de email
+document.addEventListener('DOMContentLoaded', function() {
+    const emailInput = document.getElementById('email');
+    if (emailInput) {
+        emailInput.focus();
+    }
+
+    // Si hay mensaje de éxito, ocultar el formulario después de 5 segundos
+    const successMsg = document.querySelector('.success-message');
+    if (successMsg) {
+        setTimeout(function() {
+            window.location.href = "{{ url_for('login') }}";
+        }, 5000);
+    }
+});
+</script>
+{% endblock %}

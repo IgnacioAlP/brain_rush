@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔒 Recuperación de Contraseña - Brain RUSH</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .email-wrapper {
+            background-color: #f4f4f4;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #FF6B6B 0%, #C44569 100%);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .content {
+            padding: 40px 30px;
+        }
+        .content p {
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        .greeting {
+            font-size: 18px;
+            font-weight: 600;
+            color: #FF6B6B;
+            margin-bottom: 20px;
+        }
+        .button-container {
+            text-align: center;
+            margin: 35px 0;
+        }
+        .button {
+            display: inline-block;
+            padding: 15px 40px;
+            background: linear-gradient(135deg, #FF6B6B 0%, #C44569 100%);
+            color: #ffffff !important;
+            text-decoration: none;
+            border-radius: 25px;
+            font-size: 18px;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+        }
+        .link-fallback {
+            background-color: #f9f9f9;
+            border-left: 4px solid #FF6B6B;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .link-fallback p {
+            margin: 5px 0;
+            font-size: 14px;
+            color: #666;
+        }
+        .link-fallback a {
+            color: #FF6B6B;
+            word-break: break-all;
+            font-size: 13px;
+        }
+        .warning-box {
+            background-color: #FFF3CD;
+            border-left: 4px solid #FFC107;
+            padding: 15px;
+            margin: 25px 0;
+            border-radius: 5px;
+        }
+        .warning-box p {
+            margin: 5px 0;
+            font-size: 14px;
+            color: #856404;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 25px 30px;
+            text-align: center;
+            border-top: 1px solid #e9ecef;
+        }
+        .footer p {
+            margin: 8px 0;
+            font-size: 13px;
+            color: #6c757d;
+        }
+        .icon {
+            font-size: 50px;
+            margin-bottom: 10px;
+        }
+        .security-note {
+            background-color: #E8F5E9;
+            border-left: 4px solid #4CAF50;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .security-note p {
+            margin: 5px 0;
+            font-size: 14px;
+            color: #2E7D32;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-wrapper">
+        <div class="container">
+            <!-- Header -->
+            <div class="header">
+                <div class="icon">🔒</div>
+                <h1>Recuperación de Contraseña</h1>
+                <p style="margin: 10px 0 0 0; font-size: 16px; opacity: 0.9;">Brain RUSH - Sistema de Aprendizaje</p>
+            </div>
+
+            <!-- Content -->
+            <div class="content">
+                <p class="greeting">Hola {{ nombre }},</p>
+                
+                <p>Recibimos una solicitud para <strong>restablecer la contraseña</strong> de tu cuenta en Brain RUSH.</p>
+                
+                <p>Para crear una nueva contraseña, haz clic en el siguiente botón:</p>
+
+                <!-- Button -->
+                <div class="button-container">
+                    <a href="{{ reset_url }}" class="button">🔑 Restablecer Contraseña</a>
+                </div>
+
+                <!-- Link fallback -->
+                <div class="link-fallback">
+                    <p><strong>¿El botón no funciona?</strong></p>
+                    <p>Copia y pega este enlace en tu navegador:</p>
+                    <p><a href="{{ reset_url }}">{{ reset_url }}</a></p>
+                </div>
+
+                <!-- Warning box -->
+                <div class="warning-box">
+                    <p><strong>⏰ Importante:</strong></p>
+                    <p>• Este enlace expirará en <strong>1 hora</strong> por razones de seguridad.</p>
+                    <p>• Solo puedes usar este enlace <strong>una vez</strong>.</p>
+                    <p>• Si necesitas otro enlace, solicita la recuperación nuevamente.</p>
+                </div>
+
+                <!-- Security note -->
+                <div class="security-note">
+                    <p><strong>🛡️ Nota de Seguridad:</strong></p>
+                    <p>Si <strong>NO solicitaste</strong> este cambio de contraseña, ignora este correo.</p>
+                    <p>Tu contraseña actual permanecerá sin cambios y tu cuenta estará segura.</p>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="footer">
+                <p><strong>Brain RUSH</strong> - Sistema de Aprendizaje Interactivo 🎮</p>
+                <p>Este es un correo automático, por favor no respondas a este mensaje.</p>
+                <p style="margin-top: 15px; color: #999; font-size: 12px;">
+                    Recibiste este correo porque se solicitó una recuperación de contraseña para <strong>{{ email }}</strong>
+                </p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

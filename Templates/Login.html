@@ -210,6 +210,14 @@
             <p>¿No tienes cuenta? <a href="{{ url_for('registrarse') }}">¡Regístrate aquí!</a></p>
         </div>
 
+        <div class="forgot-password-link" style="text-align: center; margin-top: var(--space-md);">
+            <p style="font-size: 0.9rem;">
+                <a href="{{ url_for('recuperar_contrasena') }}" style="color: #FF6B6B; text-decoration: none; font-weight: 600; transition: var(--transition-smooth);">
+                    🔒 ¿Olvidaste tu contraseña?
+                </a>
+            </p>
+        </div>
+
         <div class="demo-users">
             <h4 class="demo-title">
                 <i class="fas fa-user-friends"></i>
