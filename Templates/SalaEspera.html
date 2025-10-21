@@ -316,9 +316,6 @@
         <button id="close-room-btn" class="btn btn-secondary">
           ❌ Cerrar Sala
         </button>
-        <a href="{{ url_for('proyectar_cuestionario', pin=pin_sala) }}" class="btn btn-primary" target="_blank">
-          📺 Modo Proyección
-        </a>
       </div>
 
       <div class="mobile-friendly">
@@ -328,59 +325,173 @@
   </div>
 
   <script>
-    // Simulación de participantes conectándose
-    const participantes = [];
-    let participantId = 1;
+    const SALA_ID = {{ sala.id }};
+    let ultimosParticipantes = [];
+    let intervaloActualizacion = null;
 
-    function agregarParticipante(nombre) {
-      participantes.push({ id: participantId++, nombre: nombre });
-      actualizarListaParticipantes();
+    // Función para actualizar la lista de participantes
+    async function actualizarParticipantes() {
+      try {
+        const response = await fetch(`/api/sala/${SALA_ID}/participantes`);
+        const data = await response.json();
+        
+        if (data.success) {
+          const participantes = data.participantes || [];
+          
+          // Actualizar contador
+          document.getElementById('participant-count').textContent = participantes.length;
+          
+          // Actualizar lista
+          const listElement = document.getElementById('participants-list');
+          if (participantes.length === 0) {
+            listElement.innerHTML = '<div style="color: #888; font-size: 14px;">Esperando participantes...</div>';
+          } else {
+            listElement.innerHTML = participantes.map(p => 
+              `<div class="participant-badge">${p.nombre_participante || p.nombre}</div>`
+            ).join('');
+          }
+          
+          // Habilitar botón de inicio si hay al menos 1 participante
+          const startButton = document.getElementById('start-game-btn');
+          startButton.disabled = participantes.length === 0;
+          
+          // Notificar si hay nuevos participantes
+          if (participantes.length > ultimosParticipantes.length) {
+            const nuevos = participantes.slice(ultimosParticipantes.length);
+            nuevos.forEach(p => {
+              console.log(`✅ Nuevo participante: ${p.nombre_participante || p.nombre}`);
+            });
+          }
+          
+          ultimosParticipantes = participantes;
+        }
+      } catch (error) {
+        console.error('Error al actualizar participantes:', error);
+      }
     }
 
-    function actualizarListaParticipantes() {
-      const countElement = document.getElementById('participant-count');
-      const listElement = document.getElementById('participants-list');
-      const startButton = document.getElementById('start-game-btn');
-
-      countElement.textContent = participantes.length;
-
-      listElement.innerHTML = participantes.map(p => 
-        `<div class="participant-badge">${p.nombre}</div>`
-      ).join('');
-
-      // Habilitar botón de inicio si hay al menos 1 participante
-      startButton.disabled = participantes.length === 0;
+    // Función para verificar el estado de la sala
+    async function verificarEstadoSala() {
+      try {
+        const response = await fetch(`/api/sala/${SALA_ID}/estado`);
+        const data = await response.json();
+        
+        if (data.success) {
+          const estado = data.estado;
+          
+          // Si el estado cambió a 'en_curso', redirigir al juego
+          if (estado === 'en_curso') {
+            console.log('🎮 El juego ha comenzado, redirigiendo...');
+            detenerActualizaciones();
+            window.location.href = `/juego/{{ sala.pin_sala }}/jugar`;
+          }
+          
+          // Si la sala se cerró, redirigir
+          if (estado === 'finalizada') {
+            console.log('❌ La sala ha sido cerrada');
+            detenerActualizaciones();
+            alert('La sala ha sido cerrada por el docente');
+            window.location.href = '/dashboard-docente';
+          }
+        }
+      } catch (error) {
+        console.error('Error al verificar estado de sala:', error);
+      }
     }
 
-    // Simulación de participantes conectándose (para demo)
-    setTimeout(() => agregarParticipante('Ana García'), 2000);
-    setTimeout(() => agregarParticipante('Carlos López'), 4000);
-    setTimeout(() => agregarParticipante('María Rodríguez'), 6000);
+    // Iniciar actualizaciones automáticas
+    function iniciarActualizaciones() {
+      // Primera actualización inmediata
+      actualizarParticipantes();
+      verificarEstadoSala();
+      
+      // Actualizar cada 2 segundos
+      intervaloActualizacion = setInterval(() => {
+        actualizarParticipantes();
+        verificarEstadoSala();
+      }, 2000);
+      
+      console.log('✅ Sistema de actualizaciones en tiempo real iniciado');
+    }
 
-    // Event listeners
-    document.getElementById('start-game-btn').addEventListener('click', function() {
-      if (participantes.length === 0) {
+    // Detener actualizaciones
+    function detenerActualizaciones() {
+      if (intervaloActualizacion) {
+        clearInterval(intervaloActualizacion);
+        intervaloActualizacion = null;
+        console.log('⏹️ Actualizaciones detenidas');
+      }
+    }
+
+    // Event listener para iniciar juego
+    document.getElementById('start-game-btn').addEventListener('click', async function() {
+      const participantesCount = ultimosParticipantes.length;
+      
+      if (participantesCount === 0) {
         alert('⚠️ Necesitas al menos un participante para iniciar el juego');
         return;
       }
       
-      if (confirm(`🎮 ¿Iniciar juego con ${participantes.length} participante(s)?`)) {
-        // Redirigir a la pantalla de juego
-        window.location.href = `/juego/{{ pin_sala }}/iniciar`;
+      if (confirm(`🎮 ¿Iniciar juego con ${participantesCount} participante(s)?`)) {
+        try {
+          detenerActualizaciones();
+          
+          // Llamar al endpoint para iniciar el juego
+          const response = await fetch(`/sala/${SALA_ID}/iniciar`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          const data = await response.json();
+          
+          if (data.success) {
+            window.location.href = `/sala/${SALA_ID}/monitorear`;
+          } else {
+            alert('Error al iniciar el juego: ' + data.error);
+            iniciarActualizaciones();
+          }
+        } catch (error) {
+          console.error('Error al iniciar juego:', error);
+          alert('Error al iniciar el juego. Intenta nuevamente.');
+          iniciarActualizaciones();
+        }
       }
     });
 
-    document.getElementById('close-room-btn').addEventListener('click', function() {
+    // Event listener para cerrar sala
+    document.getElementById('close-room-btn').addEventListener('click', async function() {
       if (confirm('❌ ¿Estás seguro de que quieres cerrar la sala? Todos los participantes serán desconectados.')) {
-        window.location.href = '/mis-cuestionarios';
+        try {
+          detenerActualizaciones();
+          
+          const response = await fetch(`/sala/${SALA_ID}/cerrar`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          const data = await response.json();
+          
+          if (data.success) {
+            window.location.href = '/mis-cuestionarios';
+          } else {
+            alert('Error al cerrar la sala: ' + data.error);
+          }
+        } catch (error) {
+          console.error('Error al cerrar sala:', error);
+          alert('Error al cerrar la sala. Intenta nuevamente.');
+        }
       }
     });
 
-    // En una implementación real, aquí conectarías WebSocket para recibir participantes en tiempo real
-    // const socket = io();
-    // socket.on('nuevo_participante', (data) => {
-    //   agregarParticipante(data.nombre);
-    // });
+    // Iniciar cuando la página cargue
+    window.addEventListener('DOMContentLoaded', iniciarActualizaciones);
+
+    // Detener actualizaciones cuando se cierre la página
+    window.addEventListener('beforeunload', detenerActualizaciones);
   </script>
 </body>
 </html>

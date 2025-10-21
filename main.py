@@ -34,6 +34,7 @@ csrf = CSRFProtect(app)
 app.config['WTF_CSRF_TIME_LIMIT'] = None  # No expirar el token
 app.config['WTF_CSRF_SSL_STRICT'] = False  # No requerir HTTPS
 app.config['WTF_CSRF_CHECK_DEFAULT'] = True
+app.config['WTF_CSRF_ENABLED'] = False  # Deshabilitar CSRF globalmente para poder usar fetch() sin token
 # Importar controladores
 from controladores import controlador_salas
 from controladores import controlador_usuario
@@ -173,11 +174,15 @@ def obtener_cuestionarios_por_docente_simple(id_docente):
     try:
         cursor = conexion.cursor()
         cursor.execute("""
-            SELECT id_cuestionario, titulo, descripcion, id_docente, estado, 
-                   fecha_creacion, fecha_programada, fecha_publicacion
-            FROM cuestionarios
-            WHERE id_docente = %s
-            ORDER BY fecha_creacion DESC
+            SELECT c.id_cuestionario, c.titulo, c.descripcion, c.id_docente, c.estado, 
+                   c.fecha_creacion, c.fecha_programada, c.fecha_publicacion,
+                   COUNT(DISTINCT cp.id_pregunta) as num_preguntas
+            FROM cuestionarios c
+            LEFT JOIN cuestionario_preguntas cp ON c.id_cuestionario = cp.id_cuestionario
+            WHERE c.id_docente = %s
+            GROUP BY c.id_cuestionario, c.titulo, c.descripcion, c.id_docente, c.estado, 
+                     c.fecha_creacion, c.fecha_programada, c.fecha_publicacion
+            ORDER BY c.fecha_creacion DESC
         """, (id_docente,))
         resultados = cursor.fetchall()
         
@@ -192,7 +197,7 @@ def obtener_cuestionarios_por_docente_simple(id_docente):
                 'fecha_creacion': resultado[5],  # Mantenemos como datetime object
                 'fecha_programada': resultado[6],  # Mantenemos como datetime object
                 'fecha_publicacion': resultado[7],  # Mantenemos como datetime object
-                'num_preguntas': 0  # Por ahora 0, se puede calcular después
+                'num_preguntas': resultado[8]  # Ahora cuenta las preguntas reales
             })
         
         return cuestionarios
@@ -402,10 +407,84 @@ def restablecer_contrasena(token):
 
 @app.route('/unirse_a_sala', methods=['GET', 'POST'])
 def unirse_a_sala():
-    if request.method == 'POST':
-        # Procesar datos del formulario de unirse a sala aquí
-        pass
-    return render_template('UnirseASala.html')
+    if request.method == 'GET':
+        return render_template('UnirseASala.html')
+    
+    # POST - Procesar unión a sala
+    try:
+        data = request.get_json(silent=True) or request.form.to_dict()
+        codigo_sala = data.get('codigo_sala', '').strip().upper()
+        
+        print(f"\n{'='*80}")
+        print(f"🎮 ESTUDIANTE INTENTANDO UNIRSE (UnirseASala.html)")
+        print(f"Código: {codigo_sala}")
+        print(f"Datos recibidos: {data}")
+        print(f"{'='*80}\n")
+        
+        # Validar código (debe ser 6 caracteres)
+        if not codigo_sala or len(codigo_sala) != 6:
+            error_msg = 'El código debe tener 6 caracteres'
+            print(f"❌ Error: {error_msg}")
+            if request.is_json:
+                return jsonify({'success': False, 'error': error_msg}), 400
+            flash(error_msg, 'error')
+            return render_template('UnirseASala.html')
+        
+        # Buscar la sala por PIN
+        print(f"🔍 Buscando sala con código: {codigo_sala}")
+        sala = controlador_salas.obtener_sala_por_codigo(codigo_sala)
+        
+        if not sala:
+            error_msg = f'No se encontró ninguna sala con el código {codigo_sala}'
+            print(f"❌ Error: {error_msg}")
+            if request.is_json:
+                return jsonify({'success': False, 'error': error_msg}), 404
+            flash(error_msg, 'error')
+            return render_template('UnirseASala.html')
+        
+        print(f"✅ Sala encontrada - ID: {sala['id']}, Estado: {sala['estado']}")
+        
+        # Verificar estado de la sala
+        if sala['estado'] != 'esperando':
+            error_msg = 'Esta sala no está disponible para unirse'
+            if sala['estado'] == 'en_curso':
+                error_msg = 'Esta sala ya está en curso'
+            elif sala['estado'] == 'finalizada':
+                error_msg = 'Esta sala ya ha finalizado'
+            
+            print(f"❌ Error: {error_msg}")
+            if request.is_json:
+                return jsonify({'success': False, 'error': error_msg}), 400
+            flash(error_msg, 'error')
+            return render_template('UnirseASala.html')
+        
+        # Guardar información en sesión y redirigir a página para ingresar nombre
+        session['pin_sala_temp'] = codigo_sala
+        session['sala_id_temp'] = sala['id']
+        
+        print(f"✅ Redirigiendo a /unirse-juego con PIN: {codigo_sala}")
+        print(f"{'='*80}\n")
+        
+        # Si es JSON, devolver URL de redirección
+        if request.is_json:
+            return jsonify({
+                'success': True,
+                'redirect_url': url_for('unirse_juego') + f'?pin={codigo_sala}'
+            })
+        
+        # Si es form normal, redirigir directamente
+        return redirect(url_for('unirse_juego') + f'?pin={codigo_sala}')
+        
+    except Exception as e:
+        error_msg = f'Error del sistema: {str(e)}'
+        print(f"❌ ERROR en unirse_a_sala: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        if request.is_json:
+            return jsonify({'success': False, 'error': 'Error del servidor'}), 500
+        flash('Error al procesar la solicitud', 'error')
+        return render_template('UnirseASala.html')
 
 # Ruta de error de sistema divertida
 @app.route('/login', methods=['GET', 'POST'])
@@ -1049,6 +1128,259 @@ def esperar_juego(sala_id):
         flash(f'Error: {str(e)}', 'error')
         return redirect(url_for('error_sistema_page'))
 
+# ========== APIs para actualizaciones en tiempo real ==========
+
+@app.route('/api/sala/<int:sala_id>/participantes')
+def api_obtener_participantes(sala_id):
+    """API para obtener lista de participantes en tiempo real"""
+    try:
+        participantes = controlador_salas.obtener_participantes_sala(sala_id)
+        return jsonify({
+            'success': True,
+            'participantes': participantes,
+            'total': len(participantes)
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/sala/<int:sala_id>/estado')
+def api_obtener_estado_sala(sala_id):
+    """API para obtener el estado actual de la sala"""
+    try:
+        sala = obtener_sala_por_id_simple(sala_id)
+        if not sala:
+            return jsonify({'success': False, 'error': 'Sala no encontrada'}), 404
+        
+        participantes = controlador_salas.obtener_participantes_sala(sala_id)
+        
+        return jsonify({
+            'success': True,
+            'estado': sala.get('estado', 'esperando'),
+            'total_participantes': len(participantes),
+            'sala': {
+                'id': sala.get('id'),
+                'pin_sala': sala.get('pin_sala'),
+                'estado': sala.get('estado'),
+                'max_participantes': sala.get('max_participantes', 30)
+            }
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/sala/verificar/<string:pin>')
+def api_verificar_sala_por_pin(pin):
+    """API para verificar si una sala existe y está disponible"""
+    try:
+        # Validar formato del PIN
+        if not pin or len(pin) != 6 or not pin.isdigit():
+            return jsonify({'success': False, 'error': 'PIN inválido'}), 400
+        
+        # Buscar sala por PIN
+        sala = controlador_salas.obtener_sala_por_codigo(pin)
+        
+        if not sala:
+            return jsonify({'success': False, 'error': 'No existe una sala con ese PIN'}), 404
+        
+        # Obtener participantes actuales
+        participantes = controlador_salas.obtener_participantes_sala(sala['id'])
+        
+        return jsonify({
+            'success': True,
+            'sala': {
+                'id': sala.get('id'),
+                'pin_sala': sala.get('pin_sala'),
+                'estado': sala.get('estado'),
+                'max_participantes': sala.get('max_participantes', 30),
+                'participantes_actuales': len(participantes)
+            }
+        })
+    except Exception as e:
+        print(f"ERROR en api_verificar_sala_por_pin: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500
+
+@app.route('/api/participantes/<string:pin>')
+def api_obtener_participantes_por_pin(pin):
+    """API para obtener lista de participantes usando el PIN de la sala (para MonitoreoJuego.html)"""
+    try:
+        print(f"🔍 API: Obteniendo participantes para PIN: {pin}")
+        
+        # Validar formato del PIN
+        if not pin or len(pin) != 6 or not pin.isdigit():
+            print(f"❌ PIN inválido: {pin}")
+            return jsonify({'success': False, 'error': 'PIN inválido'}), 400
+        
+        # Buscar sala por PIN
+        sala = controlador_salas.obtener_sala_por_codigo(pin)
+        
+        if not sala:
+            print(f"❌ Sala no encontrada con PIN: {pin}")
+            return jsonify({'success': False, 'error': 'Sala no encontrada'}), 404
+        
+        # Obtener participantes
+        participantes = controlador_salas.obtener_participantes_sala(sala['id'])
+        
+        print(f"✅ Participantes encontrados: {len(participantes)}")
+        
+        # Formatear participantes para el frontend
+        participantes_formateados = []
+        for p in participantes:
+            participantes_formateados.append({
+                'id': p['id_participante'],
+                'nombre': p['nombre_participante'],
+                'estado': p['estado'],
+                'fecha_union': p['fecha_union'].isoformat() if p['fecha_union'] else None
+            })
+        
+        return jsonify({
+            'success': True,
+            'participantes': participantes_formateados,
+            'total': len(participantes_formateados)
+        })
+        
+    except Exception as e:
+        print(f"❌ ERROR en api_obtener_participantes_por_pin: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': 'Error del servidor'}), 500
+
+@app.route('/unirse-juego', methods=['GET', 'POST'])
+def unirse_juego():
+    """Ruta mejorada para unirse a un juego con PIN"""
+    if request.method == 'GET':
+        return render_template('UnirseJuego.html')
+    
+    try:
+        data = request.get_json(silent=True) or request.form.to_dict()
+        pin_sala = data.get('pin_sala', '').strip()
+        nombre_estudiante = data.get('nombre_estudiante', '').strip()
+        
+        print(f"\n{'='*80}")
+        print(f"🎮 ESTUDIANTE INTENTANDO UNIRSE")
+        print(f"PIN: {pin_sala}")
+        print(f"Nombre: {nombre_estudiante}")
+        print(f"Datos recibidos: {data}")
+        print(f"{'='*80}\n")
+        
+        # Validaciones
+        if not pin_sala:
+            print("❌ Error: PIN vacío")
+            return jsonify({'success': False, 'error': 'El PIN de la sala es requerido'}), 400
+        
+        if not nombre_estudiante:
+            print("❌ Error: Nombre vacío")
+            return jsonify({'success': False, 'error': 'Tu nombre es requerido'}), 400
+        
+        if len(pin_sala) != 6 or not pin_sala.isdigit():
+            print(f"❌ Error: PIN inválido (longitud: {len(pin_sala)})")
+            return jsonify({'success': False, 'error': 'El PIN debe ser de 6 dígitos'}), 400
+        
+        # Buscar la sala por PIN
+        print(f"🔍 Buscando sala con PIN: {pin_sala}")
+        sala = controlador_salas.obtener_sala_por_codigo(pin_sala)
+        print(f"📋 Sala encontrada: {sala}")
+        
+        if not sala:
+            print(f"❌ Error: No se encontró sala con PIN {pin_sala}")
+            return jsonify({'success': False, 'error': 'Sala no encontrada. Verifica el PIN'}), 404
+        
+        print(f"✅ Sala encontrada - ID: {sala['id']}, Estado: {sala['estado']}")
+        
+        # Verificar que la sala está en estado 'esperando'
+        if sala['estado'] != 'esperando':
+            if sala['estado'] == 'en_curso':
+                return jsonify({'success': False, 'error': 'La sala ya está en curso. No puedes unirte'}), 400
+            elif sala['estado'] == 'finalizada':
+                return jsonify({'success': False, 'error': 'La sala ha finalizado'}), 400
+            else:
+                return jsonify({'success': False, 'error': f'La sala no está disponible (estado: {sala["estado"]}'}), 400
+        
+        # Verificar límite de participantes
+        print(f"📊 Obteniendo participantes actuales de sala {sala['id']}...")
+        participantes_actuales = controlador_salas.obtener_participantes_sala(sala['id'])
+        max_participantes = sala.get('max_participantes', 30)
+        
+        print(f"👥 Participantes actuales: {len(participantes_actuales)}/{max_participantes}")
+        print(f"   Lista: {participantes_actuales}")
+        
+        if len(participantes_actuales) >= max_participantes:
+            print(f"❌ Error: Sala llena")
+            return jsonify({'success': False, 'error': f'La sala está llena ({max_participantes} participantes máximo)'}), 400
+        
+        # Agregar el participante a la sala
+        id_usuario = session.get('usuario_id')  # Si está logueado
+        print(f"➕ Agregando participante: {nombre_estudiante} (usuario_id: {id_usuario})")
+        
+        try:
+            participante_id = controlador_salas.agregar_participante_sala(sala['id'], nombre_estudiante, id_usuario)
+        except ValueError as ve:
+            print(f"❌ Error al agregar: {ve}")
+            return jsonify({'success': False, 'error': str(ve)}), 400
+        
+        print(f"✅ Participante agregado exitosamente!")
+        print(f"   - ID Participante: {participante_id}")
+        print(f"   - Sala ID: {sala['id']}")
+        print(f"   - PIN Sala: {pin_sala}")
+        
+        # Guardar en sesión
+        session['participante_id'] = participante_id
+        session['sala_id'] = sala['id']
+        session['nombre_participante'] = nombre_estudiante
+        session['pin_sala'] = pin_sala
+        
+        redirect_url = url_for('sala_espera', sala_id=sala['id'])
+        print(f"   - URL Redirección: {redirect_url}")
+        print(f"{'='*80}\n")
+        
+        return jsonify({
+            'success': True,
+            'participante_id': participante_id,
+            'sala_id': sala['id'],
+            'redirect_url': redirect_url,
+            'message': f'¡Te has unido exitosamente! Espera a que el docente inicie el juego.'
+        })
+        
+    except ValueError as ve:
+        print(f"DEBUG: ValueError: {ve}")
+        return jsonify({'success': False, 'error': str(ve)}), 400
+    except Exception as e:
+        print(f"DEBUG: Error al unirse a sala: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': 'Error interno del servidor'}), 500
+
+@app.route('/sala-espera/<int:sala_id>')
+def sala_espera(sala_id):
+    """Página de espera para estudiantes"""
+    try:
+        # Verificar que el estudiante esté en la sala
+        if session.get('sala_id') != sala_id:
+            flash('No estás registrado en esta sala', 'error')
+            return redirect(url_for('unirse_juego'))
+        
+        sala = obtener_sala_por_id_simple(sala_id)
+        if not sala:
+            flash('Sala no encontrada', 'error')
+            return redirect(url_for('unirse_juego'))
+        
+        # Obtener información del participante
+        nombre_participante = session.get('nombre_participante', 'Participante')
+        participante_id = session.get('participante_id')
+        pin_sala = session.get('pin_sala', sala.get('pin_sala', ''))
+        
+        return render_template('SalaEspera.html', 
+                             sala=sala, 
+                             nombre_participante=nombre_participante,
+                             participante_id=participante_id,
+                             pin_sala=pin_sala)
+    except Exception as e:
+        print(f"ERROR en sala_espera: {e}")
+        import traceback
+        traceback.print_exc()
+        flash(f'Error: {str(e)}', 'error')
+        return redirect(url_for('unirse_juego'))
+
 # Rutas para juegos
 @app.route('/crear-cuestionario', methods=['GET', 'POST'])
 def crear_cuestionario_route():
@@ -1302,45 +1634,43 @@ def crear_sala_para_cuestionario(cuestionario_id):
 
 # Ruta para publicar un cuestionario
 @app.route('/publicar-cuestionario/<int:cuestionario_id>', methods=['POST'])
-@login_required
 def publicar_cuestionario_route(cuestionario_id):
+    """Publica un cuestionario cambiando su estado a 'publicado'"""
+    print(f"\n{'='*80}")
+    print(f"📢 PUBLICAR CUESTIONARIO - ID: {cuestionario_id}")
+    print(f"Sesión: logged_in={session.get('logged_in')}, tipo={session.get('usuario_tipo')}, user_id={session.get('usuario_id')}")
+    print(f"{'='*80}\n")
+    
+    # Verificar sesión manualmente (sin decorador @login_required)
+    if 'logged_in' not in session or not session.get('logged_in'):
+        print("❌ Usuario no autenticado")
+        return jsonify({'success': False, 'error': 'No has iniciado sesión'}), 401
+    
+    if session.get('usuario_tipo') != 'docente':
+        print(f"❌ Usuario no es docente: {session.get('usuario_tipo')}")
+        return jsonify({'success': False, 'error': 'Solo los docentes pueden publicar cuestionarios'}), 403
+    
     try:
-        if session.get('usuario_tipo') != 'docente':
-            return jsonify({'success': False, 'error': 'Solo los docentes pueden publicar cuestionarios'}), 403
-        
         id_docente = session.get('usuario_id')
+        print(f"✅ Llamando a publicar_cuestionario({cuestionario_id}, {id_docente})")
         
-        # Verificar que el cuestionario tiene preguntas antes de publicar
-        try:
-            preguntas = controlador_preguntas.obtener_preguntas_por_cuestionario(cuestionario_id)
-            if not preguntas or len(preguntas) == 0:
-                return jsonify({
-                    'success': False, 
-                    'error': 'No se puede publicar un cuestionario sin preguntas'
-                }), 400
-        except:
-            return jsonify({
-                'success': False, 
-                'error': 'Error al verificar las preguntas del cuestionario'
-            }), 500
-        
-        # Usar la nueva función publicar_cuestionario
+        # Llamar a la función del controlador
         success, mensaje = controlador_cuestionarios.publicar_cuestionario(cuestionario_id, id_docente)
         
+        print(f"Resultado: success={success}, mensaje={mensaje}")
+        
         if success:
-            return jsonify({
-                'success': True, 
-                'message': mensaje
-            })
+            print("✅ Publicación exitosa")
+            return jsonify({'success': True, 'message': mensaje}), 200
         else:
-            return jsonify({
-                'success': False, 
-                'error': mensaje
-            }), 400
+            print(f"❌ Publicación fallida: {mensaje}")
+            return jsonify({'success': False, 'error': mensaje}), 400
             
     except Exception as e:
-        print(f"DEBUG: Error en publicar_cuestionario: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500
+        print(f"❌ ERROR CRÍTICO en publicar_cuestionario_route: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': f'Error del servidor: {str(e)}'}), 500
 
 # Ruta para despublicar un cuestionario
 @app.route('/despublicar-cuestionario/<int:cuestionario_id>', methods=['POST'])
@@ -1851,56 +2181,6 @@ def eliminar_pregunta_cuestionario(pregunta_id):
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@app.route('/unirse-juego', methods=['GET', 'POST'])
-def unirse_juego():
-    if request.method == 'POST':
-        # Procesar unión al juego
-        data = request.get_json(silent=True) or request.form.to_dict()
-        try:
-            pin_sala = data.get('pin_sala', '').strip()
-            nombre_jugador = data.get('nombre_jugador', '').strip()
-            
-            # Aquí iría la validación del PIN y registro del jugador
-            if request.is_json:
-                return jsonify({'success': True, 'redirect': f'/sala-espera/{pin_sala}'})
-            return redirect(url_for('sala_espera', pin_sala=pin_sala))
-        except Exception as e:
-            if request.is_json:
-                return jsonify({'success': False, 'error': str(e)}), 400
-            flash('Error al unirse al juego', 'error')
-            return redirect(url_for('error_sistema_page'))
-    
-    return render_template('UnirseJuego.html')
-
-@app.route('/sala-espera/<pin_sala>')
-def sala_espera(pin_sala):
-    try:
-        # Validar el PIN y obtener info de la sala
-        sala = controlador_salas.obtener_sala_por_codigo(pin_sala)
-        if not sala:
-            flash('Sala no encontrada', 'error')
-            return redirect(url_for('unirse_a_sala'))
-        
-        if sala['estado'] != 'esperando':
-            flash('La sala no está disponible', 'error')
-            return redirect(url_for('unirse_a_sala'))
-        
-        # Obtener participantes conectados
-        participantes = controlador_salas.obtener_participantes_sala(sala['id'])
-        
-        # Obtener información del cuestionario
-        cuestionario = controlador_cuestionarios.obtener_cuestionario_por_id(sala['id_cuestionario'])
-        
-        return render_template('SalaEspera.html', 
-                             sala=sala, 
-                             participantes=participantes,
-                             cuestionario=cuestionario,
-                             pin_sala=pin_sala)
-    except Exception as e:
-        print(f"Error en sala_espera: {e}")
-        flash('Error al acceder a la sala', 'error')
-        return redirect(url_for('unirse_a_sala'))
-
 @app.route('/juego-estudiante/<pin_sala>')
 def juego_estudiante_por_pin(pin_sala):
     # Aquí iría la lógica para obtener las preguntas del juego
@@ -1915,79 +2195,6 @@ def monitoreo_juego(pin_sala):
 def resultados_juego(pin_sala):
     # Aquí iría la lógica para obtener los resultados finales
     return render_template('ResultadosJuego.html', pin_sala=pin_sala)
-
-# Rutas para APIs (respuestas JSON)
-@app.route('/api/participantes/<pin_sala>')
-def api_obtener_participantes(pin_sala):
-    try:
-        # Validar sala
-        sala = controlador_salas.obtener_sala_por_codigo(pin_sala)
-        if not sala:
-            return jsonify({'success': False, 'error': 'Sala no encontrada'}), 404
-        
-        # Obtener participantes actuales
-        participantes = controlador_salas.obtener_participantes_sala(sala['id'])
-        
-        # Formatear respuesta
-        participantes_response = []
-        for p in participantes:
-            participantes_response.append({
-                'id': p['id_participante'],
-                'nombre': p['nombre_participante'],
-                'estado': p['estado'],
-                'fecha_union': p['fecha_union'].strftime('%Y-%m-%d %H:%M:%S') if p['fecha_union'] else None
-            })
-        
-        return jsonify({
-            'success': True, 
-            'participantes': participantes_response,
-            'total': len(participantes_response),
-            'sala_estado': sala['estado']
-        })
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@app.route('/api/iniciar-juego/<pin_sala>', methods=['POST'])
-def api_iniciar_juego(pin_sala):
-    try:
-        # Validar sala
-        sala = controlador_salas.obtener_sala_por_codigo(pin_sala)
-        if not sala:
-            return jsonify({'success': False, 'error': 'Sala no encontrada'}), 404
-        
-        # Actualizar estado de la sala
-        controlador_salas.actualizar_estado_sala(sala['id'], 'en_curso')
-        
-        return jsonify({'success': True, 'message': 'Juego iniciado'})
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 400
-
-@app.route('/api/enviar-respuesta/<pin_sala>', methods=['POST'])
-def api_enviar_respuesta(pin_sala):
-    try:
-        data = request.get_json()
-        jugador_id = data.get('jugador_id')
-        pregunta_id = data.get('pregunta_id')
-        respuesta = data.get('respuesta')
-        
-        # Lógica para procesar la respuesta
-        return jsonify({'success': True, 'puntos': 100})
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 400
-
-@app.route('/api/estado-juego/<pin_sala>')
-def api_estado_juego(pin_sala):
-    try:
-        # Lógica para obtener el estado actual del juego
-        estado = {
-            'pregunta_actual': 1,
-            'total_preguntas': 10,
-            'participantes': 8,
-            'tiempo_restante': 30
-        }
-        return jsonify(estado)
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 400
 
 ###############################
 # RUTAS CRUD PARA EL DASHBOARD
