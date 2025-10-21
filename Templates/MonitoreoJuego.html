@@ -100,6 +100,23 @@
         <a href="{{ url_for('mis_cuestionarios') }}" class="control-btn" style="background: #ccc; color: #333; text-decoration: none;">Volver</a>
     </div>
 
+    <!-- Panel de Grupos -->
+    <div class="control-panel" id="panel-grupos">
+        <h2>⚙️ Configurar Grupos</h2>
+        <div id="config-grupos">
+            <p style="margin-bottom: 1rem; color: rgba(30,30,30,0.7);">Puedes crear grupos para dividir a los participantes. Cada estudiante seleccionará su grupo al unirse.</p>
+            <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem;">
+                <label for="num-grupos-input">Número de grupos:</label>
+                <input type="number" id="num-grupos-input" min="2" max="10" value="2" style="padding: 0.5rem; border: 2px solid #ccc; border-radius: 0.5rem; width: 80px; text-align: center;">
+                <button class="control-btn btn-success" onclick="habilitarGrupos()">✔️ Crear Grupos</button>
+            </div>
+        </div>
+        <div id="grupos-container" style="display: none; margin-top: 1.5rem;">
+            <h3 style="margin-bottom: 1rem;">Grupos Creados</h3>
+            <div id="grupos-list"></div>
+        </div>
+    </div>
+
     <div class="control-panel">
         <h2>Participantes (<span id="participantes-count">{{ participantes|length }}</span>)</h2>
         <div id="participantes-container">
@@ -127,6 +144,71 @@
 {% block extra_js %}
 <script>
 const codigoSala = "{{ sala.pin_sala }}";
+const SALA_ID = {{ sala.id }};
+
+let gruposHabilitados = false;
+
+// Habilitar grupos: envía solicitud al servidor para crear grupos
+async function habilitarGrupos() {
+    const numGrupos = parseInt(document.getElementById('num-grupos-input').value);
+    if (numGrupos < 2 || numGrupos > 10) {
+        alert('Ingresa un número válido de grupos (2-10)');
+        return;
+    }
+
+    if (!confirm(`¿Crear ${numGrupos} grupos?`)) return;
+
+    try {
+        const response = await fetch(`/sala/${SALA_ID}/configurar-grupos`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ num_grupos: numGrupos })
+        });
+        const data = await response.json();
+        if (data.success) {
+            alert(`✅ Se crearon ${data.grupos_creados} grupos`);
+            gruposHabilitados = true;
+            document.getElementById('config-grupos').style.display = 'none';
+            document.getElementById('grupos-container').style.display = 'block';
+            await cargarGrupos();
+        } else {
+            alert('Error: ' + data.error);
+        }
+    } catch (error) {
+        console.error('Error habilitando grupos:', error);
+        alert('Error al crear grupos');
+    }
+}
+
+// Cargar grupos desde el servidor
+async function cargarGrupos() {
+    try {
+        const response = await fetch(`/api/sala/${SALA_ID}/grupos`);
+        const data = await response.json();
+        if (data.success && data.grupos.length > 0) {
+            gruposHabilitados = true;
+            mostrarGrupos(data.grupos);
+        }
+    } catch (error) {
+        console.error('Error cargando grupos:', error);
+    }
+}
+
+// Mostrar grupos en el DOM
+function mostrarGrupos(grupos) {
+    const container = document.getElementById('grupos-list');
+    let html = '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">';
+    grupos.forEach(g => {
+        html += `
+            <div class="grupo-card" data-grupo-id="${g.id_grupo}" style="background: rgba(34, 197, 94, 0.1); border: 2px solid rgba(34, 197, 94, 0.3); border-radius: 1rem; padding: 1rem; text-align: center;">
+                <h4 style="color: rgb(21, 128, 61);">${g.nombre_grupo}</h4>
+                <p id="grupo-${g.id_grupo}-count" style="font-size: 0.9rem; color: rgba(30,30,30,0.7);">0 estudiantes</p>
+            </div>
+        `;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+}
 
 // Actualizar participantes en tiempo real
 function actualizarParticipantes() {
@@ -139,15 +221,37 @@ function actualizarParticipantes() {
                 
                 countElement.textContent = data.total;
                 
+                // Contar participantes por grupo si los grupos están habilitados
+                if (gruposHabilitados) {
+                    const gruposCuentas = {};
+                    data.participantes.forEach(p => {
+                        if (p.id_grupo) {
+                            gruposCuentas[p.id_grupo] = (gruposCuentas[p.id_grupo] || 0) + 1;
+                        }
+                    });
+                    // Actualizar contadores en las tarjetas de grupos
+                    Object.keys(gruposCuentas).forEach(grupoId => {
+                        const countEl = document.getElementById(`grupo-${grupoId}-count`);
+                        if (countEl) {
+                            const count = gruposCuentas[grupoId];
+                            countEl.textContent = `${count} estudiante${count !== 1 ? 's' : ''}`;
+                        }
+                    });
+                }
+                
                 if (data.participantes.length > 0) {
                     let html = '<div id="participantes-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">';
                     
                     data.participantes.forEach(participante => {
+                        const grupoBadge = participante.nombre_grupo ? 
+                            `<span style="background: rgba(34, 197, 94, 0.2); color: rgb(21, 128, 61); padding: 0.25rem 0.75rem; border-radius: 0.5rem; font-size: 0.85rem; display: inline-block; margin-top: 0.5rem;">👥 ${participante.nombre_grupo}</span>` : 
+                            '';
                         html += `
                             <div class="participante-card" style="background: rgba(79, 70, 229, 0.1); border-radius: 1rem; padding: 1rem; text-align: center;">
                                 <h4>${participante.nombre}</h4>
                                 <p style="color: #4F46E5; font-weight: 600;">${participante.estado.charAt(0).toUpperCase() + participante.estado.slice(1)}</p>
                                 <small>Unido: ${new Date(participante.fecha_union).toLocaleTimeString()}</small>
+                                ${grupoBadge}
                             </div>
                         `;
                     });
@@ -171,6 +275,12 @@ function actualizarParticipantes() {
 
 // Actualizar cada 3 segundos
 setInterval(actualizarParticipantes, 3000);
+
+// Cargar grupos existentes al cargar la página
+document.addEventListener('DOMContentLoaded', function() {
+    actualizarParticipantes(); // Cargar participantes inmediatamente
+    cargarGrupos(); // Intentar cargar grupos si ya existen
+});
 
 function iniciarJuego() {
     const participantesCount = parseInt(document.getElementById('participantes-count').textContent);

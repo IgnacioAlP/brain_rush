@@ -245,6 +245,71 @@
     color: rgba(30, 30, 30, 0.7);
 }
 
+.grupos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-lg);
+    margin-bottom: var(--space-xl);
+}
+
+.grupo-card {
+    background: rgba(249, 250, 251, 0.8);
+    border: 3px solid rgba(209, 213, 219, 0.5);
+    border-radius: var(--radius-lg);
+    padding: var(--space-xl);
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.grupo-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(79, 70, 229, 0.15);
+    border-color: var(--primary-color);
+}
+
+.grupo-card.selected {
+    background: var(--gradient-primary);
+    border-color: var(--primary-color);
+    box-shadow: 0 8px 20px rgba(79, 70, 229, 0.3);
+    transform: translateY(-4px);
+}
+
+.grupo-card.selected .grupo-nombre,
+.grupo-card.selected .grupo-info {
+    color: white;
+}
+
+.grupo-nombre {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--primary-dark);
+    margin-bottom: var(--space-sm);
+}
+
+.grupo-info {
+    font-size: 0.9rem;
+    color: rgba(30, 30, 30, 0.6);
+}
+
+.grupo-card.selected::after {
+    content: '✓';
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    background: white;
+    color: var(--primary-color);
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 1.2rem;
+}
+
 @media (max-width: 480px) {
     .unirse-card {
         padding: var(--space-xl);
@@ -284,7 +349,8 @@
       <div class="step-indicator">
         <div class="step active" id="step-1">1</div>
         <div class="step" id="step-2">2</div>
-        <div class="step" id="step-3">3</div>
+        <div class="step" id="step-2.5">3</div>
+        <div class="step" id="step-3">4</div>
       </div>
 
       <div class="error-message" id="error-message"></div>
@@ -313,11 +379,30 @@
             Este nombre aparecerá en el ranking
           </div>
         </div>
-        <button class="btn btn-primary" id="join-game-btn" disabled>
-          Unirse al juego
+        <button class="btn btn-primary" id="next-to-group-btn" disabled>
+          Continuar
         </button>
         <button class="btn btn-secondary" id="back-to-pin-btn">
           ← Cambiar PIN
+        </button>
+      </div>
+
+      <!-- Paso 2.5: Seleccionar Grupo (solo si hay grupos habilitados) -->
+      <div class="step-content" id="content-step-2.5" style="display: none;">
+        <div class="form-group">
+          <label>👥 Selecciona tu grupo</label>
+          <div class="help-text" style="margin-bottom: var(--space-lg);">
+            Elige el grupo al que quieres unirte
+          </div>
+          <div id="grupos-grid" class="grupos-grid">
+            <!-- Los grupos se cargarán dinámicamente aquí -->
+          </div>
+        </div>
+        <button class="btn btn-primary" id="join-game-btn" disabled>
+          Unirse al juego
+        </button>
+        <button class="btn btn-secondary" id="back-to-name-btn">
+          ← Volver
         </button>
       </div>
 
@@ -337,6 +422,8 @@
     let currentStep = 1;
     let gamePin = '';
     let salaData = null;
+    let gruposDisponibles = [];
+    let grupoSeleccionado = null;
 
     // Referencias a elementos
     const errorMessage = document.getElementById('error-message');
@@ -344,8 +431,10 @@
     const pinInput = document.getElementById('pin-input');
     const nameInput = document.getElementById('name-input');
     const verifyPinBtn = document.getElementById('verify-pin-btn');
+    const nextToGroupBtn = document.getElementById('next-to-group-btn');
     const joinGameBtn = document.getElementById('join-game-btn');
     const backToPinBtn = document.getElementById('back-to-pin-btn');
+    const backToNameBtn = document.getElementById('back-to-name-btn');
 
     function showError(message) {
       errorMessage.textContent = '❌ ' + message;
@@ -366,20 +455,30 @@
 
     function updateStep(step) {
       // Ocultar todos los contenidos
-      for (let i = 1; i <= 3; i++) {
-        document.getElementById(`content-step-${i}`).style.display = 'none';
-        const stepElement = document.getElementById(`step-${i}`);
-        stepElement.classList.remove('active', 'completed');
+      const steps = [1, 2, 2.5, 3];
+      steps.forEach(s => {
+        const stepId = `step-${s}`;
+        const contentId = `content-step-${s}`;
+        const contentElement = document.getElementById(contentId);
+        const stepElement = document.getElementById(stepId);
         
-        if (i < step) {
-          stepElement.classList.add('completed');
-        } else if (i === step) {
-          stepElement.classList.add('active');
+        if (contentElement) contentElement.style.display = 'none';
+        if (stepElement) {
+          stepElement.classList.remove('active', 'completed');
+          
+          if ((typeof s === 'number' && s < step) || (s === 2.5 && step === 3)) {
+            stepElement.classList.add('completed');
+          } else if (s === step) {
+            stepElement.classList.add('active');
+          }
         }
-      }
+      });
 
       // Mostrar contenido actual
-      document.getElementById(`content-step-${step}`).style.display = 'flex';
+      const currentContent = document.getElementById(`content-step-${step}`);
+      if (currentContent) {
+        currentContent.style.display = 'flex';
+      }
       currentStep = step;
       hideMessages();
     }
@@ -395,6 +494,76 @@
     function validateName(name) {
       name = name.trim();
       return name.length >= 2 && name.length <= 100;
+    }
+
+    async function cargarGrupos(salaId) {
+      try {
+        console.log(`🔍 Intentando cargar grupos para sala ID: ${salaId}`);
+        const response = await fetch(`/api/sala/${salaId}/grupos`);
+        const data = await response.json();
+        
+        console.log('📦 Respuesta de grupos:', data);
+        
+        if (data.success && data.grupos && data.grupos.length > 0) {
+          gruposDisponibles = data.grupos;
+          console.log(`✅ Se encontraron ${data.grupos.length} grupos`);
+          return true;
+        }
+        console.log('ℹ️ No hay grupos habilitados para esta sala');
+        return false;
+      } catch (error) {
+        console.error('❌ Error cargando grupos:', error);
+        return false;
+      }
+    }
+
+    function mostrarGrupos() {
+      const container = document.getElementById('grupos-grid');
+      container.innerHTML = '';
+      
+      gruposDisponibles.forEach(grupo => {
+        const card = document.createElement('div');
+        card.className = 'grupo-card';
+        card.dataset.grupoId = grupo.id_grupo;
+        card.innerHTML = `
+          <div class="grupo-nombre">👥 ${grupo.nombre_grupo}</div>
+          <div class="grupo-info">Haz clic para seleccionar</div>
+        `;
+        
+        card.addEventListener('click', () => seleccionarGrupo(grupo.id_grupo));
+        container.appendChild(card);
+      });
+    }
+
+    function seleccionarGrupo(grupoId) {
+      grupoSeleccionado = grupoId;
+      
+      // Actualizar visualización
+      document.querySelectorAll('.grupo-card').forEach(card => {
+        card.classList.remove('selected');
+        if (parseInt(card.dataset.grupoId) === grupoId) {
+          card.classList.add('selected');
+        }
+      });
+      
+      // Habilitar botón de unirse
+      joinGameBtn.disabled = false;
+    }
+
+    async function asignarGrupoAParticipante(participanteId, grupoId) {
+      try {
+        const response = await fetch(`/api/participante/${participanteId}/asignar-grupo`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id_grupo: grupoId })
+        });
+        
+        const data = await response.json();
+        return data.success;
+      } catch (error) {
+        console.error('Error asignando grupo:', error);
+        return false;
+      }
     }
 
     async function verificarSala(pin) {
@@ -488,12 +657,40 @@
 
     nameInput.addEventListener('input', function() {
       const name = this.value.trim();
-      joinGameBtn.disabled = !validateName(name);
+      nextToGroupBtn.disabled = !validateName(name);
     });
 
     nameInput.addEventListener('keypress', function(e) {
-      if (e.key === 'Enter' && !joinGameBtn.disabled) {
-        joinGameBtn.click();
+      if (e.key === 'Enter' && !nextToGroupBtn.disabled) {
+        nextToGroupBtn.click();
+      }
+    });
+
+    nextToGroupBtn.addEventListener('click', async function() {
+      const name = nameInput.value.trim();
+      
+      if (!validateName(name)) {
+        showError('El nombre debe tener entre 2 y 100 caracteres');
+        nameInput.focus();
+        return;
+      }
+
+      console.log('📝 Nombre validado, verificando grupos...');
+      console.log('📊 Datos de sala:', salaData);
+
+      // Verificar si hay grupos habilitados en esta sala
+      const salaId = salaData.id_sala || salaData.id;
+      const hayGrupos = await cargarGrupos(salaId);
+      
+      if (hayGrupos) {
+        // Ir al paso de selección de grupo
+        console.log('👥 Mostrando selección de grupos');
+        mostrarGrupos();
+        updateStep(2.5);
+      } else {
+        // No hay grupos, ir directo a unirse
+        console.log('➡️ No hay grupos, uniendo directamente');
+        unirseDirecto();
       }
     });
 
@@ -546,21 +743,29 @@
     });
 
     joinGameBtn.addEventListener('click', async function() {
-      const name = nameInput.value.trim();
-      
-      if (!validateName(name)) {
-        showError('El nombre debe tener entre 2 y 100 caracteres');
-        nameInput.focus();
+      if (!grupoSeleccionado) {
+        showError('Debes seleccionar un grupo');
         return;
       }
 
       // Mostrar pantalla de carga
       updateStep(3);
 
+      const name = nameInput.value.trim();
       const result = await unirseASala(gamePin, name);
       
       if (result.success) {
         console.log('✅ Unido exitosamente a la sala:', result);
+        
+        // Asignar el grupo al participante
+        const grupoAsignado = await asignarGrupoAParticipante(result.participante_id, grupoSeleccionado);
+        
+        if (grupoAsignado) {
+          console.log('✅ Grupo asignado correctamente');
+        } else {
+          console.warn('⚠️ No se pudo asignar el grupo, pero el estudiante se unió a la sala');
+        }
+        
         showSuccess(result.message || '¡Te uniste exitosamente!');
         
         // Redirigir a la sala de espera
@@ -570,17 +775,47 @@
       } else {
         console.error('❌ Error al unirse:', result.error);
         showError(result.error);
+        updateStep(2.5);
+      }
+    });
+
+    // Función para unirse sin grupos (acceso directo)
+    async function unirseDirecto() {
+      updateStep(3);
+
+      const name = nameInput.value.trim();
+      const result = await unirseASala(gamePin, name);
+      
+      if (result.success) {
+        console.log('✅ Unido exitosamente a la sala:', result);
+        showSuccess(result.message || '¡Te uniste exitosamente!');
+        
+        setTimeout(() => {
+          window.location.href = result.redirect_url;
+        }, 500);
+      } else {
+        console.error('❌ Error al unirse:', result.error);
+        showError(result.error);
         updateStep(2);
         nameInput.focus();
       }
-    });
+    }
 
     backToPinBtn.addEventListener('click', function() {
       gamePin = '';
       salaData = null;
+      gruposDisponibles = [];
+      grupoSeleccionado = null;
       pinInput.value = '';
+      nameInput.value = '';
       updateStep(1);
       pinInput.focus();
+    });
+
+    backToNameBtn.addEventListener('click', function() {
+      grupoSeleccionado = null;
+      updateStep(2);
+      nameInput.focus();
     });
 
     // Inicialización

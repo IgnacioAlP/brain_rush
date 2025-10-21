@@ -1,333 +1,524 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sala de Juego - Brain RUSH</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+{% extends "BrainRush_Master.html" %}
 
-    body {
-      font-family: Arial, sans-serif;
-      background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
+{% block title %}Sala de Espera - Brain RUSH{% endblock %}
 
-    .header {
-      background: rgba(34, 34, 34, 0.95);
-      color: white;
-      padding: 16px 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
+{% block extra_css %}
+<style>
+.sala-espera-page {
+  padding: var(--space-xl) 0;
+  min-height: 70vh;
+}
 
-    .logo {
-      font-size: 24px;
-      font-weight: bold;
-      letter-spacing: 1px;
-    }
+.sala-container {
+  max-width: 900px;
+  margin: 0 auto;
+}
 
-    .sala-info {
-      display: flex;
-      gap: 20px;
-      align-items: center;
-      font-size: 16px;
-    }
+.sala-header {
+  background: var(--gradient-primary);
+  border-radius: var(--radius-xl);
+  padding: var(--space-xl);
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+  margin-bottom: var(--space-xxl);
+  position: relative;
+  overflow: hidden;
+}
 
-    .pin-display {
-      background: white;
-      color: #222;
-      padding: 8px 16px;
-      border-radius: 20px;
-      font-weight: bold;
-      font-size: 18px;
-      letter-spacing: 2px;
-    }
+.sala-header::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+  animation: pulse 3s ease-in-out infinite;
+}
 
-    .main-content {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 40px 20px;
-      text-align: center;
-    }
+@keyframes pulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
 
-    .waiting-screen {
-      max-width: 600px;
-      background: rgba(255, 255, 255, 0.9);
-      border-radius: 20px;
-      padding: 40px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-    }
+.sala-header h1 {
+  font-family: var(--font-primary);
+  font-size: 2.5rem;
+  color: white;
+  margin-bottom: var(--space-sm);
+  position: relative;
+  z-index: 1;
+}
 
-    .waiting-screen h1 {
-      font-size: 36px;
-      color: #222;
-      margin-bottom: 16px;
-      font-weight: bold;
-    }
+.sala-header h2 {
+  font-size: 1.3rem;
+  color: rgba(255, 255, 255, 0.95);
+  font-weight: 600;
+  margin-bottom: var(--space-lg);
+  position: relative;
+  z-index: 1;
+}
 
-    .waiting-screen h2 {
-      font-size: 24px;
-      color: #555;
-      margin-bottom: 32px;
-      font-weight: normal;
-    }
+.pin-display {
+  background: white;
+  color: var(--primary-color);
+  font-size: 3rem;
+  font-weight: 800;
+  letter-spacing: 0.3em;
+  padding: var(--space-lg) var(--space-xxl);
+  border-radius: var(--radius-lg);
+  display: inline-block;
+  box-shadow: var(--shadow-md);
+  font-family: 'Courier New', monospace;
+  position: relative;
+  z-index: 1;
+}
 
-    .game-pin {
-      background: #222;
-      color: white;
-      font-size: 48px;
-      font-weight: bold;
-      letter-spacing: 4px;
-      padding: 20px 40px;
-      border-radius: 12px;
-      margin-bottom: 32px;
-      display: inline-block;
-    }
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  background: rgba(150, 206, 180, 0.2);
+  color: rgb(34, 139, 34);
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--radius-xl);
+  font-weight: 600;
+  margin-top: var(--space-lg);
+  position: relative;
+  z-index: 1;
+}
 
-    .instructions {
-      background: #f8f9fa;
-      border-radius: 12px;
-      padding: 24px;
-      margin-bottom: 32px;
-      border-left: 4px solid #222;
-    }
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgb(34, 139, 34);
+  animation: blink 2s infinite;
+}
 
-    .instructions h3 {
-      color: #222;
-      margin-bottom: 16px;
-      font-size: 20px;
-    }
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
 
-    .instructions ol {
-      text-align: left;
-      color: #555;
-      line-height: 1.6;
-      max-width: 400px;
-      margin: 0 auto;
-    }
+.info-card {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: var(--radius-xl);
+  padding: var(--space-xl);
+  box-shadow: var(--shadow-lg);
+  margin-bottom: var(--space-xl);
+}
 
-    .instructions li {
-      margin-bottom: 8px;
-    }
+.info-card h3 {
+  font-family: var(--font-primary);
+  font-size: 1.5rem;
+  color: var(--primary-dark);
+  margin-bottom: var(--space-lg);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
 
-    .participants-section {
-      margin-top: 32px;
-    }
+.instrucciones {
+  background: rgba(69, 183, 209, 0.1);
+  border-left: 4px solid var(--accent-color);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-xl);
+}
 
-    .participants-count {
-      font-size: 20px;
-      color: #222;
-      margin-bottom: 16px;
-      font-weight: bold;
-    }
+.instrucciones ol {
+  margin: 0;
+  padding-left: var(--space-xl);
+  color: var(--dark-gray);
+  line-height: 1.8;
+}
 
-    .participants-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      justify-content: center;
-      max-height: 200px;
-      overflow-y: auto;
-    }
+.instrucciones li {
+  margin-bottom: var(--space-sm);
+}
 
-    .participant-badge {
-      background: #e9ecef;
-      color: #222;
-      padding: 8px 16px;
-      border-radius: 20px;
-      font-size: 14px;
-      font-weight: 500;
-    }
+.instrucciones strong {
+  color: var(--primary-color);
+  font-weight: 700;
+}
 
-    .control-buttons {
-      margin-top: 40px;
-      display: flex;
-      gap: 16px;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
+.participants-count {
+  font-size: 1.5rem;
+  color: var(--primary-dark);
+  margin-bottom: var(--space-lg);
+  font-weight: 700;
+  text-align: center;
+}
 
-    .btn {
-      padding: 16px 32px;
-      border: none;
-      border-radius: 8px;
-      font-size: 18px;
-      font-weight: bold;
-      cursor: pointer;
-      transition: all 0.2s;
-      text-decoration: none;
-      display: inline-block;
-    }
+.participants-count span {
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-size: 2rem;
+}
 
-    .btn-primary {
-      background: #222;
-      color: white;
-    }
+.participants-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-md);
+  margin-bottom: var(--space-xl);
+}
 
-    .btn-primary:hover {
-      background: #444;
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    }
+.participant-card {
+  background: var(--gradient-accent);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  text-align: center;
+  box-shadow: var(--shadow-md);
+  transition: all 0.3s ease;
+  animation: slideIn 0.5s ease-out;
+}
 
-    .btn-secondary {
-      background: #6c757d;
-      color: white;
-    }
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
-    .btn-secondary:hover {
-      background: #545b62;
-    }
+.participant-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
 
-    .btn:disabled {
-      background: #ccc;
-      color: #888;
-      cursor: not-allowed;
-      transform: none;
-      box-shadow: none;
-    }
+.participant-card h4 {
+  color: white;
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: var(--space-sm);
+}
 
-    .status-indicator {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 16px;
-      margin-bottom: 20px;
-    }
+.participant-card .tiempo {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.85rem;
+}
 
-    .status-dot {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      background: #28a745;
-      animation: pulse 2s infinite;
-    }
+.grupo-badge {
+  background: rgba(255, 255, 255, 0.25);
+  color: white;
+  padding: var(--space-xs) var(--space-md);
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: inline-block;
+  margin-top: var(--space-sm);
+}
 
-    @keyframes pulse {
-      0% { opacity: 1; }
-      50% { opacity: 0.5; }
-      100% { opacity: 1; }
-    }
+.grupos-section {
+  margin-top: var(--space-xl);
+  padding-top: var(--space-xl);
+  border-top: 2px dashed rgba(0, 0, 0, 0.1);
+}
 
-    .mobile-friendly {
-      background: #d4edda;
-      color: #155724;
-      padding: 12px 20px;
-      border-radius: 8px;
-      margin-top: 24px;
-      font-size: 14px;
-    }
+.grupos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-md);
+  margin-top: var(--space-lg);
+}
 
-    @media (max-width: 768px) {
-      .header {
-        flex-direction: column;
-        gap: 12px;
-        text-align: center;
-      }
+.grupo-card-mini {
+  background: rgba(150, 206, 180, 0.15);
+  border: 2px solid rgba(150, 206, 180, 0.4);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  text-align: center;
+  transition: all 0.3s ease;
+}
 
-      .sala-info {
-        flex-direction: column;
-        gap: 12px;
-      }
+.grupo-card-mini:hover {
+  background: rgba(150, 206, 180, 0.25);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
 
-      .waiting-screen {
-        margin: 20px;
-        padding: 24px;
-      }
+.grupo-card-mini .nombre {
+  font-weight: 700;
+  color: rgb(34, 139, 34);
+  font-size: 1.1rem;
+  margin-bottom: var(--space-xs);
+}
 
-      .waiting-screen h1 {
-        font-size: 28px;
-      }
+.grupo-card-mini .contador {
+  font-size: 0.9rem;
+  color: var(--dark-gray);
+}
 
-      .game-pin {
-        font-size: 36px;
-        padding: 16px 24px;
-        letter-spacing: 2px;
-      }
+.control-section {
+  margin-top: var(--space-xxl);
+}
 
-      .control-buttons {
-        flex-direction: column;
-        align-items: center;
-      }
+.btn-control {
+  width: 100%;
+  padding: var(--space-lg) var(--space-xl);
+  border: none;
+  border-radius: var(--radius-lg);
+  font-size: 1.2rem;
+  font-weight: 700;
+  font-family: var(--font-secondary);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: var(--space-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  box-shadow: var(--shadow-md);
+}
 
-      .btn {
-        width: 100%;
-        max-width: 300px;
-      }
-    }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <div class="logo">🧠 BRAIN RUSH</div>
-    <div class="sala-info">
-      <span>📚 {{ cuestionario_titulo }}</span>
-      <div class="pin-display">PIN: {{ pin_sala }}</div>
-    </div>
-  </div>
+.btn-iniciar {
+  background: var(--gradient-primary);
+  color: white;
+}
 
-  <div class="main-content">
-    <div class="waiting-screen">
-      <div class="status-indicator">
+.btn-iniciar:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg);
+}
+
+.btn-iniciar:disabled {
+  background: linear-gradient(135deg, #ccc 0%, #aaa 100%);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.btn-cerrar {
+  background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+  color: white;
+}
+
+.btn-cerrar:hover {
+  background: linear-gradient(135deg, #545b62 0%, #343a40 100%);
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg);
+}
+
+.waiting-message {
+  background: rgba(69, 183, 209, 0.15);
+  border: 2px solid rgba(69, 183, 209, 0.3);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  text-align: center;
+  color: var(--accent-color);
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.tip-box {
+  background: rgba(255, 234, 167, 0.2);
+  border-left: 4px solid var(--warning-color);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+  margin-top: var(--space-xl);
+  color: var(--dark-gray);
+  line-height: 1.6;
+}
+
+.tip-box strong {
+  color: #F7931E;
+}
+
+.no-participants {
+  text-align: center;
+  padding: var(--space-xxl);
+  color: var(--gray);
+}
+
+.no-participants p {
+  font-size: 1.1rem;
+  margin-bottom: var(--space-sm);
+}
+
+@media (max-width: 768px) {
+  .sala-header h1 {
+    font-size: 2rem;
+  }
+  
+  .pin-display {
+    font-size: 2rem;
+    padding: var(--space-md) var(--space-lg);
+    letter-spacing: 0.2em;
+  }
+  
+  .participants-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+  
+  .grupos-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container sala-espera-page">
+  <div class="sala-container animate-fadeIn">
+    
+    <!-- Header de la Sala -->
+    <div class="sala-header">
+      <div class="status-badge">
         <div class="status-dot"></div>
-        <span>Sala activa - Esperando participantes</span>
+        <span>Sala activa</span>
       </div>
+      <h1>🧠 Sala de Juego</h1>
+      <h2>{{ sala.cuestionario_titulo or 'Cuestionario' }}</h2>
+      <div class="pin-display">{{ pin_sala }}</div>
+    </div>
 
-      <h1>¡Sala de Juego Lista!</h1>
-      <h2>{{ cuestionario_titulo }}</h2>
-      
-      <div class="game-pin">{{ pin_sala }}</div>
-
-      <div class="instructions">
-        <h3>📱 Instrucciones para los estudiantes:</h3>
+    <!-- Instrucciones -->
+    <div class="info-card">
+      <h3>📱 Instrucciones para estudiantes</h3>
+      <div class="instrucciones">
         <ol>
-          <li>Ve a <strong>{{ url_unirse }}</strong> desde tu dispositivo móvil</li>
+          <li>Abre tu navegador y ve a <strong>{{ request.host_url }}unirse_a_sala</strong></li>
           <li>Ingresa el código PIN: <strong>{{ pin_sala }}</strong></li>
-          <li>Escribe tu nombre para unirte</li>
-          <li>¡Espera a que el profesor inicie el juego!</li>
+          <li>Escribe tu nombre completo</li>
+          <li>{% if session.get('usuario_tipo') == 'docente' %}Selecciona tu grupo (si hay grupos){% else %}Espera a que inicie el juego{% endif %}</li>
+          <li>¡A jugar! 🎮</li>
         </ol>
       </div>
+    </div>
 
-      <div class="participants-section">
-        <div class="participants-count">
-          👥 Participantes conectados: <span id="participant-count">0</span>
-        </div>
-        <div class="participants-list" id="participants-list">
-          <!-- Los participantes aparecerán aquí -->
+    <!-- Participantes -->
+    <div class="info-card">
+      <h3>👥 Participantes</h3>
+      <div class="participants-count">
+        Total: <span id="participant-count">0</span>
+      </div>
+      
+      <div id="participants-container">
+        <div class="participants-grid" id="participants-list">
+          <div class="no-participants">
+            <p>⏳ Esperando participantes...</p>
+            <p style="font-size: 0.9rem;">Comparte el PIN <strong>{{ pin_sala }}</strong> con los estudiantes</p>
+          </div>
         </div>
       </div>
 
-      <div class="control-buttons">
-        <button id="start-game-btn" class="btn btn-primary" disabled>
-          🚀 Iniciar Juego
-        </button>
-        <button id="close-room-btn" class="btn btn-secondary">
-          ❌ Cerrar Sala
-        </button>
-      </div>
-
-      <div class="mobile-friendly">
-        💡 <strong>Tip:</strong> Proyecta esta pantalla para que todos puedan ver el PIN y las instrucciones.
+      <!-- Sección de Grupos -->
+      <div class="grupos-section" id="grupos-section" style="display: none;">
+        <h3 style="font-family: var(--font-primary); font-size: 1.3rem; color: var(--primary-dark); margin-bottom: var(--space-lg); text-align: center;">
+          📊 Distribución por Grupos
+        </h3>
+        <div class="grupos-grid" id="grupos-grid">
+          <!-- Los grupos se cargarán aquí dinámicamente -->
+        </div>
       </div>
     </div>
+
+    <!-- Controles (Solo Docente) -->
+    <div class="control-section">
+      {% if session.get('usuario_tipo') == 'docente' %}
+        <button id="start-game-btn" class="btn-control btn-iniciar" disabled>
+          🚀 Iniciar Juego
+        </button>
+        <button id="close-room-btn" class="btn-control btn-cerrar">
+          ❌ Cerrar Sala
+        </button>
+      {% else %}
+        <div class="waiting-message">
+          ⏳ <strong>Esperando que el profesor inicie el juego...</strong>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Tip Box -->
+    <div class="tip-box">
+      💡 <strong>Tip:</strong> Proyecta esta pantalla para que todos puedan ver el PIN y las instrucciones en tiempo real.
+    </div>
+
   </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
 
   <script>
     const SALA_ID = {{ sala.id }};
+    const ES_DOCENTE = {{ 'true' if session.get('usuario_tipo') == 'docente' else 'false' }};
     let ultimosParticipantes = [];
+    let gruposDisponibles = [];
     let intervaloActualizacion = null;
+
+    // Función para cargar grupos
+    async function cargarGrupos() {
+      try {
+        const response = await fetch(`/api/sala/${SALA_ID}/grupos`);
+        const data = await response.json();
+        
+        if (data.success && data.grupos && data.grupos.length > 0) {
+          gruposDisponibles = data.grupos;
+          mostrarGrupos();
+          return true;
+        }
+        return false;
+      } catch (error) {
+        console.error('Error cargando grupos:', error);
+        return false;
+      }
+    }
+
+    // Función para mostrar grupos
+    function mostrarGrupos() {
+      const gruposSection = document.getElementById('grupos-section');
+      const gruposGrid = document.getElementById('grupos-grid');
+      
+      if (gruposDisponibles.length > 0) {
+        gruposSection.style.display = 'block';
+        gruposGrid.innerHTML = '';
+        
+        gruposDisponibles.forEach(grupo => {
+          const card = document.createElement('div');
+          card.className = 'grupo-card-mini';
+          card.innerHTML = `
+            <div class="nombre">${grupo.nombre_grupo}</div>
+            <div class="contador" id="grupo-${grupo.id_grupo}-count">0 estudiantes</div>
+          `;
+          gruposGrid.appendChild(card);
+        });
+      } else {
+        gruposSection.style.display = 'none';
+      }
+    }
+
+    // Función para actualizar contadores de grupos
+    function actualizarContadoresGrupos(participantes) {
+      if (gruposDisponibles.length === 0) return;
+      
+      // Contar participantes por grupo
+      const gruposCuentas = {};
+      gruposDisponibles.forEach(g => {
+        gruposCuentas[g.id_grupo] = 0;
+      });
+      
+      participantes.forEach(p => {
+        if (p.id_grupo && gruposCuentas[p.id_grupo] !== undefined) {
+          gruposCuentas[p.id_grupo]++;
+        }
+      });
+      
+      // Actualizar visualización
+      Object.keys(gruposCuentas).forEach(grupoId => {
+        const countEl = document.getElementById(`grupo-${grupoId}-count`);
+        if (countEl) {
+          const count = gruposCuentas[grupoId];
+          countEl.textContent = `${count} estudiante${count !== 1 ? 's' : ''}`;
+        }
+      });
+    }
 
     // Función para actualizar la lista de participantes
     async function actualizarParticipantes() {
@@ -341,19 +532,39 @@
           // Actualizar contador
           document.getElementById('participant-count').textContent = participantes.length;
           
-          // Actualizar lista
+          // Actualizar lista con nuevo diseño
           const listElement = document.getElementById('participants-list');
           if (participantes.length === 0) {
-            listElement.innerHTML = '<div style="color: #888; font-size: 14px;">Esperando participantes...</div>';
+            listElement.innerHTML = `
+              <div class="no-participants">
+                <p>⏳ Esperando participantes...</p>
+                <p style="font-size: 0.9rem;">Comparte el PIN <strong>{{ pin_sala }}</strong> con los estudiantes</p>
+              </div>
+            `;
           } else {
-            listElement.innerHTML = participantes.map(p => 
-              `<div class="participant-badge">${p.nombre_participante || p.nombre}</div>`
-            ).join('');
+            listElement.innerHTML = participantes.map(p => {
+              const grupoBadge = p.nombre_grupo ? 
+                `<div class="grupo-badge">👥 ${p.nombre_grupo}</div>` : '';
+              return `
+                <div class="participant-card">
+                  <h4>${p.nombre_participante || p.nombre}</h4>
+                  <div class="tiempo">${new Date(p.fecha_union).toLocaleTimeString('es-ES', {hour: '2-digit', minute: '2-digit'})}</div>
+                  ${grupoBadge}
+                </div>
+              `;
+            }).join('');
           }
           
-          // Habilitar botón de inicio si hay al menos 1 participante
-          const startButton = document.getElementById('start-game-btn');
-          startButton.disabled = participantes.length === 0;
+          // Actualizar contadores de grupos
+          actualizarContadoresGrupos(participantes);
+          
+          // Habilitar botón de inicio si hay al menos 1 participante (solo para docentes)
+          if (ES_DOCENTE) {
+            const startButton = document.getElementById('start-game-btn');
+            if (startButton) {
+              startButton.disabled = participantes.length === 0;
+            }
+          }
           
           // Notificar si hay nuevos participantes
           if (participantes.length > ultimosParticipantes.length) {
@@ -402,6 +613,7 @@
     // Iniciar actualizaciones automáticas
     function iniciarActualizaciones() {
       // Primera actualización inmediata
+      cargarGrupos(); // Cargar grupos si existen
       actualizarParticipantes();
       verificarEstadoSala();
       
@@ -423,75 +635,81 @@
       }
     }
 
-    // Event listener para iniciar juego
-    document.getElementById('start-game-btn').addEventListener('click', async function() {
-      const participantesCount = ultimosParticipantes.length;
-      
-      if (participantesCount === 0) {
-        alert('⚠️ Necesitas al menos un participante para iniciar el juego');
-        return;
-      }
-      
-      if (confirm(`🎮 ¿Iniciar juego con ${participantesCount} participante(s)?`)) {
-        try {
-          detenerActualizaciones();
-          
-          // Llamar al endpoint para iniciar el juego
-          const response = await fetch(`/sala/${SALA_ID}/iniciar`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
+    // Event listener para iniciar juego (solo docente)
+    const startGameBtn = document.getElementById('start-game-btn');
+    if (startGameBtn && ES_DOCENTE) {
+      startGameBtn.addEventListener('click', async function() {
+        const participantesCount = ultimosParticipantes.length;
+        
+        if (participantesCount === 0) {
+          alert('⚠️ Necesitas al menos un participante para iniciar el juego');
+          return;
+        }
+        
+        if (confirm(`🎮 ¿Iniciar juego con ${participantesCount} participante(s)?`)) {
+          try {
+            detenerActualizaciones();
+            
+            // Llamar al endpoint para iniciar el juego
+            const response = await fetch(`/sala/${SALA_ID}/iniciar`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+              window.location.href = `/sala/${SALA_ID}/monitorear`;
+            } else {
+              alert('Error al iniciar el juego: ' + data.error);
+              iniciarActualizaciones();
             }
-          });
-          
-          const data = await response.json();
-          
-          if (data.success) {
-            window.location.href = `/sala/${SALA_ID}/monitorear`;
-          } else {
-            alert('Error al iniciar el juego: ' + data.error);
+          } catch (error) {
+            console.error('Error al iniciar juego:', error);
+            alert('Error al iniciar el juego. Intenta nuevamente.');
             iniciarActualizaciones();
           }
-        } catch (error) {
-          console.error('Error al iniciar juego:', error);
-          alert('Error al iniciar el juego. Intenta nuevamente.');
-          iniciarActualizaciones();
         }
-      }
-    });
+      });
+    }
 
-    // Event listener para cerrar sala
-    document.getElementById('close-room-btn').addEventListener('click', async function() {
-      if (confirm('❌ ¿Estás seguro de que quieres cerrar la sala? Todos los participantes serán desconectados.')) {
-        try {
-          detenerActualizaciones();
-          
-          const response = await fetch(`/sala/${SALA_ID}/cerrar`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
+    // Event listener para cerrar sala (solo docente)
+    const closeRoomBtn = document.getElementById('close-room-btn');
+    if (closeRoomBtn && ES_DOCENTE) {
+      closeRoomBtn.addEventListener('click', async function() {
+        if (confirm('❌ ¿Estás seguro de que quieres cerrar la sala? Todos los participantes serán desconectados.')) {
+          try {
+            detenerActualizaciones();
+            
+            const response = await fetch(`/sala/${SALA_ID}/cerrar`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+              window.location.href = '/mis-cuestionarios';
+            } else {
+              alert('Error al cerrar la sala: ' + data.error);
             }
-          });
-          
-          const data = await response.json();
-          
-          if (data.success) {
-            window.location.href = '/mis-cuestionarios';
-          } else {
-            alert('Error al cerrar la sala: ' + data.error);
+          } catch (error) {
+            console.error('Error al cerrar sala:', error);
+            alert('Error al cerrar la sala. Intenta nuevamente.');
           }
-        } catch (error) {
-          console.error('Error al cerrar sala:', error);
-          alert('Error al cerrar la sala. Intenta nuevamente.');
         }
-      }
-    });
+      });
+    }
 
+    // Iniciar cuando la página cargue
     // Iniciar cuando la página cargue
     window.addEventListener('DOMContentLoaded', iniciarActualizaciones);
 
     // Detener actualizaciones cuando se cierre la página
     window.addEventListener('beforeunload', detenerActualizaciones);
   </script>
-</body>
-</html>
+{% endblock %}

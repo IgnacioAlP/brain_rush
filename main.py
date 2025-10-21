@@ -951,6 +951,68 @@ def iniciar_sala(sala_id):
         flash(f'Error al iniciar la sala: {str(e)}', 'error')
         return redirect(url_for('error_sistema_page'))
 
+
+@app.route('/sala/<int:sala_id>/configurar-grupos', methods=['POST'])
+def configurar_grupos_sala(sala_id):
+    """Permite al docente habilitar grupos y definir cuántos grupos crear"""
+    try:
+        # Solo docentes pueden configurar
+        if session.get('usuario_tipo') != 'docente':
+            return jsonify({'success': False, 'error': 'No autorizado'}), 403
+
+        data = request.get_json(silent=True) or request.form.to_dict()
+        num_grupos = int(data.get('num_grupos', 0))
+        nombres = data.get('nombres') or None
+        if isinstance(nombres, str):
+            # aceptar lista en JSON string
+            try:
+                import json as _json
+                nombres = _json.loads(nombres)
+            except Exception:
+                nombres = None
+
+        if num_grupos <= 0:
+            return jsonify({'success': False, 'error': 'El número de grupos debe ser mayor a 0'}), 400
+
+        ids = controlador_salas.crear_grupos_sala(sala_id, num_grupos, nombres=nombres)
+        return jsonify({'success': True, 'grupos_creados': len(ids), 'ids': ids})
+    except Exception as e:
+        print(f"ERROR configurar_grupos_sala: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': 'Error del servidor'}), 500
+
+
+@app.route('/api/sala/<int:sala_id>/grupos')
+def api_obtener_grupos_sala(sala_id):
+    try:
+        grupos = controlador_salas.obtener_grupos_sala(sala_id)
+        return jsonify({'success': True, 'grupos': grupos})
+    except Exception as e:
+        print(f"ERROR api_obtener_grupos_sala: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/participante/<int:participante_id>/asignar-grupo', methods=['POST'])
+def api_asignar_participante_grupo(participante_id):
+    try:
+        data = request.get_json(silent=True) or request.form.to_dict()
+        id_grupo = int(data.get('id_grupo'))
+
+        # Validar sesión y que el participante sea el actual
+        if session.get('participante_id') != participante_id:
+            return jsonify({'success': False, 'error': 'No autorizado para asignar a este participante'}), 403
+
+        ok = controlador_salas.asignar_participante_grupo(participante_id, id_grupo)
+        if ok:
+            return jsonify({'success': True})
+        return jsonify({'success': False, 'error': 'No se pudo asignar al grupo'}), 400
+    except Exception as e:
+        print(f"ERROR api_asignar_participante_grupo: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': 'Error del servidor'}), 500
+
 @app.route('/sala/<int:sala_id>/cerrar', methods=['POST'])
 def cerrar_sala(sala_id):
     try:
@@ -1188,6 +1250,7 @@ def api_verificar_sala_por_pin(pin):
             'success': True,
             'sala': {
                 'id': sala.get('id'),
+                'id_sala': sala.get('id'),  # Agregar también como id_sala
                 'pin_sala': sala.get('pin_sala'),
                 'estado': sala.get('estado'),
                 'max_participantes': sala.get('max_participantes', 30),
@@ -1363,6 +1426,11 @@ def sala_espera(sala_id):
         if not sala:
             flash('Sala no encontrada', 'error')
             return redirect(url_for('unirse_juego'))
+        
+        # Obtener título del cuestionario
+        cuestionario = obtener_cuestionario_por_id_simple(sala['id_cuestionario'])
+        if cuestionario:
+            sala['cuestionario_titulo'] = cuestionario[1]  # El título está en índice 1
         
         # Obtener información del participante
         nombre_participante = session.get('nombre_participante', 'Participante')
