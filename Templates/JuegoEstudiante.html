@@ -4,7 +4,22 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Jugando - Brain RUSH</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --primary-color: #FF6B35;
+      --secondary-color: #4ECDC4;
+      --accent-color: #45B7D1;
+      --success-color: #96CEB4;
+      --gradient-hero: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      --gradient-secondary: linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%);
+      --gradient-primary: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
+      --font-primary: 'Fredoka One', cursive;
+      --font-secondary: 'Nunito', sans-serif;
+      --radius-lg: 1.5rem;
+      --shadow-lg: 0 8px 25px rgba(0,0,0,0.15);
+    }
+
     * {
       margin: 0;
       padding: 0;
@@ -12,23 +27,24 @@
     }
 
     body {
-      font-family: Arial, sans-serif;
-      background: linear-gradient(135deg, #222 0%, #444 100%);
+      font-family: var(--font-secondary);
+      background: var(--gradient-hero);
       min-height: 100vh;
       color: white;
       overflow-x: hidden;
     }
 
     .game-header {
-      background: rgba(0, 0, 0, 0.3);
-      padding: 12px 20px;
+      background: rgba(255, 255, 255, 0.15);
+      padding: 15px 30px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      backdrop-filter: blur(10px);
+      backdrop-filter: blur(20px);
       position: sticky;
       top: 0;
       z-index: 100;
+      border-bottom: 2px solid rgba(255, 255, 255, 0.2);
     }
 
     .game-info {
@@ -89,11 +105,13 @@
     }
 
     .question-text {
-      font-size: 24px;
-      font-weight: bold;
-      line-height: 1.4;
-      margin-bottom: 20px;
+      font-family: var(--font-secondary);
+      font-size: 26px;
+      font-weight: 800;
+      line-height: 1.5;
+      margin-bottom: 25px;
       color: white;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
     }
 
     .question-media {
@@ -389,221 +407,280 @@
   </div>
 
   <script>
+    // Constantes del sistema de puntuación
+    const PUNTAJE_MAXIMO = 1000;
+    const PUNTAJE_MINIMO = 10;
+    const DECREMENTO_POR_MEDIO_SEGUNDO = 100;
+    const SALA_ID = {{ sala.id }};
+    
     // Estado del juego
     let gameState = {
-      currentQuestion: 1,
-      totalQuestions: 10,
+      salaId: SALA_ID,
+      currentQuestion: null,
+      totalQuestions: 0,
       score: 0,
       correctAnswers: 0,
-      timeBonus: 0,
-      questions: [],
-      timeLeft: 30,
+      timeStartQuestion: null,
       timerInterval: null,
-      gamePin: '{{ pin_sala | default("123456") }}',
-      playerId: '{{ jugador_id | default("demo") }}'
+      questionStartTime: null,
+      hasAnswered: false,
+      preguntaActual: 1
     };
 
-    // Preguntas de demo (en producción vendrían del servidor)
-    const demoQuestions = [
-      {
-        id: 1,
-        texto: "¿Cuál es el resultado de 2 + 2?",
-        opciones: [
-          { id: 'a', texto: '3', correcta: false },
-          { id: 'b', texto: '4', correcta: true },
-          { id: 'c', texto: '5', correcta: false },
-          { id: 'd', texto: '6', correcta: false }
-        ],
-        tiempo_limite: 15
-      },
-      {
-        id: 2,
-        texto: "¿Cuál es la capital de Francia?",
-        opciones: [
-          { id: 'a', texto: 'Londres', correcta: false },
-          { id: 'b', texto: 'Berlín', correcta: false },
-          { id: 'c', texto: 'París', correcta: true },
-          { id: 'd', texto: 'Madrid', correcta: false }
-        ],
-        tiempo_limite: 20
-      },
-      {
-        id: 3,
-        texto: "¿Cuántos continentes hay en el mundo?",
-        opciones: [
-          { id: 'a', texto: '5', correcta: false },
-          { id: 'b', texto: '6', correcta: false },
-          { id: 'c', texto: '7', correcta: true },
-          { id: 'd', texto: '8', correcta: false }
-        ],
-        tiempo_limite: 25
-      }
-    ];
-
-    function initGame() {
-      gameState.questions = demoQuestions;
-      gameState.totalQuestions = demoQuestions.length;
-      document.getElementById('total-questions').textContent = gameState.totalQuestions;
-      
-      loadQuestion(gameState.currentQuestion - 1);
+    // Calcular puntaje según tiempo (igual que el backend)
+    function calcularPuntaje(tiempoRespuesta) {
+      const intervalos = Math.floor(tiempoRespuesta / 0.5);
+      const puntaje = PUNTAJE_MAXIMO - (intervalos * DECREMENTO_POR_MEDIO_SEGUNDO);
+      return Math.max(PUNTAJE_MINIMO, Math.min(PUNTAJE_MAXIMO, puntaje));
     }
 
-    function loadQuestion(questionIndex) {
-      if (questionIndex >= gameState.questions.length) {
-        showResults();
-        return;
+    // Mostrar puntaje en tiempo real
+    function actualizarPuntajeVisual() {
+      if (!gameState.questionStartTime) return;
+      
+      const tiempoTranscurrido = (Date.now() - gameState.questionStartTime) / 1000;
+      const puntajeActual = calcularPuntaje(tiempoTranscurrido);
+      
+      // Actualizar el indicador visual del puntaje potencial
+      const timerFill = document.getElementById('timer-fill');
+      const porcentaje = ((puntajeActual - PUNTAJE_MINIMO) / (PUNTAJE_MAXIMO - PUNTAJE_MINIMO)) * 100;
+      timerFill.style.width = porcentaje + '%';
+    }
+
+    // Cargar pregunta actual del servidor
+    async function cargarPreguntaActual() {
+      try {
+        const response = await fetch(`/api/sala/${SALA_ID}/pregunta-actual`);
+        const data = await response.json();
+        
+        if (data.success && data.pregunta) {
+          gameState.currentQuestion = data.pregunta;
+          gameState.totalQuestions = data.pregunta.total_preguntas;
+          gameState.preguntaActual = data.pregunta.numero_pregunta;
+          gameState.hasAnswered = false;
+          gameState.questionStartTime = Date.now();
+          
+          mostrarPregunta(data.pregunta);
+        } else {
+          // No hay pregunta activa, mostrar espera
+          mostrarPantallaEspera();
+        }
+      } catch (error) {
+        console.error('Error al cargar pregunta:', error);
+        setTimeout(cargarPreguntaActual, 2000); // Reintentar
       }
+    }
 
-      const question = gameState.questions[questionIndex];
-      gameState.timeLeft = question.tiempo_limite;
-
-      // Actualizar UI
-      document.getElementById('current-question').textContent = gameState.currentQuestion;
-      document.getElementById('question-text').textContent = question.texto;
+    function mostrarPregunta(pregunta) {
+      // Actualizar contador
+      document.getElementById('current-question').textContent = pregunta.numero_pregunta;
+      document.getElementById('total-questions').textContent = pregunta.total_preguntas;
+      
+      // Mostrar enunciado
+      document.getElementById('question-text').textContent = pregunta.enunciado;
       
       // Cargar opciones
       const optionsGrid = document.getElementById('options-grid');
-      optionsGrid.innerHTML = question.opciones.map(opcion => `
-        <button class="option-button option-${opcion.id}" 
-                onclick="selectAnswer('${opcion.id}')" 
-                data-correct="${opcion.correcta}">
+      const colores = ['a', 'b', 'c', 'd'];
+      
+      optionsGrid.innerHTML = pregunta.opciones.map((opcion, index) => `
+        <button class="option-button option-${colores[index]}" 
+                onclick="seleccionarRespuesta(${opcion.id_opcion})"
+                data-opcion-id="${opcion.id_opcion}">
           ${opcion.texto}
         </button>
       `).join('');
 
       // Mostrar pantalla de juego
-      showGameScreen();
+      mostrarPantallaJuego();
       
-      // Iniciar timer
-      startTimer();
+      // Iniciar actualización del puntaje visual
+      clearInterval(gameState.timerInterval);
+      gameState.timerInterval = setInterval(actualizarPuntajeVisual, 100);
     }
 
-    function startTimer() {
-      const timerFill = document.getElementById('timer-fill');
-      const totalTime = gameState.timeLeft;
+    async function seleccionarRespuesta(idOpcion) {
+      if (gameState.hasAnswered) return;
       
+      gameState.hasAnswered = true;
       clearInterval(gameState.timerInterval);
       
-      gameState.timerInterval = setInterval(() => {
-        gameState.timeLeft--;
-        const percentage = (gameState.timeLeft / totalTime) * 100;
-        timerFill.style.width = percentage + '%';
-        
-        if (gameState.timeLeft <= 0) {
-          clearInterval(gameState.timerInterval);
-          timeUp();
-        }
-      }, 1000);
-    }
-
-    function selectAnswer(optionId) {
-      clearInterval(gameState.timerInterval);
+      // Calcular tiempo de respuesta
+      const tiempoRespuesta = (Date.now() - gameState.questionStartTime) / 1000;
       
+      // Deshabilitar botones
       const buttons = document.querySelectorAll('.option-button');
       buttons.forEach(btn => btn.disabled = true);
       
-      const selectedButton = document.querySelector(`.option-${optionId}`);
-      const isCorrect = selectedButton.dataset.correct === 'true';
+      // Marcar selección
+      const selectedButton = document.querySelector(`[data-opcion-id="${idOpcion}"]`);
+      selectedButton.classList.add('selected');
       
-      // Mostrar respuesta correcta
-      buttons.forEach(btn => {
-        if (btn.dataset.correct === 'true') {
-          btn.classList.add('correct');
-        } else if (btn === selectedButton && !isCorrect) {
-          btn.classList.add('incorrect');
-        }
-      });
-
-      // Calcular puntuación
-      if (isCorrect) {
-        gameState.correctAnswers++;
-        const timeBonus = Math.floor(gameState.timeLeft * 10);
-        const questionPoints = 100 + timeBonus;
-        gameState.score += questionPoints;
-        gameState.timeBonus += timeBonus;
+      try {
+        // Enviar respuesta al servidor
+        const response = await fetch(`/api/sala/${SALA_ID}/responder`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            id_pregunta: gameState.currentQuestion.id_pregunta,
+            id_opcion: idOpcion,
+            tiempo_respuesta: tiempoRespuesta
+          })
+        });
         
-        updateScore();
-      }
-
-      // Enviar respuesta al servidor (simulado)
-      setTimeout(() => {
-        nextQuestion();
-      }, 2000);
-    }
-
-    function timeUp() {
-      const buttons = document.querySelectorAll('.option-button');
-      buttons.forEach(btn => {
-        btn.disabled = true;
-        if (btn.dataset.correct === 'true') {
-          btn.classList.add('correct');
+        const data = await response.json();
+        
+        if (data.success) {
+          const resultado = data.resultado;
+          
+          // Mostrar resultado visual
+          if (resultado.es_correcta) {
+            selectedButton.classList.add('correct');
+            gameState.correctAnswers++;
+            gameState.score += resultado.puntaje_obtenido;
+            
+            // Actualizar score en UI
+            document.getElementById('current-score').textContent = gameState.score;
+          } else {
+            selectedButton.classList.add('incorrect');
+          }
+          
+          // Esperar 2 segundos y luego esperar siguiente pregunta
+          setTimeout(() => {
+            mostrarPantallaEspera();
+            // Polling para siguiente pregunta o fin del juego
+            console.log('🔄 Iniciando polling para siguiente pregunta o fin del juego...');
+            iniciarPollingPregunta();
+          }, 2000);
         }
-      });
-
-      setTimeout(() => {
-        nextQuestion();
-      }, 2000);
-    }
-
-    function nextQuestion() {
-      if (gameState.currentQuestion >= gameState.totalQuestions) {
-        showResults();
-        return;
+      } catch (error) {
+        console.error('Error al enviar respuesta:', error);
+        alert('Error al enviar respuesta. Intenta nuevamente.');
+        // Rehabilitar botones
+        buttons.forEach(btn => btn.disabled = false);
+        gameState.hasAnswered = false;
+        gameState.questionStartTime = Date.now();
+        gameState.timerInterval = setInterval(actualizarPuntajeVisual, 100);
       }
+    }
 
-      showWaitingScreen();
-      
-      setTimeout(() => {
-        gameState.currentQuestion++;
-        loadQuestion(gameState.currentQuestion - 1);
+    let pollingInterval = null;
+    
+    function iniciarPollingPregunta() {
+      // Verificar cada 2 segundos si hay nueva pregunta o si el juego finalizó
+      pollingInterval = setInterval(async () => {
+        try {
+          // Primero verificar el estado de la sala
+          const estadoResponse = await fetch(`/api/sala/${SALA_ID}/estado`);
+          const estadoData = await estadoResponse.json();
+          
+          if (estadoData.success && estadoData.sala && estadoData.sala.estado === 'finalizada') {
+            // El juego ha terminado, redirigir a resultados
+            console.log('🏁 Juego finalizado, redirigiendo a resultados...');
+            clearInterval(pollingInterval);
+            window.location.href = `/sala/${SALA_ID}/resultados`;
+            return;
+          }
+          
+          // Luego verificar si hay nueva pregunta
+          const response = await fetch(`/api/sala/${SALA_ID}/pregunta-actual`);
+          const data = await response.json();
+          
+          if (data.success && data.pregunta) {
+            // Nueva pregunta disponible
+            if (!gameState.currentQuestion || 
+                data.pregunta.numero_pregunta !== gameState.currentQuestion.numero_pregunta) {
+              clearInterval(pollingInterval);
+              cargarPreguntaActual();
+            }
+          } else if (data.error === 'No hay pregunta activa' || data.error === 'Juego finalizado') {
+            // Verificar si el juego terminó
+            verificarEstadoJuego();
+          }
+        } catch (error) {
+          console.error('Error en polling:', error);
+        }
       }, 2000);
     }
 
-    function updateScore() {
-      document.getElementById('current-score').textContent = gameState.score;
+    async function verificarEstadoJuego() {
+      try {
+        // Verificar el estado de la sala
+        const response = await fetch(`/api/sala/${SALA_ID}/estado`);
+        const data = await response.json();
+        
+        if (data.success && data.sala) {
+          if (data.sala.estado === 'finalizada') {
+            // El juego ha terminado, redirigir a resultados
+            console.log('🏁 Juego finalizado, redirigiendo a resultados...');
+            clearInterval(pollingInterval);
+            window.location.href = `/sala/${SALA_ID}/resultados`;
+          }
+        }
+      } catch (error) {
+        console.error('Error al verificar estado:', error);
+      }
     }
 
-    function showGameScreen() {
-      document.getElementById('game-screen').style.display = 'block';
-      document.getElementById('waiting-screen').style.display = 'none';
-      document.getElementById('results-screen').style.display = 'none';
-    }
-
-    function showWaitingScreen() {
-      document.getElementById('game-screen').style.display = 'none';
-      document.getElementById('waiting-screen').style.display = 'block';
-      document.getElementById('results-screen').style.display = 'none';
-    }
-
-    function showResults() {
-      document.getElementById('game-screen').style.display = 'none';
-      document.getElementById('waiting-screen').style.display = 'none';
-      document.getElementById('results-screen').style.display = 'block';
-
-      // Calcular estadísticas
-      const accuracy = Math.round((gameState.correctAnswers / gameState.totalQuestions) * 100);
+    function mostrarResultados(ranking) {
+      // Encontrar posición del jugador actual
+      const participanteId = {{ session.get('participante_id', 0) }};
+      let miPosicion = ranking.findIndex(r => r.id_participante === participanteId) + 1;
+      
+      if (miPosicion === 0) miPosicion = '-';
+      
+      // Calcular precisión
+      const accuracy = gameState.totalQuestions > 0 
+        ? Math.round((gameState.correctAnswers / gameState.totalQuestions) * 100) 
+        : 0;
       
       // Actualizar UI de resultados
       document.getElementById('final-score').textContent = gameState.score;
       document.getElementById('correct-answers').textContent = gameState.correctAnswers;
       document.getElementById('accuracy').textContent = accuracy + '%';
-      document.getElementById('time-bonus').textContent = gameState.timeBonus;
-      document.getElementById('final-position').textContent = '#' + Math.floor(Math.random() * 10 + 1);
+      document.getElementById('time-bonus').textContent = Math.floor(gameState.score * 0.1);
+      document.getElementById('final-position').textContent = miPosicion === '-' ? '#-' : '#' + miPosicion;
 
       // Reiniciar timer
       document.getElementById('timer-fill').style.width = '0%';
+      
+      // Mostrar pantalla de resultados
+      mostrarPantallaResultados();
+    }
+
+    function mostrarPantallaJuego() {
+      document.getElementById('game-screen').style.display = 'block';
+      document.getElementById('waiting-screen').style.display = 'none';
+      document.getElementById('results-screen').style.display = 'none';
+    }
+
+    function mostrarPantallaEspera() {
+      document.getElementById('game-screen').style.display = 'none';
+      document.getElementById('waiting-screen').style.display = 'block';
+      document.getElementById('results-screen').style.display = 'none';
+    }
+
+    function mostrarPantallaResultados() {
+      document.getElementById('game-screen').style.display = 'none';
+      document.getElementById('waiting-screen').style.display = 'none';
+      document.getElementById('results-screen').style.display = 'block';
     }
 
     function volverAlInicio() {
-      window.location.href = '/';
+      window.location.href = '/dashboard-estudiante';
     }
 
-    // Inicializar juego
-    initGame();
+    // Inicializar juego cuando carga la página
+    window.addEventListener('DOMContentLoaded', () => {
+      cargarPreguntaActual();
+    });
 
     // Manejar desconexión de la página
     window.addEventListener('beforeunload', function() {
       clearInterval(gameState.timerInterval);
+      clearInterval(pollingInterval);
     });
   </script>
 </body>

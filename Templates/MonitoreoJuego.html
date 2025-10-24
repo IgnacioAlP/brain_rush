@@ -291,7 +291,7 @@ function iniciarJuego() {
     }
     
     if (confirm(`¿Iniciar juego con ${participantesCount} participante(s)?`)) {
-        fetch(`/api/iniciar-juego/${codigoSala}`, {
+        fetch(`/sala/${SALA_ID}/iniciar`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -301,13 +301,15 @@ function iniciarJuego() {
         .then(data => {
             if (data.success) {
                 alert('¡Juego iniciado!');
-                // Redirigir o actualizar interfaz según necesites
+                // Redirigir a la página de juego
+                window.location.href = `/sala/${SALA_ID}/juego`;
             } else {
                 alert('Error: ' + data.error);
             }
         })
         .catch(error => {
-            alert('Error al iniciar juego: ' + error);
+            console.error('Error al iniciar juego:', error);
+            alert('Error al iniciar juego. Ver consola para más detalles.');
         });
     }
 }

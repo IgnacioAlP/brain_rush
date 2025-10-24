@@ -529,6 +529,18 @@
         if (data.success) {
           const participantes = data.participantes || [];
           
+          // VERIFICAR ESTADO DE LA SALA
+          console.log('📊 Estado actual de la sala:', data.sala ? data.sala.estado : 'no disponible');
+          
+          // Si el estado cambió a 'en_juego', redirigir automáticamente
+          if (data.sala && data.sala.estado === 'en_juego') {
+            console.log('🎮 ¡EL JUEGO HA INICIADO! Redirigiendo al juego...');
+            alert('¡El juego ha comenzado! Redirigiendo...');
+            detenerActualizaciones();
+            window.location.href = `/sala/${SALA_ID}/juego`;
+            return;
+          }
+          
           // Actualizar contador
           document.getElementById('participant-count').textContent = participantes.length;
           

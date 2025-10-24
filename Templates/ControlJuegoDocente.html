@@ -1,0 +1,559 @@
+{% extends "BrainRush_Master.html" %}
+
+{% block title %}Control de Juego - Brain RUSH{% endblock %}
+
+{% block extra_css %}
+<style>
+.control-juego-page {
+    padding: 1.5rem;
+    min-height: calc(100vh - 100px);
+}
+
+.game-status-bar {
+    background: linear-gradient(135deg, #FF6B35, #4ECDC4);
+    color: white;
+    padding: 1.5rem;
+    border-radius: 1.5rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.status-item {
+    text-align: center;
+}
+
+.status-label {
+    font-size: 0.9rem;
+    opacity: 0.9;
+    margin-bottom: 0.25rem;
+}
+
+.status-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+.pregunta-actual-container {
+    background: white;
+    border-radius: 1.5rem;
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+.pregunta-enunciado {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #1a202c;
+    margin-bottom: 1.5rem;
+    line-height: 1.4;
+}
+
+.opciones-preview {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.opcion-card {
+    background: #f7fafc;
+    padding: 1rem;
+    border-radius: 1rem;
+    border-left: 4px solid #cbd5e0;
+    position: relative;
+}
+
+.opcion-card.correcta {
+    border-left-color: #48bb78;
+    background: #f0fff4;
+}
+
+.opcion-correcta-badge {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: #48bb78;
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.stat-icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #4ECDC4;
+    margin: 0.5rem 0;
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    color: #64748b;
+}
+
+.progress-bar-container {
+    background: #e2e8f0;
+    border-radius: 1rem;
+    height: 8px;
+    overflow: hidden;
+    margin-top: 0.5rem;
+}
+
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #4ECDC4, #48bb78);
+    transition: width 0.3s ease;
+}
+
+.control-buttons {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.btn-control {
+    flex: 1;
+    padding: 1.25rem;
+    border: none;
+    border-radius: 1rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #4ECDC4, #48bb78);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(78, 205, 196, 0.3);
+}
+
+.btn-secondary {
+    background: linear-gradient(135deg, #FF6B35, #f97316);
+    color: white;
+}
+
+.btn-secondary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(255, 107, 53, 0.3);
+}
+
+.btn-control:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.ranking-preview {
+    background: white;
+    border-radius: 1.5rem;
+    padding: 2rem;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+.ranking-preview h3 {
+    margin-bottom: 1rem;
+    color: #1a202c;
+}
+
+.ranking-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.ranking-table th {
+    background: #f7fafc;
+    padding: 0.75rem;
+    text-align: left;
+    font-weight: 600;
+    color: #4a5568;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.ranking-table td {
+    padding: 0.75rem;
+    border-bottom: 1px solid #f7fafc;
+}
+
+.ranking-table tr:hover {
+    background: #f7fafc;
+}
+
+.posicion-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    font-weight: bold;
+    color: white;
+}
+
+.posicion-1 { background: linear-gradient(135deg, #fbbf24, #f59e0b); }
+.posicion-2 { background: linear-gradient(135deg, #94a3b8, #64748b); }
+.posicion-3 { background: linear-gradient(135deg, #fb923c, #ea580c); }
+.posicion-other { background: linear-gradient(135deg, #4ECDC4, #48bb78); }
+
+.waiting-message {
+    text-align: center;
+    padding: 3rem;
+    background: white;
+    border-radius: 1.5rem;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+.waiting-message h2 {
+    color: #1a202c;
+    margin-bottom: 1rem;
+}
+
+.waiting-message p {
+    color: #64748b;
+    font-size: 1.1rem;
+}
+
+@media (max-width: 768px) {
+    .game-status-bar {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .control-buttons {
+        flex-direction: column;
+    }
+    
+    .opciones-preview {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container control-juego-page">
+    <!-- Barra de Estado Superior -->
+    <div class="game-status-bar">
+        <div class="status-item">
+            <div class="status-label">Pregunta Actual</div>
+            <div class="status-value" id="pregunta-numero">-</div>
+        </div>
+        <div class="status-item">
+            <div class="status-label">Total Preguntas</div>
+            <div class="status-value" id="total-preguntas">-</div>
+        </div>
+        <div class="status-item">
+            <div class="status-label">Participantes</div>
+            <div class="status-value" id="total-participantes">-</div>
+        </div>
+        <div class="status-item">
+            <div class="status-label">Estado</div>
+            <div class="status-value" id="estado-juego">En Curso</div>
+        </div>
+    </div>
+
+    <!-- Estadísticas de Respuesta -->
+    <div class="stats-grid" id="stats-container" style="display: none;">
+        <div class="stat-card">
+            <div class="stat-icon">✅</div>
+            <div class="stat-value" id="respondieron-count">0</div>
+            <div class="stat-label">Han Respondido</div>
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="progress-respuestas" style="width: 0%"></div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">⏳</div>
+            <div class="stat-value" id="pendientes-count">0</div>
+            <div class="stat-label">Pendientes</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">⏱️</div>
+            <div class="stat-value" id="tiempo-promedio">0s</div>
+            <div class="stat-label">Tiempo Promedio</div>
+        </div>
+    </div>
+
+    <!-- Pregunta Actual -->
+    <div class="pregunta-actual-container" id="pregunta-container" style="display: none;">
+        <h2 style="margin-bottom: 1rem;">📝 Pregunta Actual</h2>
+        <div class="pregunta-enunciado" id="pregunta-enunciado">
+            Cargando pregunta...
+        </div>
+        
+        <div class="opciones-preview" id="opciones-preview">
+            <!-- Las opciones se cargarán dinámicamente -->
+        </div>
+    </div>
+
+    <!-- Controles -->
+    <div class="control-buttons" id="control-buttons" style="display: none;">
+        <button class="btn-control btn-primary" id="btn-siguiente" onclick="siguientePregunta()">
+            ➡️ Siguiente Pregunta
+        </button>
+        <button class="btn-control btn-secondary" onclick="finalizarJuego()">
+            🏁 Finalizar Juego
+        </button>
+    </div>
+
+    <!-- Mensaje de espera inicial -->
+    <div class="waiting-message" id="waiting-message">
+        <h2>🚀 Preparando juego...</h2>
+        <p>Cargando preguntas y participantes</p>
+    </div>
+
+    <!-- Ranking en tiempo real -->
+    <div class="ranking-preview" id="ranking-container" style="display: none;">
+        <h3>🏆 Ranking en Tiempo Real</h3>
+        <table class="ranking-table">
+            <thead>
+                <tr>
+                    <th>Pos</th>
+                    <th>Participante</th>
+                    <th>Grupo</th>
+                    <th>Puntaje</th>
+                    <th>Correctas</th>
+                    <th>Tiempo</th>
+                </tr>
+            </thead>
+            <tbody id="ranking-tbody">
+                <!-- Se llenará dinámicamente -->
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const SALA_ID = {{ sala.id }};
+let pollingInterval = null;
+let estadisticasInterval = null;
+
+// Cargar pregunta actual y comenzar polling
+async function cargarPreguntaActual() {
+    try {
+        const response = await fetch(`/api/sala/${SALA_ID}/pregunta-actual`);
+        const data = await response.json();
+        
+        if (data.success && data.pregunta) {
+            mostrarPregunta(data.pregunta);
+            document.getElementById('waiting-message').style.display = 'none';
+            document.getElementById('pregunta-container').style.display = 'block';
+            document.getElementById('stats-container').style.display = 'grid';
+            document.getElementById('control-buttons').style.display = 'flex';
+            document.getElementById('ranking-container').style.display = 'block';
+            
+            // Iniciar polling de estadísticas
+            iniciarPollingEstadisticas();
+        } else {
+            // No hay pregunta activa
+            document.getElementById('waiting-message').innerHTML = `
+                <h2>⏸️ Juego en pausa</h2>
+                <p>No hay pregunta activa en este momento</p>
+            `;
+        }
+    } catch (error) {
+        console.error('Error al cargar pregunta:', error);
+    }
+}
+
+function mostrarPregunta(pregunta) {
+    // Actualizar barra de estado
+    document.getElementById('pregunta-numero').textContent = pregunta.numero_pregunta;
+    document.getElementById('total-preguntas').textContent = pregunta.total_preguntas;
+    
+    // Mostrar enunciado
+    document.getElementById('pregunta-enunciado').textContent = pregunta.enunciado;
+    
+    // Mostrar opciones
+    const opcionesContainer = document.getElementById('opciones-preview');
+    opcionesContainer.innerHTML = pregunta.opciones.map((opcion, index) => {
+        // Aquí asumo que conoces la respuesta correcta, si no, omite la clase
+        return `
+            <div class="opcion-card">
+                <strong>${String.fromCharCode(65 + index)}.</strong> ${opcion.texto}
+            </div>
+        `;
+    }).join('');
+}
+
+async function iniciarPollingEstadisticas() {
+    // Limpiar intervalo anterior si existe
+    if (estadisticasInterval) {
+        clearInterval(estadisticasInterval);
+    }
+    
+    // Actualizar cada 2 segundos
+    estadisticasInterval = setInterval(async () => {
+        await actualizarEstadisticas();
+        await actualizarRanking();
+    }, 2000);
+    
+    // Actualizar inmediatamente
+    await actualizarEstadisticas();
+    await actualizarRanking();
+}
+
+async function actualizarEstadisticas() {
+    try {
+        const response = await fetch(`/api/sala/${SALA_ID}/estadisticas-pregunta`);
+        const data = await response.json();
+        
+        if (data.success) {
+            const stats = data.estadisticas;
+            document.getElementById('total-participantes').textContent = stats.total;
+            document.getElementById('respondieron-count').textContent = stats.respondieron;
+            document.getElementById('pendientes-count').textContent = stats.pendientes;
+            
+            // Actualizar barra de progreso
+            const porcentaje = stats.total > 0 ? (stats.respondieron / stats.total) * 100 : 0;
+            document.getElementById('progress-respuestas').style.width = porcentaje + '%';
+        }
+    } catch (error) {
+        console.error('Error al actualizar estadísticas:', error);
+    }
+}
+
+async function actualizarRanking() {
+    try {
+        const response = await fetch(`/api/sala/${SALA_ID}/ranking`);
+        const data = await response.json();
+        
+        if (data.success) {
+            const tbody = document.getElementById('ranking-tbody');
+            tbody.innerHTML = data.ranking.map((participante, index) => {
+                const posicionClass = index === 0 ? 'posicion-1' : 
+                                     index === 1 ? 'posicion-2' : 
+                                     index === 2 ? 'posicion-3' : 'posicion-other';
+                
+                return `
+                    <tr>
+                        <td><span class="posicion-badge ${posicionClass}">${index + 1}</span></td>
+                        <td>${participante.nombre}</td>
+                        <td>${participante.grupo || '-'}</td>
+                        <td><strong>${participante.puntaje}</strong></td>
+                        <td>${participante.correctas}</td>
+                        <td>${participante.tiempo_total.toFixed(1)}s</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+    } catch (error) {
+        console.error('Error al actualizar ranking:', error);
+    }
+}
+
+async function siguientePregunta() {
+    if (!confirm('¿Avanzar a la siguiente pregunta?')) return;
+    
+    const btn = document.getElementById('btn-siguiente');
+    btn.disabled = true;
+    btn.textContent = 'Cargando...';
+    
+    try {
+        const response = await fetch(`/api/sala/${SALA_ID}/siguiente-pregunta`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            if (data.hay_mas_preguntas) {
+                // Recargar pregunta actual
+                setTimeout(() => {
+                    cargarPreguntaActual();
+                    btn.disabled = false;
+                    btn.textContent = '➡️ Siguiente Pregunta';
+                }, 1000);
+            } else {
+                // Juego terminado
+                alert('¡Juego completado! Mostrando resultados finales...');
+                window.location.href = `/sala/${SALA_ID}/resultados`;
+            }
+        } else {
+            alert('Error: ' + data.error);
+            btn.disabled = false;
+            btn.textContent = '➡️ Siguiente Pregunta';
+        }
+    } catch (error) {
+        console.error('Error al avanzar pregunta:', error);
+        alert('Error al avanzar pregunta');
+        btn.disabled = false;
+        btn.textContent = '➡️ Siguiente Pregunta';
+    }
+}
+
+function finalizarJuego() {
+    if (confirm('¿Está seguro de finalizar el juego?')) {
+        // Enviar POST para finalizar el juego
+        fetch(`/sala/${SALA_ID}/finalizar`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Redirigir a resultados
+                window.location.href = `/sala/${SALA_ID}/resultados`;
+            } else {
+                alert('Error al finalizar el juego: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al finalizar el juego');
+        });
+    }
+}
+
+// Inicializar cuando carga la página
+window.addEventListener('DOMContentLoaded', () => {
+    cargarPreguntaActual();
+});
+
+// Limpiar intervalos al salir
+window.addEventListener('beforeunload', () => {
+    if (pollingInterval) clearInterval(pollingInterval);
+    if (estadisticasInterval) clearInterval(estadisticasInterval);
+});
+</script>
+{% endblock %}

@@ -39,6 +39,7 @@ app.config['WTF_CSRF_ENABLED'] = False  # Deshabilitar CSRF globalmente para pod
 from controladores import controlador_salas
 from controladores import controlador_usuario
 from controladores import controlador_cuestionarios
+from controladores import controlador_juego
 from controladores import controlador_preguntas
 from controladores import controlador_participaciones
 from controladores import controlador_ranking
@@ -936,7 +937,7 @@ def monitorear_sala(sala_id):
 @app.route('/sala/<int:sala_id>/iniciar', methods=['POST'])
 def iniciar_sala(sala_id):
     try:
-        resultado = iniciar_juego_sala(sala_id)
+        resultado = controlador_juego.iniciar_juego_sala(sala_id)
         
         if not resultado:
             raise ValueError("No se pudo iniciar la sala")
@@ -1029,6 +1030,232 @@ def cerrar_sala(sala_id):
         if request.is_json:
             return jsonify({'success': False, 'error': str(e)}), 400
         flash(f'Error al cerrar la sala: {str(e)}', 'error')
+        return redirect(url_for('error_sistema_page'))
+
+@app.route('/sala/<int:sala_id>/juego')
+def juego_sala(sala_id):
+    """Página del juego en tiempo real"""
+    try:
+        # Verificar que la sala existe
+        conexion = obtener_conexion()
+        cursor = conexion.cursor()
+        
+        cursor.execute('''
+            SELECT id_sala, pin_sala, id_cuestionario, estado, modo_juego
+            FROM salas_juego
+            WHERE id_sala = %s
+        ''', (sala_id,))
+        
+        sala_data = cursor.fetchone()
+        cursor.close()
+        conexion.close()
+        
+        if not sala_data:
+            flash('Sala no encontrada', 'error')
+            return redirect(url_for('error_sistema_page'))
+        
+        sala = {
+            'id': sala_data[0],
+            'pin_sala': sala_data[1],
+            'id_cuestionario': sala_data[2],
+            'estado': sala_data[3],
+            'modo_juego': sala_data[4]
+        }
+        
+        # Determinar qué vista mostrar según el tipo de usuario
+        if session.get('usuario_tipo') == 'docente':
+            return render_template('ControlJuegoDocente.html', sala=sala)
+        else:
+            return render_template('JuegoEstudiante.html', sala=sala)
+            
+    except Exception as e:
+        print(f"ERROR juego_sala: {e}")
+        import traceback
+        traceback.print_exc()
+        flash(f'Error: {str(e)}', 'error')
+        return redirect(url_for('error_sistema_page'))
+
+# ==================== RUTAS DEL SISTEMA DE JUEGO EN TIEMPO REAL ====================
+
+@app.route('/api/sala/<int:sala_id>/pregunta-actual')
+def obtener_pregunta_actual(sala_id):
+    """API para obtener la pregunta actual que se está mostrando"""
+    try:
+        pregunta = controlador_juego.obtener_pregunta_actual_sala(sala_id)
+        
+        if not pregunta:
+            return jsonify({'success': False, 'error': 'No hay pregunta activa'}), 404
+        
+        return jsonify({
+            'success': True,
+            'pregunta': pregunta
+        })
+    except Exception as e:
+        print(f"ERROR obtener_pregunta_actual: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/sala/<int:sala_id>/responder', methods=['POST'])
+def responder_pregunta_juego(sala_id):
+    """Registra la respuesta de un participante a la pregunta actual"""
+    try:
+        data = request.get_json()
+        
+        participante_id = session.get('participante_id')
+        if not participante_id:
+            return jsonify({'success': False, 'error': 'No hay sesión de participante'}), 401
+        
+        id_pregunta = int(data.get('id_pregunta'))
+        id_opcion = int(data.get('id_opcion'))
+        tiempo_respuesta = float(data.get('tiempo_respuesta'))
+        
+        resultado = controlador_juego.registrar_respuesta_participante(
+            participante_id=participante_id,
+            sala_id=sala_id,
+            id_pregunta=id_pregunta,
+            id_opcion_seleccionada=id_opcion,
+            tiempo_respuesta=tiempo_respuesta
+        )
+        
+        return jsonify({
+            'success': True,
+            'resultado': resultado
+        })
+    except Exception as e:
+        print(f"ERROR responder_pregunta_juego: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/sala/<int:sala_id>/siguiente-pregunta', methods=['POST'])
+def avanzar_pregunta(sala_id):
+    """Avanza a la siguiente pregunta (solo docente)"""
+    try:
+        if session.get('usuario_tipo') != 'docente':
+            return jsonify({'success': False, 'error': 'No autorizado'}), 403
+        
+        hay_mas = controlador_juego.avanzar_siguiente_pregunta(sala_id)
+        
+        return jsonify({
+            'success': True,
+            'hay_mas_preguntas': hay_mas,
+            'message': 'Siguiente pregunta' if hay_mas else 'Juego finalizado'
+        })
+    except Exception as e:
+        print(f"ERROR avanzar_pregunta: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/sala/<int:sala_id>/ranking')
+def obtener_ranking(sala_id):
+    """Obtiene el ranking actual de la sala"""
+    try:
+        ranking = controlador_juego.obtener_ranking_sala(sala_id)
+        
+        return jsonify({
+            'success': True,
+            'ranking': ranking
+        })
+    except Exception as e:
+        print(f"ERROR obtener_ranking: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/sala/<int:sala_id>/estadisticas-pregunta')
+def obtener_estadisticas_pregunta(sala_id):
+    """Obtiene estadísticas de cuántos han respondido la pregunta actual"""
+    try:
+        stats = controlador_juego.obtener_estadisticas_pregunta_actual(sala_id)
+        
+        return jsonify({
+            'success': True,
+            'estadisticas': stats
+        })
+    except Exception as e:
+        print(f"ERROR obtener_estadisticas_pregunta: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/sala/<int:sala_id>/finalizar', methods=['POST'])
+def finalizar_juego(sala_id):
+    """Finaliza el juego y redirige a resultados"""
+    try:
+        # Solo docentes pueden finalizar
+        if session.get('usuario_tipo') != 'docente':
+            return jsonify({'success': False, 'error': 'No autorizado'}), 403
+        
+        resultado = controlador_juego.finalizar_juego_sala(sala_id)
+        
+        if not resultado:
+            raise ValueError("No se pudo finalizar el juego")
+        
+        if request.is_json:
+            return jsonify({
+                'success': True, 
+                'message': 'Juego finalizado',
+                'redirect': url_for('ver_resultados_juego', sala_id=sala_id)
+            })
+        
+        return redirect(url_for('ver_resultados_juego', sala_id=sala_id))
+    except Exception as e:
+        print(f"ERROR finalizar_juego: {e}")
+        import traceback
+        traceback.print_exc()
+        if request.is_json:
+            return jsonify({'success': False, 'error': str(e)}), 500
+        flash(f'Error al finalizar el juego: {str(e)}', 'error')
+        return redirect(url_for('error_sistema_page'))
+
+@app.route('/sala/<int:sala_id>/resultados')
+def ver_resultados_juego(sala_id):
+    """Muestra los resultados finales del juego"""
+    try:
+        # Obtener información de la sala
+        sala = obtener_sala_por_id_simple(sala_id)
+        if not sala:
+            flash('Sala no encontrada', 'error')
+            return redirect(url_for('error_sistema_page'))
+        
+        # Obtener ranking completo
+        ranking = controlador_juego.obtener_ranking_sala(sala_id)
+        
+        # Obtener cuestionario
+        conexion = obtener_conexion()
+        cursor = conexion.cursor()
+        cursor.execute('''
+            SELECT c.titulo, c.descripcion 
+            FROM cuestionarios c
+            JOIN salas_juego s ON c.id_cuestionario = s.id_cuestionario
+            WHERE s.id_sala = %s
+        ''', (sala_id,))
+        cuestionario_data = cursor.fetchone()
+        cursor.close()
+        conexion.close()
+        
+        # Si es estudiante, obtener su resultado personal
+        resultado_personal = None
+        if session.get('usuario_tipo') == 'estudiante':
+            participante_id = session.get('participante_id')
+            if participante_id:
+                resultado_personal = controlador_juego.obtener_resultado_participante(sala_id, participante_id)
+        
+        return render_template('ResultadosJuego.html',
+            sala=sala,
+            ranking=ranking,
+            cuestionario_titulo=cuestionario_data[0] if cuestionario_data else 'Cuestionario',
+            cuestionario_descripcion=cuestionario_data[1] if cuestionario_data else '',
+            resultado_personal=resultado_personal,
+            es_docente=(session.get('usuario_tipo') == 'docente')
+        )
+    except Exception as e:
+        print(f"ERROR ver_resultados_juego: {e}")
+        import traceback
+        traceback.print_exc()
+        flash(f'Error al cargar resultados: {str(e)}', 'error')
         return redirect(url_for('error_sistema_page'))
 
 # Rutas para respuestas y participaciones
@@ -1197,10 +1424,27 @@ def api_obtener_participantes(sala_id):
     """API para obtener lista de participantes en tiempo real"""
     try:
         participantes = controlador_salas.obtener_participantes_sala(sala_id)
+        
+        # Obtener también el estado de la sala para verificar si el juego comenzó
+        conexion = obtener_conexion()
+        cursor = conexion.cursor()
+        cursor.execute('SELECT estado FROM salas_juego WHERE id_sala = %s', (sala_id,))
+        sala_data = cursor.fetchone()
+        cursor.close()
+        conexion.close()
+        
+        estado_sala = sala_data[0] if sala_data else 'esperando'
+        
+        # Log para depuración
+        print(f"📊 API participantes - Sala {sala_id}: Estado = '{estado_sala}', Participantes = {len(participantes)}")
+        
         return jsonify({
             'success': True,
             'participantes': participantes,
-            'total': len(participantes)
+            'total': len(participantes),
+            'sala': {
+                'estado': estado_sala
+            }
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500

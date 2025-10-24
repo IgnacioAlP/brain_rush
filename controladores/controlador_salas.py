@@ -136,3 +136,126 @@ def actualizar_estado_sala(sala_id, nuevo_estado):
             return cursor.rowcount > 0
     finally:
         conexion.close()
+
+# ==================== FUNCIONES DE GRUPOS ====================
+
+def crear_grupos_sala(sala_id, num_grupos, nombres=None):
+    """
+    Crea grupos para una sala específica
+    
+    Args:
+        sala_id: ID de la sala
+        num_grupos: Número de grupos a crear
+        nombres: Lista opcional de nombres personalizados para los grupos
+        
+    Returns:
+        Lista de IDs de los grupos creados
+    """
+    conexion = obtener_conexion()
+    try:
+        with conexion.cursor() as cursor:
+            # Primero eliminar grupos existentes de esta sala
+            cursor.execute('DELETE FROM grupos_sala WHERE id_sala = %s', (sala_id,))
+            
+            # Crear los nuevos grupos
+            ids_grupos = []
+            for i in range(num_grupos):
+                nombre_grupo = nombres[i] if nombres and i < len(nombres) else f'Grupo {i + 1}'
+                
+                cursor.execute('''
+                    INSERT INTO grupos_sala (id_sala, nombre_grupo, numero_grupo, capacidad_maxima) 
+                    VALUES (%s, %s, %s, %s)
+                ''', (sala_id, nombre_grupo, i + 1, 0))  # capacidad 0 = sin límite
+                
+                ids_grupos.append(cursor.lastrowid)
+            
+            conexion.commit()
+            return ids_grupos
+    finally:
+        conexion.close()
+
+def obtener_grupos_sala(sala_id):
+    """
+    Obtiene todos los grupos de una sala con el conteo de participantes
+    
+    Returns:
+        Lista de diccionarios con información de cada grupo
+    """
+    conexion = obtener_conexion()
+    try:
+        with conexion.cursor() as cursor:
+            cursor.execute('''
+                SELECT 
+                    g.id_grupo,
+                    g.nombre_grupo,
+                    g.numero_grupo,
+                    g.capacidad_maxima,
+                    COUNT(p.id_participante) as num_participantes
+                FROM grupos_sala g
+                LEFT JOIN participantes_sala p ON g.id_grupo = p.id_grupo AND p.estado != 'desconectado'
+                WHERE g.id_sala = %s
+                GROUP BY g.id_grupo, g.nombre_grupo, g.numero_grupo, g.capacidad_maxima
+                ORDER BY g.numero_grupo
+            ''', (sala_id,))
+            
+            grupos = []
+            for row in cursor.fetchall():
+                grupos.append({
+                    'id_grupo': row[0],
+                    'nombre_grupo': row[1],
+                    'numero_grupo': row[2],
+                    'capacidad_maxima': row[3],
+                    'num_participantes': row[4]
+                })
+            return grupos
+    finally:
+        conexion.close()
+
+def asignar_participante_grupo(participante_id, grupo_id):
+    """
+    Asigna un participante a un grupo específico
+    
+    Args:
+        participante_id: ID del participante
+        grupo_id: ID del grupo (puede ser None para quitar del grupo)
+        
+    Returns:
+        True si se actualizó correctamente
+    """
+    conexion = obtener_conexion()
+    try:
+        with conexion.cursor() as cursor:
+            cursor.execute('''
+                UPDATE participantes_sala 
+                SET id_grupo = %s 
+                WHERE id_participante = %s
+            ''', (grupo_id, participante_id))
+            conexion.commit()
+            return cursor.rowcount > 0
+    finally:
+        conexion.close()
+
+def habilitar_grupos_sala(sala_id, habilitar=True, num_grupos=3):
+    """
+    Habilita o deshabilita los grupos para una sala
+    
+    Args:
+        sala_id: ID de la sala
+        habilitar: True para habilitar, False para deshabilitar
+        num_grupos: Número de grupos a crear (solo si habilitar=True)
+        
+    Returns:
+        True si se actualizó correctamente
+    """
+    conexion = obtener_conexion()
+    try:
+        with conexion.cursor() as cursor:
+            cursor.execute('''
+                UPDATE salas_juego 
+                SET grupos_habilitados = %s, num_grupos = %s 
+                WHERE id_sala = %s
+            ''', (1 if habilitar else 0, num_grupos if habilitar else 0, sala_id))
+            conexion.commit()
+            return cursor.rowcount > 0
+    finally:
+        conexion.close()
