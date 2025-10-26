@@ -262,6 +262,243 @@
     color: #6c757d;
     border-color: rgba(108, 117, 125, 0.3);
 }
+
+/* Modal de historial de salas */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem;
+}
+
+.modal-overlay.active {
+    display: flex;
+}
+
+.modal-content {
+    background: white;
+    border-radius: var(--radius-xl);
+    max-width: 900px;
+    width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50px) scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.modal-header {
+    padding: 2rem;
+    border-bottom: 2px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--gradient-hero);
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+}
+
+.modal-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: white;
+    margin: 0;
+}
+
+.modal-close {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1.5rem;
+    transition: all 0.3s;
+}
+
+.modal-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: rotate(90deg);
+}
+
+.modal-body {
+    padding: 2rem;
+}
+
+.salas-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.sala-item {
+    background: #f8fafc;
+    border-radius: var(--radius-md);
+    padding: 1.5rem;
+    border-left: 4px solid var(--gradient-hero);
+    transition: all 0.3s;
+}
+
+.sala-item:hover {
+    background: #f1f5f9;
+    transform: translateX(5px);
+}
+
+.sala-header-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.sala-info {
+    flex: 1;
+}
+
+.sala-pin {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #4ECDC4;
+    margin-bottom: 0.5rem;
+}
+
+.sala-meta {
+    display: flex;
+    gap: 1.5rem;
+    color: #64748b;
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+}
+
+.sala-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.sala-estado {
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.estado-esperando {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.estado-en_curso {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.estado-finalizada {
+    background: #d4edda;
+    color: #155724;
+}
+
+.sala-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.sala-btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-view-results {
+    background: linear-gradient(135deg, #4ECDC4, #44A08D);
+    color: white;
+}
+
+.btn-export-dropdown {
+    position: relative;
+}
+
+.export-options {
+    display: none;
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    background: white;
+    border-radius: var(--radius-md);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    min-width: 200px;
+    margin-bottom: 0.5rem;
+    z-index: 10;
+}
+
+.export-options.active {
+    display: block;
+}
+
+.export-option {
+    padding: 0.75rem 1rem;
+    border: none;
+    background: transparent;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.export-option:hover {
+    background: #f1f5f9;
+}
+
+.export-option:first-child {
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+
+.export-option:last-child {
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+}
+
+.empty-salas {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #64748b;
+}
+
+.empty-salas i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
 </style>
 {% endblock %}
 
@@ -305,6 +542,14 @@
                         <i class="fas fa-eye"></i>
                         Ver Preguntas
                     </a>
+                    
+                    <button class="action-btn btn-outline btn-ver-resultados"
+                            data-cuestionario-id="{{ cuestionario.id_cuestionario }}"
+                            data-cuestionario-titulo="{{ cuestionario.titulo }}"
+                            title="Ver historial de salas y resultados">
+                        <i class="fas fa-chart-bar"></i>
+                        Ver Resultados
+                    </button>
                     
                     <a href="{{ url_for('editar_cuestionario', cuestionario_id=cuestionario.id_cuestionario) }}" 
                        class="action-btn btn-secondary">
@@ -354,6 +599,27 @@
             </div>
         {% endif %}
     </div>
+
+    <!-- Modal de Historial de Salas -->
+    <div id="modalHistorialSalas" class="modal-overlay" onclick="cerrarModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modalTitulo">
+                    <i class="fas fa-history"></i>
+                    Historial de Salas
+                </h2>
+                <button class="modal-close" onclick="cerrarModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div id="salasContainer">
+                    <div style="text-align: center; padding: 2rem;">
+                        <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: #4ECDC4;"></i>
+                        <p style="margin-top: 1rem; color: #64748b;">Cargando salas...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -377,12 +643,31 @@ document.addEventListener('DOMContentLoaded', function() {
         card.style.transform = 'translateY(20px)';
         observer.observe(card);
     });
+    
+    // Event listeners para botones "Ver Resultados"
+    const botonesResultados = document.querySelectorAll('.btn-ver-resultados');
+    console.log('🔘 Botones "Ver Resultados" encontrados:', botonesResultados.length);
+    
+    botonesResultados.forEach((btn, index) => {
+        console.log(`🔘 Botón ${index + 1}:`, {
+            id: btn.getAttribute('data-cuestionario-id'),
+            titulo: btn.getAttribute('data-cuestionario-titulo')
+        });
+        
+        btn.addEventListener('click', function() {
+            console.log('🖱️ Click en botón Ver Resultados');
+            const cuestionarioId = this.getAttribute('data-cuestionario-id');
+            const cuestionarioTitulo = this.getAttribute('data-cuestionario-titulo');
+            console.log('📊 Datos del botón:', { cuestionarioId, cuestionarioTitulo });
+            verHistorialSalas(parseInt(cuestionarioId), cuestionarioTitulo);
+        });
+    });
 });
 
 // Funciones para publicar/despublicar cuestionarios
 function publicarCuestionario(cuestionarioId) {
     if (confirm('¿Estás seguro de que quieres publicar este cuestionario? Una vez publicado, los estudiantes podrán acceder a él.')) {
-        fetch(`/publicar-cuestionario/${cuestionarioId}`, {
+        fetch(`/api/cuestionarios/${cuestionarioId}/publicar`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -391,22 +676,22 @@ function publicarCuestionario(cuestionarioId) {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                alert(data.message);
-                location.reload(); // Recargar para mostrar el cambio de estado
+                alert('✅ Cuestionario publicado correctamente');
+                location.reload();
             } else {
-                alert('Error: ' + data.error);
+                alert('❌ Error: ' + data.error);
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Error al publicar el cuestionario');
+            alert('❌ Error al publicar el cuestionario');
         });
     }
 }
 
 function despublicarCuestionario(cuestionarioId) {
-    if (confirm('¿Estás seguro de que quieres despublicar este cuestionario? Los estudiantes ya no podrán acceder a él.')) {
-        fetch(`/despublicar-cuestionario/${cuestionarioId}`, {
+    if (confirm('¿Despublicar este cuestionario? Los estudiantes ya no podrán acceder a él.')) {
+        fetch(`/api/cuestionarios/${cuestionarioId}/despublicar`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -415,16 +700,335 @@ function despublicarCuestionario(cuestionarioId) {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                alert(data.message);
-                location.reload(); // Recargar para mostrar el cambio de estado
+                alert('✅ Cuestionario despublicado correctamente');
+                location.reload();
             } else {
-                alert('Error: ' + data.error);
+                alert('❌ Error: ' + data.error);
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Error al despublicar el cuestionario');
+            alert('❌ Error al despublicar el cuestionario');
         });
+    }
+}
+
+// Funciones para el modal de historial de salas
+async function verHistorialSalas(cuestionarioId, tituloQuestionario) {
+    console.log('� INICIO verHistorialSalas');
+    console.log('📊 Cuestionario ID:', cuestionarioId);
+    console.log('📝 Título:', tituloQuestionario);
+    
+    const modal = document.getElementById('modalHistorialSalas');
+    const modalTitulo = document.getElementById('modalTitulo');
+    const salasContainer = document.getElementById('salasContainer');
+    
+    console.log('🔍 Modal element:', modal);
+    console.log('🔍 Modal titulo element:', modalTitulo);
+    console.log('🔍 Salas container element:', salasContainer);
+    
+    if (!modal) {
+        console.error('❌ Modal no encontrado!');
+        alert('Error: No se encontró el modal');
+        return;
+    }
+    
+    // Actualizar título
+    modalTitulo.innerHTML = `
+        <i class="fas fa-history"></i>
+        Historial de Salas - ${tituloQuestionario}
+    `;
+    
+    // Mostrar modal
+    console.log('👁️ Mostrando modal...');
+    modal.classList.add('active');
+    
+    // Mostrar loader
+    salasContainer.innerHTML = `
+        <div style="text-align: center; padding: 2rem;">
+            <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: #4ECDC4;"></i>
+            <p style="margin-top: 1rem; color: #64748b;">Cargando salas...</p>
+        </div>
+    `;
+    
+    try {
+        console.log('🌐 Fetching:', `/api/cuestionario/${cuestionarioId}/salas`);
+        const response = await fetch(`/api/cuestionario/${cuestionarioId}/salas`);
+        console.log('📡 Response status:', response.status);
+        const data = await response.json();
+        
+        console.log('📋 Salas recibidas:', data);
+        
+        if (data.success && data.salas && data.salas.length > 0) {
+            mostrarListaSalas(data.salas, tituloQuestionario);
+        } else {
+            salasContainer.innerHTML = `
+                <div class="empty-salas">
+                    <i class="fas fa-inbox"></i>
+                    <h3>No hay salas creadas</h3>
+                    <p>Aún no se han creado salas con este cuestionario.</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('❌ Error al cargar salas:', error);
+        salasContainer.innerHTML = `
+            <div class="empty-salas" style="color: #ef4444;">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>Error al cargar salas</h3>
+                <p>${error.message}</p>
+            </div>
+        `;
+    }
+}
+
+function mostrarListaSalas(salas, tituloQuestionario) {
+    const salasContainer = document.getElementById('salasContainer');
+    
+    const salasHTML = salas.map(sala => {
+        const fechaCreacion = new Date(sala.fecha_creacion).toLocaleDateString('es-ES', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
+        const estadoClass = `estado-${sala.estado.replace(' ', '_')}`;
+        const estadoTexto = sala.estado === 'en_curso' ? 'En Curso' : 
+                           sala.estado === 'finalizada' ? 'Finalizada' : 
+                           'Esperando';
+        
+        return `
+            <div class="sala-item">
+                <div class="sala-header-info">
+                    <div class="sala-info">
+                        <div class="sala-pin">
+                            <i class="fas fa-door-open"></i>
+                            PIN: ${sala.pin_sala}
+                        </div>
+                        <div class="sala-meta">
+                            <div class="sala-meta-item">
+                                <i class="fas fa-calendar"></i>
+                                ${fechaCreacion}
+                            </div>
+                            <div class="sala-meta-item">
+                                <i class="fas fa-users"></i>
+                                ${sala.total_participantes || 0} participantes
+                            </div>
+                            <div class="sala-meta-item">
+                                <i class="fas fa-question-circle"></i>
+                                Modo: ${sala.modo_juego || 'individual'}
+                            </div>
+                        </div>
+                    </div>
+                    <span class="sala-estado ${estadoClass}">
+                        ${estadoTexto}
+                    </span>
+                </div>
+                
+                ${sala.estado === 'finalizada' ? `
+                <div class="sala-actions">
+                    <a href="/sala/${sala.id_sala}/resultados" 
+                       class="sala-btn btn-view-results"
+                       title="Ver resultados completos">
+                        <i class="fas fa-chart-line"></i>
+                        Ver Resultados
+                    </a>
+                    
+                    <div class="btn-export-dropdown">
+                        <button class="sala-btn btn-outline" 
+                                onclick="toggleExportMenu(${sala.id_sala})"
+                                id="btn-export-${sala.id_sala}">
+                            <i class="fas fa-download"></i>
+                            Exportar
+                            <i class="fas fa-caret-up"></i>
+                        </button>
+                        <div class="export-options" id="export-menu-${sala.id_sala}">
+                            <button class="export-option" 
+                                    onclick="exportarSala(${sala.id_sala}, 'csv', '${tituloQuestionario}')">
+                                <i class="fas fa-file-csv"></i>
+                                Descargar CSV
+                            </button>
+                            <button class="export-option" 
+                                    onclick="exportarSala(${sala.id_sala}, 'excel', '${tituloQuestionario}')">
+                                <i class="fas fa-file-excel"></i>
+                                Descargar Excel
+                            </button>
+                            <button class="export-option" 
+                                    onclick="exportarSala(${sala.id_sala}, 'google-sheets', '${tituloQuestionario}')">
+                                <i class="fas fa-table"></i>
+                                Subir a Google Sheets
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                ` : `
+                <div class="sala-actions">
+                    <a href="/sala/${sala.id_sala}/juego" 
+                       class="sala-btn btn-view-results"
+                       title="Ir al control de juego">
+                        <i class="fas fa-gamepad"></i>
+                        ${sala.estado === 'en_curso' ? 'Ir al Juego' : 'Ver Sala'}
+                    </a>
+                </div>
+                `}
+            </div>
+        `;
+    }).join('');
+    
+    salasContainer.innerHTML = `<div class="salas-list">${salasHTML}</div>`;
+}
+
+function cerrarModal(event) {
+    if (!event || event.target === event.currentTarget) {
+        const modal = document.getElementById('modalHistorialSalas');
+        modal.classList.remove('active');
+    }
+}
+
+function toggleExportMenu(salaId) {
+    const menu = document.getElementById(`export-menu-${salaId}`);
+    const allMenus = document.querySelectorAll('.export-options');
+    
+    // Cerrar otros menús
+    allMenus.forEach(m => {
+        if (m.id !== `export-menu-${salaId}`) {
+            m.classList.remove('active');
+        }
+    });
+    
+    // Toggle este menú
+    menu.classList.toggle('active');
+    
+    event.stopPropagation();
+}
+
+// Cerrar menús al hacer clic fuera
+document.addEventListener('click', () => {
+    document.querySelectorAll('.export-options').forEach(menu => {
+        menu.classList.remove('active');
+    });
+});
+
+async function exportarSala(salaId, formato, cuestionarioTitulo) {
+    console.log(`📥 Exportando sala ${salaId} en formato ${formato}`);
+    
+    try {
+        // Obtener datos del ranking primero
+        const rankingResponse = await fetch(`/api/sala/${salaId}/ranking`);
+        const rankingData = await rankingResponse.json();
+        
+        if (!rankingData.success) {
+            alert('❌ Error al obtener datos del ranking');
+            return;
+        }
+        
+        // Obtener info de la sala
+        const salaResponse = await fetch(`/api/sala/${salaId}/estado`);
+        const salaData = await salaResponse.json();
+        
+        const totalPreguntas = salaData.sala?.total_preguntas || 10;
+        
+        if (formato === 'csv') {
+            exportarCSV(rankingData.ranking, totalPreguntas, cuestionarioTitulo);
+        } else if (formato === 'excel') {
+            await exportarExcel(salaId, rankingData.ranking, totalPreguntas, cuestionarioTitulo);
+        } else if (formato === 'google-sheets') {
+            await exportarGoogleSheets(salaId, rankingData.ranking, totalPreguntas, cuestionarioTitulo);
+        }
+        
+        // Cerrar menú
+        document.getElementById(`export-menu-${salaId}`).classList.remove('active');
+        
+    } catch (error) {
+        console.error('❌ Error en exportación:', error);
+        alert('❌ Error al exportar: ' + error.message);
+    }
+}
+
+function exportarCSV(ranking, totalPreguntas, titulo) {
+    const csvContent = [
+        `Resultados - ${titulo}`,
+        `Fecha: ${new Date().toLocaleDateString('es-ES')}`,
+        '',
+        'Posición,Nombre,Grupo,Respuestas Correctas,Total Preguntas,Precisión,Puntuación,Tiempo Total',
+        ...ranking.map(p => {
+            const precision = totalPreguntas > 0 ? Math.round((p.respuestas_correctas / totalPreguntas) * 100) : 0;
+            return `${p.posicion},${p.nombre_participante},${p.nombre_grupo || '-'},${p.respuestas_correctas},${totalPreguntas},${precision}%,${p.puntaje_total},${p.tiempo_total_respuestas}s`;
+        })
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `resultados_${titulo.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+    
+    alert('📄 CSV descargado correctamente');
+}
+
+async function exportarExcel(salaId, ranking, totalPreguntas, titulo) {
+    const response = await fetch(`/api/exportar-resultados/${salaId}/excel`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            ranking: ranking,
+            totalPreguntas: totalPreguntas,
+            cuestionarioTitulo: titulo
+        })
+    });
+    
+    if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `resultados_${titulo.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        
+        alert('📊 Excel descargado correctamente');
+    } else {
+        const error = await response.json();
+        alert('❌ Error: ' + error.error);
+    }
+}
+
+async function exportarGoogleSheets(salaId, ranking, totalPreguntas, titulo) {
+    const response = await fetch(`/api/exportar-resultados/${salaId}/google-sheets`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            ranking: ranking,
+            totalPreguntas: totalPreguntas,
+            cuestionarioTitulo: titulo
+        })
+    });
+    
+    const data = await response.json();
+    
+    if (data.auth_required) {
+        // Necesita autenticación
+        if (confirm('🔐 Necesitas autorizar el acceso a Google Sheets. ¿Continuar?')) {
+            window.open(data.auth_url, '_blank');
+            alert('✅ Después de autorizar, vuelve a intentar la exportación.');
+        }
+    } else if (data.success) {
+        alert('📈 ¡Hoja creada en Google Sheets!');
+        window.open(data.sheet_url, '_blank');
+    } else {
+        alert('❌ ' + data.error);
     }
 }
 </script>

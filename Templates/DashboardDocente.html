@@ -158,6 +158,7 @@
     display: flex;
     align-items: center;
     gap: var(--space-sm);
+    flex-wrap: wrap;
 }
 
 /* Cuestionarios */
@@ -455,6 +456,266 @@
     background: linear-gradient(135deg, #e0a800, #e6780a);
     transform: translateY(-2px);
 }
+
+/* Estilos para Ranking en Tiempo Real */
+.live-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+    padding: 0.3rem 0.8rem;
+    border-radius: var(--radius-full);
+    margin-left: auto;
+    animation: pulse 2s infinite;
+}
+
+.live-indicator i {
+    font-size: 0.5rem;
+    animation: blink 1.5s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.8;
+    }
+}
+
+@keyframes blink {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.3;
+    }
+}
+
+.loading-state {
+    text-align: center;
+    padding: var(--space-xl);
+    color: var(--gray);
+}
+
+.loading-state i {
+    font-size: 2rem;
+    margin-bottom: var(--space-md);
+    color: var(--secondary-color);
+}
+
+.sala-ranking-group {
+    margin-bottom: var(--space-xl);
+    border-bottom: 2px solid rgba(0,0,0,0.05);
+    padding-bottom: var(--space-lg);
+}
+
+.sala-ranking-group:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.sala-ranking-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--space-md);
+    padding: var(--space-sm) var(--space-md);
+    background: rgba(78, 205, 196, 0.1);
+    border-radius: var(--radius-md);
+}
+
+.sala-ranking-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--dark);
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.sala-pin-badge {
+    background: var(--gradient-secondary);
+    color: white;
+    padding: 0.2rem 0.6rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.sala-estado-badge {
+    padding: 0.25rem 0.6rem;
+    border-radius: var(--radius-full);
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.sala-estado-badge.esperando {
+    background: rgba(255, 193, 7, 0.2);
+    color: #ff8c00;
+}
+
+.sala-estado-badge.en_curso {
+    background: rgba(40, 167, 69, 0.2);
+    color: #28a745;
+}
+
+.ranking-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.ranking-item {
+    display: flex;
+    align-items: center;
+    padding: var(--space-md);
+    background: rgba(0,0,0,0.02);
+    border-radius: var(--radius-md);
+    transition: var(--transition-smooth);
+    position: relative;
+}
+
+.ranking-item:hover {
+    background: rgba(78, 205, 196, 0.08);
+    transform: translateX(4px);
+}
+
+.ranking-item.rank-1 {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 193, 7, 0.1));
+    border-left: 4px solid #FFD700;
+}
+
+.ranking-item.rank-2 {
+    background: linear-gradient(135deg, rgba(192, 192, 192, 0.15), rgba(169, 169, 169, 0.1));
+    border-left: 4px solid #C0C0C0;
+}
+
+.ranking-item.rank-3 {
+    background: linear-gradient(135deg, rgba(205, 127, 50, 0.15), rgba(184, 115, 51, 0.1));
+    border-left: 4px solid #CD7F32;
+}
+
+.ranking-position {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--dark);
+    min-width: 40px;
+    text-align: center;
+}
+
+.ranking-item.rank-1 .ranking-position {
+    color: #FFD700;
+}
+
+.ranking-item.rank-2 .ranking-position {
+    color: #C0C0C0;
+}
+
+.ranking-item.rank-3 .ranking-position {
+    color: #CD7F32;
+}
+
+.ranking-medal {
+    font-size: 1.8rem;
+    margin-right: var(--space-sm);
+}
+
+.ranking-student-info {
+    flex: 1;
+    margin-left: var(--space-md);
+}
+
+.ranking-student-name {
+    font-weight: 700;
+    color: var(--dark);
+    font-size: 0.95rem;
+    margin-bottom: 0.2rem;
+}
+
+.ranking-student-group {
+    font-size: 0.75rem;
+    color: var(--gray);
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.ranking-stats {
+    display: flex;
+    gap: var(--space-lg);
+    align-items: center;
+}
+
+.ranking-stat {
+    text-align: center;
+}
+
+.ranking-stat-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--dark);
+    display: block;
+}
+
+.ranking-stat-label {
+    font-size: 0.7rem;
+    color: var(--gray);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.ranking-score {
+    background: var(--gradient-secondary);
+    color: white;
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-md);
+    font-weight: 700;
+    font-size: 1.1rem;
+    min-width: 80px;
+    text-align: center;
+}
+
+.empty-ranking {
+    text-align: center;
+    padding: var(--space-xxl);
+    color: var(--gray);
+}
+
+.empty-ranking i {
+    font-size: 3rem;
+    margin-bottom: var(--space-md);
+    opacity: 0.3;
+}
+
+.empty-ranking p {
+    font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+    .ranking-stats {
+        gap: var(--space-sm);
+    }
+    
+    .ranking-stat-value {
+        font-size: 0.9rem;
+    }
+    
+    .ranking-stat-label {
+        font-size: 0.65rem;
+    }
+    
+    .sala-ranking-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-sm);
+    }
+}
 </style>
 {% endblock %}
 
@@ -619,30 +880,20 @@
         <!-- Resultados Recientes -->
         <div class="section-card">
             <h3 class="section-title">
-                <i class="fas fa-chart-bar"></i>
-                Resultados Recientes
+                <i class="fas fa-trophy"></i>
+                Ranking en Tiempo Real
+                <span id="live-indicator" class="live-indicator">
+                    <i class="fas fa-circle"></i> EN VIVO
+                </span>
             </h3>
 
-            {% if resultados_recientes %}
-                {% for resultado in resultados_recientes %}
-                <div class="result-item">
-                    <div class="student-info">
-                        <h5>{{ resultado.nombre_estudiante }}</h5>
-                        <div class="result-meta">
-                            {{ resultado.cuestionario_titulo }} • {{ resultado.fecha.strftime('%d/%m') if resultado.fecha else 'N/A' }}
-                        </div>
-                    </div>
-                    <div class="score-badge">{{ resultado.puntaje }}%</div>
+            <div id="ranking-container">
+                <!-- Se llenará con JavaScript -->
+                <div class="loading-state">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Cargando ranking en tiempo real...</p>
                 </div>
-                {% endfor %}
-            {% else %}
-                <div class="empty-state">
-                    <div class="empty-icon">
-                        <i class="fas fa-chart-bar"></i>
-                    </div>
-                    <p>No hay resultados recientes.</p>
-                </div>
-            {% endif %}
+            </div>
         </div>
     </div>
 
@@ -674,6 +925,9 @@
 
 {% block extra_js %}
 <script>
+// Variable para controlar el intervalo de actualización
+let rankingInterval = null;
+
 document.addEventListener('DOMContentLoaded', function() {
     // Animaciones de números
     const statNumbers = document.querySelectorAll('.stat-number');
@@ -706,7 +960,109 @@ document.addEventListener('DOMContentLoaded', function() {
     function easeOutCubic(t) {
         return 1 - Math.pow(1 - t, 3);
     }
+    
+    // Cargar ranking en tiempo real
+    cargarRankingTiempoReal();
+    
+    // Actualizar cada 5 segundos
+    rankingInterval = setInterval(cargarRankingTiempoReal, 5000);
 });
+
+// Limpiar intervalo cuando se sale de la página
+window.addEventListener('beforeunload', function() {
+    if (rankingInterval) {
+        clearInterval(rankingInterval);
+    }
+});
+
+async function cargarRankingTiempoReal() {
+    const docenteId = {{ usuario.id_usuario }};
+    const container = document.getElementById('ranking-container');
+    
+    try {
+        const response = await fetch(`/api/docente/${docenteId}/ranking-tiempo-real`);
+        const data = await response.json();
+        
+        if (data.success && data.salas && data.salas.length > 0) {
+            let html = '';
+            
+            data.salas.forEach(sala => {
+                html += `
+                    <div class="sala-ranking-group animate-fadeIn">
+                        <div class="sala-ranking-header">
+                            <div class="sala-ranking-title">
+                                <i class="fas fa-graduation-cap"></i>
+                                ${sala.cuestionario_titulo}
+                                <span class="sala-pin-badge">PIN: ${sala.pin_sala}</span>
+                            </div>
+                            <span class="sala-estado-badge ${sala.estado}">
+                                ${sala.estado === 'en_curso' ? 'En Curso' : 'Esperando'}
+                            </span>
+                        </div>
+                        <div class="ranking-list">
+                `;
+                
+                sala.ranking.forEach((participante, index) => {
+                    const medalEmojis = ['🥇', '🥈', '🥉'];
+                    const rankClass = `rank-${participante.posicion}`;
+                    
+                    html += `
+                        <div class="ranking-item ${rankClass}">
+                            <div class="ranking-medal">${medalEmojis[index] || ''}</div>
+                            <div class="ranking-position">${participante.posicion}</div>
+                            <div class="ranking-student-info">
+                                <div class="ranking-student-name">${participante.nombre_participante}</div>
+                                ${participante.nombre_grupo ? 
+                                    `<div class="ranking-student-group">
+                                        <i class="fas fa-users"></i> 
+                                        ${participante.nombre_grupo}
+                                    </div>` 
+                                    : ''}
+                            </div>
+                            <div class="ranking-stats">
+                                <div class="ranking-stat">
+                                    <span class="ranking-stat-value">${participante.respuestas_correctas}</span>
+                                    <span class="ranking-stat-label">Correctas</span>
+                                </div>
+                                <div class="ranking-stat">
+                                    <span class="ranking-stat-value">${participante.tiempo_total_respuestas}s</span>
+                                    <span class="ranking-stat-label">Tiempo</span>
+                                </div>
+                            </div>
+                            <div class="ranking-score">${participante.puntaje_total}</div>
+                        </div>
+                    `;
+                });
+                
+                html += `
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        } else {
+            container.innerHTML = `
+                <div class="empty-ranking">
+                    <i class="fas fa-trophy"></i>
+                    <p>No hay juegos activos en este momento.</p>
+                    <p style="font-size: 0.85rem; margin-top: 0.5rem;">
+                        Crea una sala para comenzar a ver el ranking en tiempo real.
+                    </p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error al cargar ranking en tiempo real:', error);
+        container.innerHTML = `
+            <div class="empty-ranking" style="color: #ef4444;">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>Error al cargar el ranking</p>
+                <p style="font-size: 0.85rem;">${error.message}</p>
+            </div>
+        `;
+    }
+}
 
 // Funciones de exportación
 function exportarResultados(cuestionarioId) {

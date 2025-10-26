@@ -453,7 +453,9 @@ async function actualizarRanking() {
         const response = await fetch(`/api/sala/${SALA_ID}/ranking`);
         const data = await response.json();
         
-        if (data.success) {
+        console.log('🔄 Actualizando ranking:', data);
+        
+        if (data.success && data.ranking && data.ranking.length > 0) {
             const tbody = document.getElementById('ranking-tbody');
             tbody.innerHTML = data.ranking.map((participante, index) => {
                 const posicionClass = index === 0 ? 'posicion-1' : 
@@ -462,18 +464,38 @@ async function actualizarRanking() {
                 
                 return `
                     <tr>
-                        <td><span class="posicion-badge ${posicionClass}">${index + 1}</span></td>
-                        <td>${participante.nombre}</td>
-                        <td>${participante.grupo || '-'}</td>
-                        <td><strong>${participante.puntaje}</strong></td>
-                        <td>${participante.correctas}</td>
-                        <td>${participante.tiempo_total.toFixed(1)}s</td>
+                        <td><span class="posicion-badge ${posicionClass}">${participante.posicion || (index + 1)}</span></td>
+                        <td>${participante.nombre_participante || participante.nombre || 'Participante'}</td>
+                        <td>${participante.nombre_grupo || participante.grupo || '-'}</td>
+                        <td><strong>${participante.puntaje_total || participante.puntaje || 0}</strong></td>
+                        <td>${participante.respuestas_correctas || participante.correctas || 0}</td>
+                        <td>${(participante.tiempo_total_respuestas || participante.tiempo_total || 0).toFixed(1)}s</td>
                     </tr>
                 `;
             }).join('');
+        } else {
+            console.warn('⚠️ No hay datos de ranking:', data);
+            const tbody = document.getElementById('ranking-tbody');
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 2rem; color: #64748b;">
+                        <p style="font-size: 1.2rem; margin-bottom: 0.5rem;">📊 Sin datos de ranking</p>
+                        <p style="font-size: 0.9rem; opacity: 0.8;">Los participantes aparecerán aquí cuando respondan preguntas</p>
+                    </td>
+                </tr>
+            `;
         }
     } catch (error) {
-        console.error('Error al actualizar ranking:', error);
+        console.error('❌ Error al actualizar ranking:', error);
+        const tbody = document.getElementById('ranking-tbody');
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 2rem; color: #ef4444;">
+                    <p style="font-size: 1.2rem; margin-bottom: 0.5rem;">⚠️ Error al cargar ranking</p>
+                    <p style="font-size: 0.9rem;">${error.message}</p>
+                </td>
+            </tr>
+        `;
     }
 }
 
@@ -547,6 +569,12 @@ function finalizarJuego() {
 
 // Inicializar cuando carga la página
 window.addEventListener('DOMContentLoaded', () => {
+    console.log('🎮 Iniciando ControlJuegoDocente para sala:', SALA_ID);
+    
+    // Mostrar ranking inmediatamente (incluso si no hay pregunta activa)
+    document.getElementById('ranking-container').style.display = 'block';
+    actualizarRanking(); // Actualizar ranking al inicio
+    
     cargarPreguntaActual();
 });
 

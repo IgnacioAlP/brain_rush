@@ -1,10 +1,12 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, Response, session
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, Response, session, send_file
 from werkzeug.exceptions import InternalServerError
 from config import config
 from bd import verificar_conexion, obtener_conexion, inicializar_usuarios_prueba
 import random
 from flask_wtf.csrf import CSRFProtect
 import os, json
+from io import BytesIO
+from datetime import datetime
 
 # Cargar variables de entorno desde .env
 from dotenv import load_dotenv
@@ -128,7 +130,7 @@ def obtener_sala_por_id_simple(id_sala):
     try:
         cursor = conexion.cursor()
         cursor.execute("""
-            SELECT id_sala, pin_sala, id_cuestionario, modo_juego, estado, max_participantes, fecha_creacion
+            SELECT id_sala, pin_sala, id_cuestionario, modo_juego, estado, max_participantes, fecha_creacion, total_preguntas
             FROM salas_juego 
             WHERE id_sala = %s
         """, (id_sala,))
@@ -141,7 +143,8 @@ def obtener_sala_por_id_simple(id_sala):
                 'modo_juego': sala[3],
                 'estado': sala[4],
                 'max_participantes': sala[5],
-                'fecha_creacion': sala[6]
+                'fecha_creacion': sala[6],
+                'total_preguntas': sala[7] if len(sala) > 7 and sala[7] is not None else 0
             }
         return None
     finally:
@@ -3044,6 +3047,174 @@ def api_preguntas_por_cuestionario(id_cuestionario):
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 400
 
+@app.route('/api/cuestionario/<int:cuestionario_id>/salas')
+def obtener_salas_por_cuestionario(cuestionario_id):
+    """Obtiene todas las salas creadas con un cuestionario específico"""
+    try:
+        conexion = obtener_conexion()
+        cursor = conexion.cursor()
+        
+        cursor.execute('''
+            SELECT 
+                s.id_sala,
+                s.pin_sala,
+                s.estado,
+                s.modo_juego,
+                s.fecha_creacion,
+                s.total_preguntas,
+                COUNT(DISTINCT p.id_participante) as total_participantes
+            FROM salas_juego s
+            LEFT JOIN participantes_sala p ON s.id_sala = p.id_sala
+            WHERE s.id_cuestionario = %s
+            GROUP BY s.id_sala
+            ORDER BY s.fecha_creacion DESC
+        ''', (cuestionario_id,))
+        
+        salas = []
+        for row in cursor.fetchall():
+            salas.append({
+                'id_sala': row[0],
+                'pin_sala': row[1],
+                'estado': row[2],
+                'modo_juego': row[3],
+                'fecha_creacion': row[4].isoformat() if row[4] else None,
+                'total_preguntas': row[5],
+                'total_participantes': row[6]
+            })
+        
+        cursor.close()
+        conexion.close()
+        
+        return jsonify({
+            'success': True,
+            'salas': salas
+        })
+    except Exception as e:
+        print(f"ERROR obtener_salas_por_cuestionario: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/cuestionarios/<int:cuestionario_id>/publicar', methods=['POST'])
+def api_publicar_cuestionario(cuestionario_id):
+    """Publicar un cuestionario vía API"""
+    try:
+        conexion = obtener_conexion()
+        cursor = conexion.cursor()
+        
+        cursor.execute('''
+            UPDATE cuestionarios 
+            SET estado = 'publicado' 
+            WHERE id_cuestionario = %s
+        ''', (cuestionario_id,))
+        
+        conexion.commit()
+        cursor.close()
+        conexion.close()
+        
+        return jsonify({'success': True, 'message': 'Cuestionario publicado'})
+    except Exception as e:
+        print(f"ERROR api_publicar_cuestionario: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/cuestionarios/<int:cuestionario_id>/despublicar', methods=['POST'])
+def api_despublicar_cuestionario(cuestionario_id):
+    """Despublicar un cuestionario vía API"""
+    try:
+        conexion = obtener_conexion()
+        cursor = conexion.cursor()
+        
+        cursor.execute('''
+            UPDATE cuestionarios 
+            SET estado = 'borrador' 
+            WHERE id_cuestionario = %s
+        ''', (cuestionario_id,))
+        
+        conexion.commit()
+        cursor.close()
+        conexion.close()
+        
+        return jsonify({'success': True, 'message': 'Cuestionario despublicado'})
+    except Exception as e:
+        print(f"ERROR api_despublicar_cuestionario: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/docente/<int:docente_id>/ranking-tiempo-real', methods=['GET'])
+def obtener_ranking_tiempo_real_docente(docente_id):
+    """Obtiene el ranking en tiempo real de todas las salas activas del docente"""
+    try:
+        import pymysql.cursors
+        conexion = obtener_conexion()
+        cursor = conexion.cursor(pymysql.cursors.DictCursor)
+        
+        # Obtener todas las salas en curso o esperando del docente
+        query = '''
+            SELECT 
+                s.id_sala,
+                s.pin_sala,
+                s.estado,
+                c.titulo as cuestionario_titulo,
+                c.id_cuestionario
+            FROM salas_juego s
+            INNER JOIN cuestionarios c ON s.id_cuestionario = c.id_cuestionario
+            WHERE c.id_docente = %s 
+            AND s.estado IN ('esperando', 'en_curso')
+            ORDER BY s.fecha_creacion DESC
+        '''
+        
+        cursor.execute(query, (docente_id,))
+        salas = cursor.fetchall()
+        
+        # Para cada sala, obtener el ranking actual
+        resultados = []
+        for sala in salas:
+            # Obtener el top 3 del ranking de cada sala
+            ranking_query = '''
+                SELECT 
+                    r.id_participante,
+                    p.nombre_participante,
+                    g.nombre_grupo,
+                    r.puntaje_total,
+                    r.respuestas_correctas,
+                    r.tiempo_total_respuestas,
+                    r.posicion,
+                    p.id_usuario
+                FROM ranking_sala r
+                INNER JOIN participantes_sala p ON r.id_participante = p.id_participante
+                LEFT JOIN grupos_sala g ON p.id_grupo = g.id_grupo
+                WHERE r.id_sala = %s
+                ORDER BY r.posicion ASC
+                LIMIT 3
+            '''
+            
+            cursor.execute(ranking_query, (sala['id_sala'],))
+            ranking = cursor.fetchall()
+            
+            if ranking:  # Solo incluir salas con participantes
+                resultados.append({
+                    'sala_id': sala['id_sala'],
+                    'pin_sala': sala['pin_sala'],
+                    'estado': sala['estado'],
+                    'cuestionario_titulo': sala['cuestionario_titulo'],
+                    'cuestionario_id': sala['id_cuestionario'],
+                    'ranking': ranking
+                })
+        
+        cursor.close()
+        conexion.close()
+        
+        return jsonify({
+            'success': True,
+            'salas': resultados,
+            'total_salas_activas': len(resultados)
+        })
+        
+    except Exception as e:
+        print(f"ERROR obtener_ranking_tiempo_real_docente: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/api/opciones_por_pregunta/<int:id_pregunta>')
 def api_opciones_por_pregunta(id_pregunta):
     try:
@@ -3183,6 +3354,148 @@ def api_cerrar_sala(sala_id):
             
     except Exception as e:
         print(f"DEBUG: Error en api_cerrar_sala: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/exportar-resultados/<int:sala_id>/excel', methods=['POST'])
+def exportar_resultados_excel(sala_id):
+    """Exportar resultados a Excel"""
+    try:
+        # Verificar que openpyxl está instalado
+        try:
+            from openpyxl import Workbook
+            from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        except ImportError:
+            return jsonify({'success': False, 'error': 'Librería openpyxl no instalada. Ejecuta: pip install openpyxl'}), 500
+        
+        data = request.get_json()
+        ranking = data.get('ranking', [])
+        total_preguntas = data.get('totalPreguntas', 0)
+        cuestionario_titulo = data.get('cuestionarioTitulo', 'Cuestionario')
+        
+        # Crear workbook
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Resultados Brain RUSH"
+        
+        # Estilos
+        header_fill = PatternFill(start_color="667eea", end_color="667eea", fill_type="solid")
+        header_font = Font(bold=True, color="FFFFFF", size=12)
+        title_font = Font(bold=True, size=16, color="667eea")
+        border = Border(
+            left=Side(style='thin'),
+            right=Side(style='thin'),
+            top=Side(style='thin'),
+            bottom=Side(style='thin')
+        )
+        
+        # Título
+        ws.merge_cells('A1:G1')
+        title_cell = ws['A1']
+        title_cell.value = f"📊 Resultados - {cuestionario_titulo}"
+        title_cell.font = title_font
+        title_cell.alignment = Alignment(horizontal='center', vertical='center')
+        ws.row_dimensions[1].height = 30
+        
+        # Fecha
+        ws.merge_cells('A2:G2')
+        fecha_cell = ws['A2']
+        fecha_cell.value = f"Fecha: {datetime.now().strftime('%d/%m/%Y %H:%M')}"
+        fecha_cell.alignment = Alignment(horizontal='center')
+        ws.row_dimensions[2].height = 20
+        
+        # Encabezados
+        headers = ['Posición', 'Nombre', 'Resp. Correctas', 'Total Preguntas', 'Precisión', 'Puntuación', 'Tiempo (s)']
+        for col, header in enumerate(headers, start=1):
+            cell = ws.cell(row=4, column=col)
+            cell.value = header
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal='center', vertical='center')
+            cell.border = border
+        
+        ws.row_dimensions[4].height = 25
+        
+        # Datos
+        for idx, player in enumerate(ranking, start=5):
+            precision = round((player['respuestas_correctas'] / total_preguntas) * 100) if total_preguntas > 0 else 0
+            
+            row_data = [
+                player['posicion'],
+                player['nombre_participante'],
+                player['respuestas_correctas'],
+                total_preguntas,
+                f"{precision}%",
+                player['puntaje_total'],
+                round(player['tiempo_total_respuestas'], 2)
+            ]
+            
+            for col, value in enumerate(row_data, start=1):
+                cell = ws.cell(row=idx, column=col)
+                cell.value = value
+                cell.border = border
+                cell.alignment = Alignment(horizontal='center', vertical='center')
+                
+                # Colorear top 3
+                if player['posicion'] <= 3:
+                    colors = {1: "FFD700", 2: "C0C0C0", 3: "CD7F32"}
+                    cell.fill = PatternFill(start_color=colors[player['posicion']], 
+                                          end_color=colors[player['posicion']], 
+                                          fill_type="solid")
+        
+        # Ajustar anchos de columna
+        column_widths = [12, 25, 18, 18, 15, 15, 15]
+        for col, width in enumerate(column_widths, start=1):
+            ws.column_dimensions[chr(64 + col)].width = width
+        
+        # Guardar en memoria
+        excel_file = BytesIO()
+        wb.save(excel_file)
+        excel_file.seek(0)
+        
+        return send_file(
+            excel_file,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=f'resultados_brain_rush_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
+        )
+        
+    except Exception as e:
+        print(f"ERROR exportar_excel: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/exportar-resultados/<int:sala_id>/google-sheets', methods=['POST'])
+def exportar_resultados_google_sheets(sala_id):
+    """Exportar resultados a Google Sheets"""
+    try:
+        # Verificar que las librerías de Google están instaladas
+        try:
+            from google.oauth2.credentials import Credentials
+            from google_auth_oauthlib.flow import Flow
+            from googleapiclient.discovery import build
+        except ImportError:
+            return jsonify({
+                'success': False, 
+                'error': 'Librerías de Google no instaladas. Ejecuta: pip install google-auth google-auth-oauthlib google-api-python-client'
+            }), 500
+        
+        data = request.get_json()
+        ranking = data.get('ranking', [])
+        total_preguntas = data.get('totalPreguntas', 0)
+        cuestionario_titulo = data.get('cuestionarioTitulo', 'Cuestionario')
+        
+        # TODO: Implementar OAuth2 flow completo
+        # Por ahora, retornar mensaje indicando que se necesita configuración
+        return jsonify({
+            'success': False,
+            'error': 'La integración con Google Sheets requiere configuración de OAuth2. Consulta CONFIGURAR_GMAIL.md para más detalles.'
+        }), 501
+        
+    except Exception as e:
+        print(f"ERROR exportar_google_sheets: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/perfil', methods=['GET', 'POST'])

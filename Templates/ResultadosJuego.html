@@ -373,6 +373,51 @@
       box-shadow: var(--shadow-lg);
     }
 
+    /* Export dropdown styles */
+    .export-dropdown {
+      position: relative;
+      display: inline-block;
+    }
+
+    .export-menu {
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      margin-top: 10px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-xl);
+      min-width: 220px;
+      z-index: 1000;
+      overflow: hidden;
+    }
+
+    .export-option {
+      display: block;
+      width: 100%;
+      padding: 15px 20px;
+      background: transparent;
+      border: none;
+      color: #333;
+      font-family: var(--font-secondary);
+      font-size: 15px;
+      font-weight: 600;
+      text-align: left;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .export-option:hover {
+      background: var(--gradient-secondary);
+      color: white;
+    }
+
+    .export-option:not(:last-child) {
+      border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
     @keyframes slideUp {
       from {
         opacity: 0;
@@ -505,10 +550,12 @@
         <h3 id="total-players">{{ total_jugadores | default("8") }}</h3>
         <p>Jugadores participantes</p>
       </div>
+      {% if not es_docente and resultado_personal %}
       <div class="stat-card">
-        <h3 id="total-questions">{{ total_preguntas | default("10") }}</h3>
-        <p>Preguntas respondidas</p>
+        <h3 id="total-questions">{{ resultado_personal.respuestas_correctas }}</h3>
+        <p>Respuestas correctas</p>
       </div>
+      {% endif %}
       <div class="stat-card">
         <h3 id="avg-score">750</h3>
         <p>Puntuación promedio</p>
@@ -545,14 +592,27 @@
       <a href="/mis-cuestionarios" class="btn btn-secondary">
         📚 Mis Cuestionarios
       </a>
-      <button class="btn btn-secondary" onclick="exportarResultados()">
-        📊 Exportar Resultados
-      </button>
+      <div class="export-dropdown">
+        <button class="btn btn-secondary" onclick="toggleExportMenu()">
+          📊 Exportar Resultados ▼
+        </button>
+        <div id="export-menu" class="export-menu" style="display: none;">
+          <button onclick="exportarCSV()" class="export-option">
+            📄 Descargar CSV
+          </button>
+          <button onclick="exportarExcel()" class="export-option">
+            📊 Descargar Excel
+          </button>
+          <button onclick="exportarGoogleSheets()" class="export-option">
+            📈 Subir a Google Sheets
+          </button>
+        </div>
+      </div>
       {% else %}
-      <a href="/dashboard-estudiante" class="btn btn-primary">
+      <a href="/estudiante" class="btn btn-primary">
         🏠 Volver al Inicio
       </a>
-      <a href="/unirse-sala" class="btn btn-secondary">
+      <a href="/unirse_a_sala" class="btn btn-secondary">
         🎮 Jugar Otra Sala
       </a>
       {% endif %}
@@ -564,6 +624,12 @@
     const ranking = {{ ranking | tojson | safe }};
     const totalPreguntas = {{ sala.total_preguntas | default(0) }};
     const totalJugadores = ranking.length;
+
+    console.log('📊 Datos de resultados:', {
+      ranking,
+      totalPreguntas,
+      totalJugadores
+    });
 
     function initializeResults() {
       cargarPodium();
@@ -608,6 +674,12 @@
     function cargarTablaCompleta() {
       const rankingsList = document.getElementById('rankings-list');
       
+      console.log('🔍 Cargando tabla completa. Datos:', {
+        ranking,
+        totalPreguntas,
+        ejemplo: ranking[0]
+      });
+      
       if (!ranking || ranking.length === 0) {
         rankingsList.innerHTML = '<div style="text-align: center; padding: 40px; opacity: 0.8;">No hay participantes para mostrar</div>';
         return;
@@ -616,6 +688,13 @@
       const tablasHTML = ranking.map(player => {
         const precision = totalPreguntas > 0 ? Math.round((player.respuestas_correctas / totalPreguntas) * 100) : 0;
         const isTop3 = player.posicion <= 3;
+        
+        console.log(`Jugador ${player.nombre_participante}:`, {
+          respuestas_correctas: player.respuestas_correctas,
+          puntaje_total: player.puntaje_total,
+          totalPreguntas,
+          precision
+        });
         
         return `
           <div class="table-row">
@@ -647,13 +726,32 @@
       const completionTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
       
       document.getElementById('total-players').textContent = totalJugadores;
-      document.getElementById('total-questions').textContent = totalPreguntas;
+      
+      // Solo actualizar si el elemento existe (solo para estudiantes)
+      const totalQuestionsElement = document.getElementById('total-questions');
+      if (totalQuestionsElement) {
+        totalQuestionsElement.textContent = totalPreguntas;
+      }
+      
       document.getElementById('avg-score').textContent = avgScore;
       document.getElementById('completion-time').textContent = completionTime;
     }
 
-    function exportarResultados() {
-      // Exportar resultados reales
+    function toggleExportMenu() {
+      const menu = document.getElementById('export-menu');
+      menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+    }
+
+    // Cerrar menú al hacer clic fuera
+    document.addEventListener('click', function(event) {
+      const dropdown = document.querySelector('.export-dropdown');
+      const menu = document.getElementById('export-menu');
+      if (dropdown && !dropdown.contains(event.target)) {
+        menu.style.display = 'none';
+      }
+    });
+
+    function exportarCSV() {
       const csvContent = [
         'Posición,Nombre,Respuestas Correctas,Total Preguntas,Precisión,Puntuación,Tiempo Total',
         ...ranking.map(p => {
@@ -672,8 +770,85 @@
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
 
-      // Mostrar confirmación
-      alert('📊 Resultados exportados correctamente como archivo CSV');
+      alert('📄 Archivo CSV descargado correctamente');
+      document.getElementById('export-menu').style.display = 'none';
+    }
+
+    async function exportarExcel() {
+      try {
+        const response = await fetch('/api/exportar-resultados/{{ sala.id }}/excel', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            ranking: ranking,
+            totalPreguntas: totalPreguntas,
+            cuestionarioTitulo: '{{ cuestionario_titulo }}'
+          })
+        });
+
+        if (response.ok) {
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `resultados_brain_rush_${new Date().toISOString().split('T')[0]}.xlsx`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+          
+          alert('📊 Archivo Excel descargado correctamente');
+        } else {
+          alert('❌ Error al generar archivo Excel');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('❌ Error al exportar a Excel');
+      }
+      document.getElementById('export-menu').style.display = 'none';
+    }
+
+    async function exportarGoogleSheets() {
+      try {
+        const response = await fetch('/api/exportar-resultados/{{ sala.id }}/google-sheets', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            ranking: ranking,
+            totalPreguntas: totalPreguntas,
+            cuestionarioTitulo: '{{ cuestionario_titulo }}'
+          })
+        });
+
+        const data = await response.json();
+        
+        if (data.success) {
+          if (data.auth_url) {
+            // Necesita autenticación
+            window.open(data.auth_url, '_blank');
+            alert('🔐 Por favor, autoriza el acceso a Google Drive en la nueva ventana. Luego intenta exportar nuevamente.');
+          } else {
+            // Exportación exitosa
+            window.open(data.sheet_url, '_blank');
+            alert('📈 Resultados subidos a Google Sheets correctamente');
+          }
+        } else {
+          alert('❌ ' + (data.error || 'Error al exportar a Google Sheets'));
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('❌ Error al conectar con Google Sheets');
+      }
+      document.getElementById('export-menu').style.display = 'none';
+    }
+
+    // Mantener función legacy para compatibilidad
+    function exportarResultados() {
+      exportarCSV();
     }
 
     // Inicializar cuando se carga la página

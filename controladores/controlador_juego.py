@@ -235,15 +235,15 @@ def registrar_respuesta_participante(participante_id, sala_id, id_pregunta, id_o
                     puntaje_obtenido = VALUES(puntaje_obtenido)
             ''', (participante_id, sala_id, id_pregunta, id_opcion_seleccionada, tiempo_respuesta, es_correcta, puntaje))
             
-            # Actualizar ranking del participante
+            # Actualizar o crear ranking del participante
             cursor.execute('''
-                UPDATE ranking_sala
-                SET 
-                    puntaje_total = puntaje_total + %s,
-                    respuestas_correctas = respuestas_correctas + %s,
-                    tiempo_total_respuestas = tiempo_total_respuestas + %s
-                WHERE id_participante = %s AND id_sala = %s
-            ''', (puntaje, 1 if es_correcta else 0, tiempo_respuesta, participante_id, sala_id))
+                INSERT INTO ranking_sala (id_participante, id_sala, puntaje_total, respuestas_correctas, tiempo_total_respuestas)
+                VALUES (%s, %s, %s, %s, %s)
+                ON DUPLICATE KEY UPDATE
+                    puntaje_total = puntaje_total + VALUES(puntaje_total),
+                    respuestas_correctas = respuestas_correctas + VALUES(respuestas_correctas),
+                    tiempo_total_respuestas = tiempo_total_respuestas + VALUES(tiempo_total_respuestas)
+            ''', (participante_id, sala_id, puntaje, 1 if es_correcta else 0, tiempo_respuesta))
             
             conexion.commit()
             
@@ -378,7 +378,8 @@ def obtener_ranking_sala(sala_id):
                     r.puntaje_total,
                     r.respuestas_correctas,
                     r.tiempo_total_respuestas,
-                    g.nombre_grupo
+                    g.nombre_grupo,
+                    p.id_participante
                 FROM ranking_sala r
                 JOIN participantes_sala p ON r.id_participante = p.id_participante
                 LEFT JOIN grupos_sala g ON p.id_grupo = g.id_grupo
@@ -387,17 +388,16 @@ def obtener_ranking_sala(sala_id):
             ''', (sala_id,))
             
             ranking = []
-            posicion = 1
             for row in cursor.fetchall():
                 ranking.append({
-                    'posicion': posicion,
-                    'nombre': row[1],
-                    'puntaje': row[2],
-                    'correctas': row[3],
-                    'tiempo_total': float(row[4]),
-                    'grupo': row[5]
+                    'posicion': row[0],  # Usar la posición de la BD
+                    'nombre_participante': row[1],
+                    'puntaje_total': row[2],
+                    'respuestas_correctas': row[3],
+                    'tiempo_total_respuestas': float(row[4]),
+                    'nombre_grupo': row[5],
+                    'id_participante': row[6]
                 })
-                posicion += 1
             
             return ranking
     finally:
