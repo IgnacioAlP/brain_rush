@@ -495,30 +495,80 @@
     left: 0;
 }
 
+/* === INICIO DE ESTILOS RESPONSIVOS === */
 @media (max-width: 768px) {
+    .generate-questions-page {
+        /* Añade padding lateral */
+        padding: var(--space-xl) var(--space-lg);
+    }
+
     .options-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr; /* Apila opciones */
     }
     
     .question-controls {
-        flex-direction: column;
+        flex-direction: column; /* Apila controles (botón agregar) */
         gap: var(--space-lg);
         text-align: center;
     }
     
     .form-actions {
+        flex-direction: column; /* Apila botones de acción */
+        gap: var(--space-md);
+    }
+
+    /* Maneja el div anidado en form-actions */
+    .form-actions > div {
+        display: flex;
         flex-direction: column;
+        gap: var(--space-md);
+        width: 100%;
     }
     
-    .question-creator {
-        margin: var(--space-md);
+    /* Hace que todos los botones de acción sean de ancho completo */
+    .action-btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    /* Reduce padding en los contenedores principales */
+    .question-creator,
+    .cuestionario-info,
+    .preguntas-existentes,
+    .helper-text {
         padding: var(--space-xl);
+        margin-left: 0;
+        margin-right: 0;
+    }
+
+    /* Apila los botones de editar/eliminar en las tarjetas */
+    .pregunta-acciones {
+        flex-direction: column;
+        gap: var(--space-sm);
+        align-items: stretch;
+    }
+    .btn-editar, .btn-eliminar {
+        width: 100%;
+        justify-content: center;
     }
 }
 
 @media (max-width: 480px) {
+    .generate-questions-page {
+        /* Reduce más el padding lateral */
+        padding: var(--space-xl) var(--space-sm);
+    }
+
     .page-title {
-        font-size: 2rem;
+        font-size: 2rem; /* Título más pequeño */
+    }
+
+    /* Reduce el padding de todos los contenedores */
+    .question-creator,
+    .cuestionario-info,
+    .preguntas-existentes,
+    .helper-text {
+        padding: var(--space-lg);
     }
     
     .question-textarea {
@@ -527,8 +577,10 @@
     
     .option-card {
         min-height: 100px;
+        padding: var(--space-md); /* Menos padding interno en tarjetas */
     }
 }
+/* === FIN DE ESTILOS RESPONSIVOS === */
 </style>
 {% endblock %}
 
@@ -539,7 +591,6 @@
         <p class="page-subtitle">Crea preguntas dinámicas e interactivas para tu cuestionario</p>
     </div>
 
-    <!-- Información de ayuda -->
     <div class="helper-text animate-fadeIn">
         <div class="helper-title">
             <i class="fas fa-lightbulb"></i>
@@ -553,14 +604,12 @@
         </ul>
     </div>
 
-    <!-- Información del cuestionario -->
     <div class="cuestionario-info animate-fadeIn">
         <h2>Cuestionario: {{ cuestionario.titulo }}</h2>
         <p>{{ cuestionario.descripcion }}</p>
         <span class="status-badge status-{{ cuestionario.estado }}">{{ cuestionario.estado.title() }}</span>
     </div>
 
-    <!-- Preguntas existentes -->
     {% if preguntas %}
     <div class="preguntas-existentes animate-fadeIn" style="animation-delay: 0.1s;">
         <h3><i class="fas fa-list"></i> Preguntas creadas ({{ preguntas|length }})</h3>
@@ -588,11 +637,9 @@
     </div>
     {% endif %}
 
-    <!-- Creador de preguntas -->
     <div class="question-creator animate-fadeIn" style="animation-delay: 0.2s;">
         <form id="question-form" method="POST" action="{{ url_for('agregar_preguntas', cuestionario_id=cuestionario.id_cuestionario) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <!-- Sección de la pregunta -->
             <div class="question-section">
                 <label for="question-text" class="question-label">
                     <i class="fas fa-question-circle"></i>
@@ -606,7 +653,6 @@
                     required></textarea>
             </div>
 
-            <!-- Opciones de respuesta -->
             <div class="options-section">
                 <label class="question-label">
                     <i class="fas fa-list-ul"></i>
@@ -614,7 +660,6 @@
                 </label>
                 
                 <div class="options-grid" id="options-container">
-                    <!-- Opción 1 (Roja) -->
                     <div class="option-card red" data-option="0">
                         <div class="option-header">
                             <div class="option-number">A</div>
@@ -624,7 +669,6 @@
                         <button type="button" class="remove-option" onclick="removeOption(this)">✕</button>
                     </div>
 
-                    <!-- Opción 2 (Azul) -->
                     <div class="option-card blue" data-option="1">
                         <div class="option-header">
                             <div class="option-number">B</div>
@@ -634,7 +678,6 @@
                         <button type="button" class="remove-option" onclick="removeOption(this)">✕</button>
                     </div>
 
-                    <!-- Opción 3 (Amarilla) - Inicialmente oculta -->
                     <div class="option-card yellow" data-option="2" style="display: none;">
                         <div class="option-header">
                             <div class="option-number">C</div>
@@ -644,7 +687,6 @@
                         <button type="button" class="remove-option" onclick="removeOption(this)">✕</button>
                     </div>
 
-                    <!-- Opción 4 (Verde) - Inicialmente oculta -->
                     <div class="option-card green" data-option="3" style="display: none;">
                         <div class="option-header">
                             <div class="option-number">D</div>
@@ -655,7 +697,6 @@
                     </div>
                 </div>
 
-                <!-- Controles de opciones -->
                 <div class="question-controls">
                     <button type="button" class="add-option-btn" id="add-option-btn" onclick="addOption()">
                         <i class="fas fa-plus"></i>
@@ -669,11 +710,9 @@
                 </div>
             </div>
 
-            <!-- Inputs ocultos -->
             <input type="hidden" name="question_type" id="question-type" value="opcion_multiple">
             <input type="hidden" name="correct_answer" id="correct-answer" value="">
 
-            <!-- Acciones del formulario -->
             <div class="form-actions">
                 <a href="{{ url_for('mis_cuestionarios') }}" class="action-btn btn-outline">
                     <i class="fas fa-arrow-left"></i>

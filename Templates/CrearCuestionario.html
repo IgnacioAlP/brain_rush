@@ -99,6 +99,54 @@
     background: rgba(0,0,0,0.1);
     color: var(--dark);
 }
+
+/* === INICIO DE ESTILOS RESPONSIVOS === */
+@media (max-width: 768px) {
+    .create-quiz-page {
+        /* Añade padding en los lados en móvil */
+        padding: var(--space-xl) var(--space-lg);
+    }
+
+    .quiz-form-container {
+        /* Reduce el padding interno en pantallas pequeñas */
+        padding: var(--space-xl);
+    }
+
+    .form-section {
+        /* Reduce el padding interno en pantallas pequeñas */
+        padding: var(--space-lg);
+    }
+
+    .quiz-title {
+        /* Reduce el tamaño del título principal */
+        font-size: 2rem;
+    }
+
+    .form-actions {
+        /* Apila los botones verticalmente */
+        flex-direction: column;
+        gap: var(--space-md); /* Reduce el espacio entre botones */
+    }
+
+    .action-btn {
+        /* Hace que los botones ocupen todo el ancho */
+        width: 100%;
+        text-align: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .quiz-form-container {
+        /* Reduce aún más el padding en pantallas muy pequeñas */
+        padding: var(--space-lg);
+    }
+
+    .quiz-title {
+        font-size: 1.8rem;
+    }
+}
+/* === FIN DE ESTILOS RESPONSIVOS === */
+
 </style>
 {% endblock %}
 

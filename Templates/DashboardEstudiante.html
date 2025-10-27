@@ -274,7 +274,7 @@
 .recent-header {
     display: flex;
     align-items: center;
-    justify-content: between;
+    justify-content: space-between; /* Corregido 'between' a 'space-between' */
     margin-bottom: var(--space-lg);
     padding-bottom: var(--space-md);
     border-bottom: 2px solid rgba(0,0,0,0.1);
@@ -343,7 +343,17 @@
     font-size: 1.1rem;
 }
 
+/* === INICIO DE ESTILOS RESPONSIVOS === */
 @media (max-width: 768px) {
+    .student-dashboard {
+        /* Añade padding lateral */
+        padding: var(--space-xl) var(--space-lg);
+    }
+    
+    .welcome-section {
+        padding: var(--space-xl);
+    }
+    
     .welcome-header {
         flex-direction: column;
         text-align: center;
@@ -355,29 +365,66 @@
     }
     
     .action-cards {
+        /* minmax(300px, 1fr) ya se encarga de esto, pero 1fr lo fuerza */
         grid-template-columns: 1fr;
     }
     
     .stats-grid {
+        /* Pasa a 2 columnas */
         grid-template-columns: repeat(2, 1fr);
+    }
+
+    /* Ajusta el padding de las secciones */
+    .action-card, .stat-item, .recent-section {
+        padding: var(--space-lg);
     }
 }
 
 @media (max-width: 480px) {
+    .student-dashboard {
+        padding: var(--space-lg) var(--space-sm);
+    }
+
+    .welcome-section {
+        padding: var(--space-lg);
+    }
+
     .welcome-text h1 {
         font-size: 2rem;
     }
     
     .stats-grid {
+        /* Pasa a 1 columna */
         grid-template-columns: 1fr;
     }
+
+    .game-item {
+        /* Permite que los items se reorganicen */
+        flex-wrap: wrap;
+    }
+
+    .game-info {
+        /* Ocupa todo el ancho disponible */
+        flex-basis: 100%;
+        margin-bottom: var(--space-sm);
+    }
+
+    .game-score {
+        /* Mueve la puntuación al final */
+        flex-basis: 100%;
+        text-align: right;
+    }
+
+    .action-card, .stat-item, .recent-section {
+        padding: var(--space-md);
+    }
 }
+/* === FIN DE ESTILOS RESPONSIVOS === */
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="student-dashboard">
-    <!-- Sección de Bienvenida -->
     <div class="welcome-section animate-fadeIn">
         <div class="welcome-header">
             <div class="welcome-text">
@@ -405,7 +452,6 @@
         </div>
     </div>
 
-    <!-- Acciones Principales -->
     <div class="action-cards">
         <a href="{{ url_for('unirse_a_sala') }}" class="action-card primary animate-fadeIn" style="animation-delay: 0.1s;">
             <div class="card-icon primary">
@@ -450,7 +496,6 @@
         </a>
     </div>
 
-    <!-- Cuestionarios Disponibles -->
     <div class="recent-section animate-fadeIn" style="animation-delay: 0.4s; margin-bottom: var(--space-xxl);">
         <div class="recent-header">
             <h2 class="recent-title">
@@ -498,7 +543,6 @@
         {% endif %}
     </div>
 
-    <!-- Estadísticas Personales -->
     <div class="stats-grid">
         <div class="stat-item animate-fadeIn" style="animation-delay: 0.4s;">
             <div class="stat-icon">
@@ -533,7 +577,6 @@
         </div>
     </div>
 
-    <!-- Juegos Recientes -->
     <div class="recent-section animate-fadeIn" style="animation-delay: 0.8s;">
         <div class="recent-header">
             <h2 class="recent-title">
