@@ -2903,41 +2903,42 @@ def estadisticas_ranking():
     return render_template('dashboard/estadisticas_ranking.html', estadisticas=estadisticas)
 #-----FIN-RANKING-----#
 
-#-----INICIO-RECOMPENSA-----#
-@app.route('/recompensa')
-def recompensa():
-    recompensas = controlador_recompensas.obtener_recompensas()
+# ----- RECOMPENSAS GENERALES (ADMIN / DASHBOARD) -----
+@app.route('/recompensas')
+def obtener_todas_recompensas():
+    recompensas = controlador_recompensas.obtener_todas_recompensas()
     return render_template('dashboard/recompensa.html', recompensas=recompensas)
+
 
 @app.route('/registrar_recompensa')
 def registrar_recompensa():
     return render_template('dashboard/registrar_recompensa.html')
 
-@app.route('/insertar_recompensa', methods=['POST'])
-def insertar_recompensa():
+
+@app.route('/insertar_recompensa_admin', methods=['POST'])
+def insertar_recompensa_admin():
     nombre = request.form['nombre']
     descripcion = request.form['descripcion']
     puntos_requeridos = request.form['puntos_requeridos']
     tipo = request.form['tipo']
-    
-    controlador_recompensas.crear_recompensa(
-        nombre=nombre,
-        descripcion=descripcion,
-        puntos_requeridos=puntos_requeridos,
-        tipo=tipo
-    )
-    return redirect(url_for('recompensa'))
 
-@app.route('/eliminar_recompensa/<int:id>')
-def eliminar_recompensa(id):
+    # Si no hay cuestionario asociado (admin), usa NULL
+    controlador_recompensas.insertar_recompensa(nombre, descripcion, puntos_requeridos, tipo, None)
+    return redirect(url_for('obtener_todas_recompensas'))
+
+
+@app.route('/eliminar_recompensa_admin/<int:id>')
+def eliminar_recompensa_admin(id):
     controlador_recompensas.eliminar_recompensa(id)
-    return redirect(url_for('recompensa'))
+    return redirect(url_for('obtener_todas_recompensas'))
+
 
 @app.route('/modificar_recompensa', methods=['POST'])
 def modificar_recompensa():
     id = request.form['id']
     recompensa = controlador_recompensas.obtener_recompensa_por_id(id)
     return render_template('dashboard/modificar_recompensa.html', recompensa=recompensa)
+
 
 @app.route('/actualizar_recompensa', methods=['POST'])
 def actualizar_recompensa():
@@ -2946,25 +2947,84 @@ def actualizar_recompensa():
     descripcion = request.form['descripcion']
     puntos_requeridos = request.form['puntos_requeridos']
     tipo = request.form['tipo']
-    
+
     controlador_recompensas.actualizar_recompensa(id, nombre, descripcion, puntos_requeridos, tipo)
-    return redirect(url_for('recompensa'))
+    return redirect(url_for('obtener_todas_recompensas'))
+
 
 @app.route('/otorgar_recompensa', methods=['POST'])
 def otorgar_recompensa():
     id_estudiante = request.form['id_estudiante']
     id_recompensa = request.form['id_recompensa']
     controlador_recompensas.otorgar_recompensa(id_estudiante, id_recompensa)
-    return redirect(url_for('recompensa'))
+    return redirect(url_for('obtener_todas_recompensas'))
+
 
 @app.route('/revocar_recompensa', methods=['POST'])
 def revocar_recompensa():
     id_estudiante = request.form['id_estudiante']
     id_recompensa = request.form['id_recompensa']
     controlador_recompensas.revocar_recompensa(id_estudiante, id_recompensa)
-    return redirect(url_for('recompensa'))
-#-----FIN-RECOMPENSA-----#
+    return redirect(url_for('obtener_todas_recompensas'))
 
+
+# ----- GESTIONAR RECOMPENSAS (POR CUESTIONARIO) -----
+@app.route('/gestionar_recompensas/<int:id_cuestionario>')
+def gestionar_recompensas(id_cuestionario):
+    """
+    Vista principal para gestionar recompensas de un cuestionario específico.
+    """
+    return render_template('GestionarRecompensas.html', id_cuestionario=id_cuestionario)
+
+
+@app.route('/api/recompensas/<int:id_cuestionario>')
+def api_recompensas_por_cuestionario(id_cuestionario):
+    """
+    Devuelve las recompensas asociadas a un cuestionario específico.
+    """
+    try:
+        recompensas = controlador_recompensas.obtener_recompensas_por_cuestionario(id_cuestionario)
+        return jsonify({'success': True, 'recompensas': recompensas})
+    except Exception as e:
+        print(f"❌ Error al obtener recompensas del cuestionario {id_cuestionario}: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/insertar_recompensa', methods=['POST'])
+def insertar_recompensa_por_cuestionario():
+    try:
+        nombre = request.form.get('nombre')
+        descripcion = request.form.get('descripcion')
+        puntos = request.form.get('puntos_requeridos')
+        tipo = request.form.get('tipo')
+        id_cuestionario = request.form.get('id_cuestionario')
+
+        if not all([nombre, puntos, tipo, id_cuestionario]):
+            return jsonify({'success': False, 'error': 'Datos incompletos'}), 400
+
+        controlador_recompensas.insertar_recompensa(
+            nombre, descripcion, puntos, tipo, id_cuestionario
+        )
+        return jsonify({'success': True}), 200
+
+    except Exception as e:
+        print(f"❌ Error al insertar recompensa: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+
+@app.route('/eliminar_recompensa/<int:id_recompensa>', methods=['DELETE'])
+def eliminar_recompensa_por_cuestionario(id_recompensa):
+    """
+    Elimina una recompensa por su ID.
+    """
+    try:
+        controlador_recompensas.eliminar_recompensa(id_recompensa)
+        return jsonify({'success': True})
+    except Exception as e:
+        print(f"❌ Error al eliminar recompensa {id_recompensa}: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+    
+#-----FIN RECOMPESA-----#
 #-----INICIO-ROL-----#
 @app.route('/rol')
 def rol():

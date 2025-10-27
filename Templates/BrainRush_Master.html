@@ -284,16 +284,20 @@
             });
         });
 
-        // Add loading states to buttons
-        document.querySelectorAll('form').forEach(form => {
-            form.addEventListener('submit', function() {
-                const submitBtn = form.querySelector('button[type="submit"], input[type="submit"]');
-                if (submitBtn) {
-                    submitBtn.classList.add('loading');
-                    submitBtn.disabled = true;
-                }
-            });
-        });
+      // Add loading states to buttons (solo en formularios normales)
+  document.querySelectorAll('form').forEach(form => {
+    form.addEventListener('submit', function (e) {
+      // 🧠 Evitar interferir con formularios manejados por JavaScript o multipasos
+      const ignoredForms = ['form-recompensa', 'form-unirse', 'form-cuestionario', 'form-ajax'];
+      if (ignoredForms.some(id => form.id?.includes(id))) return;
+
+      const submitBtn = form.querySelector('button[type="submit"], input[type="submit"]');
+      if (submitBtn) {
+        submitBtn.classList.add('loading');
+        submitBtn.disabled = true;
+      }
+    });
+  });
     </script>
 
     {% block extra_js %}{% endblock %}

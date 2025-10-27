@@ -189,6 +189,22 @@
     color: white;
 }
 
+@media (max-width: 768px) {
+    .quiz-header {
+        flex-direction: column;
+        gap: var(--space-md);
+    }
+    
+    .quiz-meta {
+        flex-wrap: wrap;
+        gap: var(--space-md);
+    }
+    
+    .quiz-actions {
+        justify-content: center;
+    }
+}
+
 /* Estilos para botones de acción */
 .btn-success {
     background: linear-gradient(135deg, #28a745, #20c997);
@@ -483,120 +499,31 @@
     margin-bottom: 1rem;
     opacity: 0.5;
 }
-
-/* === INICIO DE ESTILOS RESPONSIVOS === */
-@media (max-width: 768px) {
-    .quizzes-page {
-        /* Añade padding lateral */
-        padding: var(--space-xl) var(--space-lg);
-    }
-
-    .quiz-card {
-        padding: var(--space-lg);
-    }
-
-    .quiz-header {
-        flex-direction: column;
-        gap: var(--space-md);
-    }
-    
-    .quiz-meta {
-        flex-wrap: wrap;
-        gap: var(--space-md);
-    }
-    
-    .quiz-actions {
-        flex-direction: column; /* Apila botones */
-        align-items: stretch; /* Estira botones a lo ancho */
-        gap: var(--space-sm);
-    }
-
-    .action-btn {
-        width: 100%;
-        justify-content: center; /* Centra texto/icono */
-    }
-    
-    .empty-state {
-        padding: var(--space-xl);
-    }
-
-    /* Modal responsiveness */
-    .modal-overlay {
-        padding: 1rem;
-    }
-    .modal-header, .modal-body {
-        padding: 1.5rem;
-    }
-
-    .sala-header-info {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: var(--space-md);
-    }
-
-    .sala-meta {
-        flex-direction: column; /* Apila meta items */
-        gap: var(--space-sm);
-        align-items: flex-start;
-    }
-
-    .sala-actions {
-        flex-direction: column;
-        align-items: stretch; /* Estira botones */
-        gap: var(--space-sm);
-    }
-    .sala-btn, .btn-export-dropdown {
-         width: 100%;
-    }
-    .sala-btn {
-        justify-content: center;
-    }
+/* Botón Gestionar Recompensas */
+.btn-recompensas {
+    background: linear-gradient(135deg, #ffb347, #ffcc33);
+    color: rgb(0, 0, 0) !important;
+    border: none;
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    box-shadow: var(--shadow-sm);
 }
 
-@media (max-width: 480px) {
-    .quizzes-page {
-        /* Reduce más el padding lateral */
-        padding: var(--space-lg) var(--space-sm);
-    }
-
-    .page-title {
-        font-size: 2rem;
-    }
-    
-    .quiz-card {
-        padding: var(--space-md);
-    }
-    
-    .empty-state {
-        padding: var(--space-lg);
-    }
-
-    .create-btn {
-        padding: var(--space-lg) var(--space-xl);
-        font-size: 1rem;
-    }
-
-    /* Modal responsiveness for small screens */
-    .modal-overlay {
-        padding: 0.5rem;
-    }
-    .modal-header, .modal-body {
-        padding: 1rem;
-    }
-    .modal-title {
-        font-size: 1.25rem;
-    }
-    .sala-item {
-        padding: 1rem;
-    }
-    .sala-meta {
-        /* Pasa de columna a wrap en pantallas chicas para ahorrar espacio vertical */
-        flex-direction: row;
-        flex-wrap: wrap;
-        gap: var(--space-md);
-    }
+.btn-recompensas:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    color: white;
+    text-decoration: none;
 }
-/* === FIN DE ESTILOS RESPONSIVOS === */
+
 </style>
 {% endblock %}
 
@@ -654,7 +581,16 @@
                         <i class="fas fa-edit"></i>
                         Editar
                     </a>
-                    
+                     </button>
+                  
+                     <a href="{{ url_for('gestionar_recompensas', id_cuestionario=cuestionario.id_cuestionario) }}" 
+                     class="action-btn btn-recompensas" 
+                        title="Administrar las recompensas del cuestionario">
+                    <i class="fas fa-gift"></i>
+                    Gestionar Recompensas
+                    </a>
+
+
                     {% if cuestionario.estado == 'borrador' %}
                     <a href="{{ url_for('agregar_preguntas', cuestionario_id=cuestionario.id_cuestionario) }}" 
                        class="action-btn btn-primary">
@@ -666,7 +602,7 @@
                             class="action-btn btn-success" title="Publicar cuestionario">
                         <i class="fas fa-share"></i>
                         Publicar
-                    </button>
+                   
                     {% elif cuestionario.estado == 'publicado' %}
                     <a href="{{ url_for('crear_sala_para_cuestionario', cuestionario_id=cuestionario.id_cuestionario) }}" 
                        class="action-btn btn-success" title="Crear sala con este cuestionario">
@@ -679,6 +615,9 @@
                         <i class="fas fa-eye-slash"></i>
                         Despublicar
                     </button>
+                
+
+
                     {% endif %}
                 </div>
             </div>
@@ -698,6 +637,7 @@
         {% endif %}
     </div>
 
+    <!-- Modal de Historial de Salas -->
     <div id="modalHistorialSalas" class="modal-overlay" onclick="cerrarModal(event)">
         <div class="modal-content" onclick="event.stopPropagation()">
             <div class="modal-header">
@@ -812,7 +752,7 @@ function despublicarCuestionario(cuestionarioId) {
 
 // Funciones para el modal de historial de salas
 async function verHistorialSalas(cuestionarioId, tituloQuestionario) {
-    console.log('🚀 INICIO verHistorialSalas');
+    console.log('� INICIO verHistorialSalas');
     console.log('📊 Cuestionario ID:', cuestionarioId);
     console.log('📝 Título:', tituloQuestionario);
     
@@ -893,8 +833,8 @@ function mostrarListaSalas(salas, tituloQuestionario) {
         
         const estadoClass = `estado-${sala.estado.replace(' ', '_')}`;
         const estadoTexto = sala.estado === 'en_curso' ? 'En Curso' : 
-                            sala.estado === 'finalizada' ? 'Finalizada' : 
-                            'Esperando';
+                           sala.estado === 'finalizada' ? 'Finalizada' : 
+                           'Esperando';
         
         return `
             <div class="sala-item">
@@ -1077,7 +1017,7 @@ async function exportarExcel(salaId, ranking, totalPreguntas, titulo) {
         },
         body: JSON.stringify({
             ranking: ranking,
-            totalPregendas: totalPreguntas,
+            totalPreguntas: totalPreguntas,
             cuestionarioTitulo: titulo
         })
     });
@@ -1108,7 +1048,7 @@ async function exportarGoogleSheets(salaId, ranking, totalPreguntas, titulo) {
         },
         body: JSON.stringify({
             ranking: ranking,
-            totalPregendas: totalPreguntas,
+            totalPreguntas: totalPreguntas,
             cuestionarioTitulo: titulo
         })
     });
