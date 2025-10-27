@@ -157,9 +157,7 @@ def crear_usuario(nombre, apellidos, email, password, tipo_usuario='estudiante')
         nombre = nombre.strip()
         apellidos = apellidos.strip()
         
-        # Verificar que la contraseña sea �nica
-        if not verificar_contrasena_unica(password):
-            return False, "Esta contraseña ya está siendo utilizada por otro usuario. Por favor, elige una diferente."
+        
         
         # Hash de la contraseña
         password_hash = hashlib.md5(password.encode()).hexdigest()
@@ -245,7 +243,7 @@ def enviar_correo_confirmacion(email):
         )
         
         mail.send(msg)
-        print(f"? Correo de confirmaci�n enviado exitosamente a: {email}")
+        print(f"? Correo de confirmacion enviado exitosamente a: {email}")
         return True, "Correo enviado exitosamente"
         
     except Exception as e:
@@ -268,14 +266,14 @@ def activar_cuenta_usuario(email):
                 return False, "El usuario no existe."
 
             if resultado[0] == 'activo':
-                return True, "Tu cuenta ya ha sido activada previamente. Ya puedes iniciar sesi�n."
+                return True, "Tu cuenta ya ha sido activada previamente. Ya puedes iniciar sesion."
 
             # Actualizar el estado a 'activo'
             cursor.execute("UPDATE usuarios SET estado = 'activo' WHERE email = %s", (email,))
             conexion.commit()
 
         conexion.close()
-        return True, "�Tu cuenta ha sido activada! Ahora puedes iniciar sesi�n."
+        return True, "Tu cuenta ha sido activada! Ahora puedes iniciar sesion."
 
     except Exception as e:
         print(f"Error al activar la cuenta de {email}: {e}")
