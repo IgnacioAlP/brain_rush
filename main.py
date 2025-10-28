@@ -2585,6 +2585,35 @@ def editar_pregunta_route(pregunta_id):
         flash(f'Error al actualizar la pregunta: {str(e)}', 'error')
         return redirect(url_for('error_sistema_page'))
 
+@app.route('/pregunta/<int:pregunta_id>/obtener', methods=['GET'])
+@login_required
+def obtener_pregunta_route(pregunta_id):
+    """Obtener los datos de una pregunta para edición"""
+    try:
+        # Verificar que el usuario es docente
+        if session.get('usuario_tipo') != 'docente':
+            return jsonify({'success': False, 'error': 'Solo los docentes pueden obtener preguntas'}), 403
+        
+        # Obtener la pregunta
+        pregunta = controlador_preguntas.obtener_pregunta_por_id(pregunta_id)
+        
+        if not pregunta:
+            return jsonify({'success': False, 'error': 'Pregunta no encontrada'}), 404
+        
+        # Obtener las opciones de la pregunta
+        opciones = controlador_opciones.obtener_opciones_por_pregunta(pregunta_id)
+        
+        pregunta['opciones'] = opciones
+        
+        return jsonify({
+            'success': True,
+            'pregunta': pregunta
+        })
+        
+    except Exception as e:
+        print(f"Error al obtener pregunta: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/pregunta/<int:pregunta_id>/eliminar', methods=['POST'])
 @login_required
 def eliminar_pregunta_route(pregunta_id):
@@ -2607,6 +2636,308 @@ def eliminar_pregunta_route(pregunta_id):
             return jsonify({'success': False, 'error': str(e)}), 400
         flash(f'Error al eliminar la pregunta: {str(e)}', 'error')
         return redirect(url_for('error_sistema_page'))
+
+@app.route('/cuestionario/<int:id_cuestionario>/descargar-plantilla', methods=['GET'])
+@login_required
+def descargar_plantilla_excel(id_cuestionario):
+    """Descargar plantilla de Excel para importar preguntas"""
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill, Alignment
+        from io import BytesIO
+        
+        # Verificar que el usuario es docente
+        if session.get('usuario_tipo') != 'docente':
+            flash('Solo los docentes pueden descargar plantillas', 'error')
+            return redirect(url_for('dashboard_docente'))
+        
+        # Verificar que el cuestionario existe y pertenece al docente
+        cuestionario = controlador_cuestionarios.obtener_cuestionario_por_id(id_cuestionario)
+        if not cuestionario or cuestionario.get('id_docente') != session.get('usuario_id'):
+            flash('No tienes permiso para acceder a este cuestionario', 'error')
+            return redirect(url_for('mis_cuestionarios'))
+        
+        # Crear libro de Excel
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Preguntas"
+        
+        # Configurar encabezados
+        headers = ['Pregunta', 'Opción A', 'Opción B', 'Opción C', 'Opción D', 'Respuesta Correcta', 'Tiempo (segundos)']
+        header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+        header_font = Font(bold=True, color="FFFFFF")
+        
+        for col_num, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col_num)
+            cell.value = header
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal='center', vertical='center')
+        
+        # Agregar fila de instrucciones
+        instruction_fill = PatternFill(start_color="FFF2CC", end_color="FFF2CC", fill_type="solid")
+        instruction_font = Font(italic=True, color="7F6000")
+        
+        instructions = [
+            "Escribe aquí la pregunta",
+            "Primera opción de respuesta",
+            "Segunda opción de respuesta",
+            "(Opcional) Tercera opción",
+            "(Opcional) Cuarta opción",
+            "Escribe la letra de la opción correcta: A, B, C o D",
+            "Tiempo en segundos (ej: 30)"
+        ]
+        
+        for col_num, instruction in enumerate(instructions, 1):
+            cell = ws.cell(row=2, column=col_num)
+            cell.value = instruction
+            cell.fill = instruction_fill
+            cell.font = instruction_font
+        
+        # Agregar ejemplo
+        example_fill = PatternFill(start_color="E2EFDA", end_color="E2EFDA", fill_type="solid")
+        example = [
+            "¿Cuál es la capital de Francia?",
+            "Madrid",
+            "París",
+            "Roma",
+            "Berlín",
+            "B",
+            "30"
+        ]
+        
+        for col_num, value in enumerate(example, 1):
+            cell = ws.cell(row=3, column=col_num)
+            cell.value = value
+            cell.fill = example_fill
+        
+        # Agregar filas vacías para que el usuario complete
+        for row in range(4, 24):
+            for col in range(1, 8):
+                ws.cell(row=row, column=col)
+        
+        # Ajustar ancho de columnas
+        column_widths = [50, 30, 30, 30, 30, 20, 20]
+        for col_num, width in enumerate(column_widths, 1):
+            ws.column_dimensions[chr(64 + col_num)].width = width
+        
+        # Guardar en memoria
+        excel_file = BytesIO()
+        wb.save(excel_file)
+        excel_file.seek(0)
+        
+        # Crear nombre de archivo
+        filename = f"plantilla_preguntas_{cuestionario['titulo'].replace(' ', '_')}.xlsx"
+        
+        return send_file(
+            excel_file,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=filename
+        )
+        
+    except Exception as e:
+        print(f"Error al generar plantilla Excel: {str(e)}")
+        flash(f'Error al generar la plantilla: {str(e)}', 'error')
+        return redirect(url_for('editar_cuestionario', cuestionario_id=id_cuestionario))
+
+@app.route('/cuestionario/<int:id_cuestionario>/importar-preguntas', methods=['POST'])
+@login_required
+def importar_preguntas_excel(id_cuestionario):
+    """Importar preguntas desde un archivo Excel"""
+    try:
+        from openpyxl import load_workbook
+        
+        # Verificar que el usuario es docente
+        if session.get('usuario_tipo') != 'docente':
+            return jsonify({'success': False, 'error': 'Solo los docentes pueden importar preguntas'}), 403
+        
+        # Verificar que el cuestionario existe y pertenece al docente
+        cuestionario = controlador_cuestionarios.obtener_cuestionario_por_id(id_cuestionario)
+        if not cuestionario or cuestionario.get('id_docente') != session.get('usuario_id'):
+            return jsonify({'success': False, 'error': 'No tienes permiso para acceder a este cuestionario'}), 403
+        
+        # Verificar que se envió un archivo
+        if 'excel_file' not in request.files:
+            return jsonify({'success': False, 'error': 'No se envió ningún archivo'}), 400
+        
+        file = request.files['excel_file']
+        
+        if file.filename == '':
+            return jsonify({'success': False, 'error': 'No se seleccionó ningún archivo'}), 400
+        
+        if not file.filename.endswith(('.xlsx', '.xls')):
+            return jsonify({'success': False, 'error': 'El archivo debe ser de formato Excel (.xlsx o .xls)'}), 400
+        
+        # Cargar el archivo Excel
+        wb = load_workbook(file)
+        ws = wb.active
+        
+        print(f"DEBUG: Archivo Excel cargado. Hojas disponibles: {wb.sheetnames}")
+        print(f"DEBUG: Hoja activa: {ws.title}")
+        print(f"DEBUG: Total de filas en la hoja: {ws.max_row}")
+        print(f"DEBUG: Total de columnas en la hoja: {ws.max_column}")
+        
+        preguntas_importadas = []
+        errores = []
+        
+        # Mostrar las primeras 5 filas para depuración
+        print("\n=== CONTENIDO DEL EXCEL ===")
+        for i, row in enumerate(ws.iter_rows(min_row=1, max_row=5, values_only=True), start=1):
+            print(f"Fila {i}: {row}")
+        print("=========================\n")
+        
+        # Procesar filas (empezando desde la fila 4 para saltar encabezados, instrucciones y ejemplo)
+        filas_procesadas = 0
+        for row_num, row in enumerate(ws.iter_rows(min_row=4, values_only=True), start=4):
+            filas_procesadas += 1
+            print(f"\nDEBUG: Procesando fila {row_num}: {row}")
+            
+            # Saltar filas vacías
+            if not row[0] or str(row[0]).strip() == '':
+                print(f"DEBUG: Fila {row_num} vacía o sin pregunta, saltando...")
+                continue
+            
+            try:
+                # Extraer datos de la fila
+                texto_pregunta = str(row[0]).strip()
+                opcion_a = str(row[1]).strip() if row[1] else ''
+                opcion_b = str(row[2]).strip() if row[2] else ''
+                opcion_c = str(row[3]).strip() if row[3] else ''
+                opcion_d = str(row[4]).strip() if row[4] else ''
+                respuesta_correcta = str(row[5]).strip().upper() if row[5] else ''
+                tiempo = int(row[6]) if row[6] else cuestionario.get('tiempo_limite_pregunta', 30)
+                
+                # Validaciones
+                if not texto_pregunta:
+                    errores.append(f"Fila {row_num}: La pregunta no puede estar vacía")
+                    continue
+                
+                if not opcion_a or not opcion_b:
+                    errores.append(f"Fila {row_num}: Se requieren al menos 2 opciones (A y B)")
+                    continue
+                
+                if respuesta_correcta not in ['A', 'B', 'C', 'D']:
+                    errores.append(f"Fila {row_num}: La respuesta correcta debe ser A, B, C o D")
+                    continue
+                
+                # Validar que la respuesta correcta corresponde a una opción existente
+                opciones_disponibles = []
+                if opcion_a: opciones_disponibles.append('A')
+                if opcion_b: opciones_disponibles.append('B')
+                if opcion_c: opciones_disponibles.append('C')
+                if opcion_d: opciones_disponibles.append('D')
+                
+                if respuesta_correcta not in opciones_disponibles:
+                    errores.append(f"Fila {row_num}: La respuesta correcta '{respuesta_correcta}' no tiene opción asociada")
+                    continue
+                
+                if tiempo < 5 or tiempo > 300:
+                    errores.append(f"Fila {row_num}: El tiempo debe estar entre 5 y 300 segundos")
+                    continue
+                
+                # Crear la pregunta con la firma correcta
+                print(f"DEBUG: Creando pregunta: '{texto_pregunta}'")
+                pregunta_id = controlador_preguntas.crear_pregunta(
+                    enunciado=texto_pregunta,
+                    tipo='opcion_multiple',
+                    cuestionario_id=id_cuestionario,
+                    puntaje_base=1,
+                    tiempo_limite=tiempo
+                )
+                
+                print(f"DEBUG: Pregunta creada con ID: {pregunta_id}")
+                
+                if not pregunta_id:
+                    errores.append(f"Fila {row_num}: Error al crear la pregunta en la base de datos")
+                    continue
+                
+                # Crear las opciones
+                opciones_data = []
+                if opcion_a:
+                    opciones_data.append({
+                        'texto': opcion_a,
+                        'es_correcta': 1 if respuesta_correcta == 'A' else 0
+                    })
+                if opcion_b:
+                    opciones_data.append({
+                        'texto': opcion_b,
+                        'es_correcta': 1 if respuesta_correcta == 'B' else 0
+                    })
+                if opcion_c:
+                    opciones_data.append({
+                        'texto': opcion_c,
+                        'es_correcta': 1 if respuesta_correcta == 'C' else 0
+                    })
+                if opcion_d:
+                    opciones_data.append({
+                        'texto': opcion_d,
+                        'es_correcta': 1 if respuesta_correcta == 'D' else 0
+                    })
+                
+                print(f"DEBUG: Creando {len(opciones_data)} opciones para pregunta {pregunta_id}")
+                
+                # Guardar las opciones
+                opciones_creadas = True
+                for idx, opcion_data in enumerate(opciones_data):
+                    resultado = controlador_opciones.crear_opcion(
+                        id_pregunta=pregunta_id,
+                        texto_opcion=opcion_data['texto'],
+                        es_correcta=opcion_data['es_correcta'],
+                        explicacion=''
+                    )
+                    print(f"DEBUG: Opción {idx+1} '{opcion_data['texto']}' creada: {resultado}")
+                    if not resultado:
+                        opciones_creadas = False
+                        break
+                
+                if not opciones_creadas:
+                    # Si falla la creación de opciones, eliminar la pregunta
+                    print(f"DEBUG: Error al crear opciones, eliminando pregunta {pregunta_id}")
+                    controlador_preguntas.eliminar_pregunta(pregunta_id)
+                    errores.append(f"Fila {row_num}: Error al crear las opciones de respuesta")
+                    continue
+                
+                # La pregunta ya fue asociada al cuestionario por crear_pregunta()
+                # Solo agregamos a la lista de importadas
+                preguntas_importadas.append({
+                    'id_pregunta': pregunta_id,
+                    'texto': texto_pregunta,
+                    'orden': len(preguntas_importadas) + 1
+                })
+                
+                print(f"DEBUG: Pregunta importada exitosamente: {texto_pregunta}")
+                
+            except Exception as e:
+                print(f"DEBUG: Error al procesar fila {row_num}: {str(e)}")
+                errores.append(f"Fila {row_num}: {str(e)}")
+                continue
+        
+        print(f"\n=== RESUMEN DE IMPORTACIÓN ===")
+        print(f"Filas procesadas: {filas_procesadas}")
+        print(f"Preguntas importadas: {len(preguntas_importadas)}")
+        print(f"Errores encontrados: {len(errores)}")
+        print("============================\n")
+        
+        # Preparar respuesta
+        total_importadas = len(preguntas_importadas)
+        
+        if total_importadas == 0 and len(errores) == 0:
+            return jsonify({
+                'success': False,
+                'error': 'No se encontraron preguntas válidas en el archivo. Asegúrate de seguir el formato de la plantilla.'
+            }), 400
+        
+        return jsonify({
+            'success': True,
+            'total_importadas': total_importadas,
+            'errores': errores,
+            'preguntas': preguntas_importadas
+        })
+        
+    except Exception as e:
+        print(f"Error al importar preguntas: {str(e)}")
+        return jsonify({'success': False, 'error': f'Error al procesar el archivo: {str(e)}'}), 500
 
 @app.route('/pregunta/<int:pregunta_id>/editar', methods=['POST'])
 @login_required

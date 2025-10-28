@@ -189,22 +189,6 @@
     color: white;
 }
 
-@media (max-width: 768px) {
-    .quiz-header {
-        flex-direction: column;
-        gap: var(--space-md);
-    }
-    
-    .quiz-meta {
-        flex-wrap: wrap;
-        gap: var(--space-md);
-    }
-    
-    .quiz-actions {
-        justify-content: center;
-    }
-}
-
 /* Estilos para botones de acción */
 .btn-success {
     background: linear-gradient(135deg, #28a745, #20c997);
@@ -524,6 +508,124 @@
     text-decoration: none;
 }
 
+
+/* --- INICIO BLOQUE RESPONSIVO --- */
+
+/* Estilos para Tablet (Tu bloque original) */
+@media (max-width: 768px) {
+    .quiz-header {
+        flex-direction: column;
+        gap: var(--space-md);
+    }
+    
+    .quiz-meta {
+        flex-wrap: wrap;
+        gap: var(--space-md);
+    }
+    
+    .quiz-actions {
+        /* Se ajusta a wrap para que los botones fluyan */
+        flex-wrap: wrap; 
+        justify-content: flex-start; /* Alinea al inicio */
+    }
+}
+
+/* Estilos para Celular (Nuevo bloque) */
+@media (max-width: 480px) {
+    /* --- Ajustes Generales de la Página --- */
+    .page-title {
+        font-size: 2rem; /* Reducir un poco el título principal */
+    }
+    
+    .page-subtitle {
+        font-size: 1rem;
+    }
+    
+    /* --- Ajustes de la Tarjeta de Cuestionario --- */
+    .quiz-card {
+        padding: var(--space-lg); /* Menos padding en la tarjeta */
+    }
+
+    .quiz-title {
+        font-size: 1.25rem; /* Título de tarjeta más pequeño */
+    }
+    
+    /* * ¡Esto es lo más importante! 
+     * Apila los botones de acción verticalmente.
+     */
+    .quiz-actions {
+        flex-direction: column; /* Apilar botones */
+        align-items: stretch; /* Estirar botones al 100% del ancho */
+        gap: var(--space-md); /* Más espacio vertical entre botones */
+    }
+    
+    .action-btn {
+        justify-content: center; /* Centrar ícono y texto */
+    }
+
+    /* --- Ajustes del Modal --- */
+    .modal-overlay {
+        padding: 0.5rem; /* Menos padding alrededor del modal */
+    }
+    
+    .modal-content {
+        max-height: 95vh; /* Permitir que ocupe casi toda la altura */
+    }
+    
+    .modal-header,
+    .modal-body {
+        padding: 1.5rem 1rem; /* Menos padding dentro del modal */
+    }
+
+    .modal-title {
+        font-size: 1.2rem;
+    }
+
+    /* --- Ajustes de los Items de Sala (en el modal) --- */
+    .sala-item {
+        padding: 1rem; /* Menos padding */
+    }
+    
+    /* Apila la info de la sala y el badge de estado */
+    .sala-header-info {
+        flex-direction: column; 
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+    
+    /* Apila los meta-items (fecha, participantes, modo) */
+    .sala-meta {
+        flex-direction: column;
+        gap: 0.5rem;
+        align-items: flex-start;
+    }
+    
+    /* Apila los botones de la sala (Ver Resultados, Exportar) */
+    .sala-actions {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+    }
+    
+    .sala-btn {
+        justify-content: center; /* Centrar texto/ícono */
+    }
+
+    /* --- Ajustes del Estado Vacío --- */
+    .empty-state {
+        padding: var(--space-xl) var(--space-lg); /* Menos padding */
+    }
+    
+    .empty-title {
+        font-size: 1.25rem;
+    }
+
+    .create-btn {
+        font-size: 1rem;
+        padding: var(--space-md) var(--space-lg);
+    }
+}
+
 </style>
 {% endblock %}
 
@@ -592,16 +694,11 @@
 
 
                     {% if cuestionario.estado == 'borrador' %}
-                    <a href="{{ url_for('agregar_preguntas', cuestionario_id=cuestionario.id_cuestionario) }}" 
-                       class="action-btn btn-primary">
-                        <i class="fas fa-plus"></i>
-                        Agregar Preguntas
-                    </a>
-                    
                     <button onclick="publicarCuestionario({{ cuestionario.id_cuestionario }})" 
                             class="action-btn btn-success" title="Publicar cuestionario">
                         <i class="fas fa-share"></i>
                         Publicar
+                    </button>
                    
                     {% elif cuestionario.estado == 'publicado' %}
                     <a href="{{ url_for('crear_sala_para_cuestionario', cuestionario_id=cuestionario.id_cuestionario) }}" 
@@ -752,7 +849,7 @@ function despublicarCuestionario(cuestionarioId) {
 
 // Funciones para el modal de historial de salas
 async function verHistorialSalas(cuestionarioId, tituloQuestionario) {
-    console.log('� INICIO verHistorialSalas');
+    console.log('  INICIO verHistorialSalas');
     console.log('📊 Cuestionario ID:', cuestionarioId);
     console.log('📝 Título:', tituloQuestionario);
     
@@ -1087,4 +1184,3 @@ async function exportarOneDrive(salaId, ranking, totalPreguntas, titulo) {
 }
 </script>
 {% endblock %}
-

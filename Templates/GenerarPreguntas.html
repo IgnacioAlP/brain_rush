@@ -738,19 +738,19 @@
 
 {% block extra_js %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const questionText = document.getElementById('question-text');
-    const submitBtn = document.getElementById('submit-btn');
-    const addOptionBtn = document.getElementById('add-option-btn');
-    const optionsCount = document.getElementById('options-count');
-    const correctCount = document.getElementById('correct-count');
-    const correctAnswerInput = document.getElementById('correct-answer');
-    
-    let visibleOptions = 2;
-    let selectedCorrect = null;
-    
-    // Validar formulario
+    // --- Funciones Globales de Validación y UI ---
+    // Se definen globalmente para que los 'onclick' y los 'listeners' puedan usarlas.
+
+    /**
+     * Valida el estado completo del formulario y habilita/deshabilita el botón de envío.
+     */
     function validateForm() {
+        const questionText = document.getElementById('question-text');
+        const submitBtn = document.getElementById('submit-btn');
+        
+        // Guardia por si los elementos no cargan
+        if (!questionText || !submitBtn) return false; 
+
         const question = questionText.value.trim();
         const options = document.querySelectorAll('.option-card:not([style*="display: none"]) .option-input');
         const hasCorrectAnswer = document.querySelector('.correct-toggle.active');
@@ -762,198 +762,218 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        const isValid = question && allOptionsFilled && hasCorrectAnswer && visibleOptions >= 2;
+        const visibleOptionsCount = options.length; 
+        
+        // Condición final de validación
+        const isValid = question && allOptionsFilled && hasCorrectAnswer && visibleOptionsCount >= 2;
         submitBtn.disabled = !isValid;
         
         return isValid;
     }
-    
-    // Event listeners para validación en tiempo real
-    questionText.addEventListener('input', validateForm);
-    
-    document.addEventListener('input', function(e) {
-        if (e.target.classList.contains('option-input')) {
-            validateForm();
-        }
-    });
-    
-    // Actualizar contadores
+
+    /**
+     * Actualiza los contadores (ej. "2 de 4 opciones") y el estado del botón "Agregar Opción".
+     * IMPORTANTE: Llama a validateForm() al final para asegurar que el estado del formulario se recalcula.
+     */
     function updateCounts() {
-        optionsCount.textContent = visibleOptions;
-        const correctOptions = document.querySelectorAll('.correct-toggle.active').length;
-        correctCount.textContent = correctOptions;
+        const addOptionBtn = document.getElementById('add-option-btn');
+        const optionsCountEl = document.getElementById('options-count');
+        const correctCountEl = document.getElementById('correct-count');
+
+        if (!addOptionBtn || !optionsCountEl || !correctCountEl) return; // Guardia
+
+        const visibleOptionsCount = document.querySelectorAll('.option-card:not([style*="display: none"])').length;
+        const correctOptionsCount = document.querySelectorAll('.correct-toggle.active').length;
         
-        // Actualizar estado del botón agregar opción
-        addOptionBtn.disabled = visibleOptions >= 4;
-        if (visibleOptions >= 4) {
-            addOptionBtn.style.opacity = '0.6';
+        optionsCountEl.textContent = visibleOptionsCount;
+        correctCountEl.textContent = correctOptionsCount;
+        
+        // Deshabilitar botón de agregar si ya hay 4 opciones
+        addOptionBtn.disabled = visibleOptionsCount >= 4;
+        addOptionBtn.style.opacity = visibleOptionsCount >= 4 ? '0.6' : '1';
+        
+        // **LA SOLUCIÓN AL BUG ESTÁ AQUÍ**
+        // Cada vez que los contadores se actualizan (por clic, añadir o borrar), 
+        // se fuerza una revalidación de todo el formulario.
+        validateForm();
+    }
+
+    // --- Funciones de Eventos (llamadas desde onclick) ---
+
+    /**
+     * Se llama al hacer clic en el círculo de respuesta correcta.
+     */
+    function toggleCorrect(element) {
+        // Remover 'active' de todos los demás botones
+        document.querySelectorAll('.correct-toggle').forEach(toggle => {
+            if (toggle !== element) {
+                toggle.classList.remove('active');
+                toggle.closest('.option-card').classList.remove('correct');
+            }
+        });
+        
+        // Alternar (toggle) el botón clickeado
+        element.classList.toggle('active');
+        const optionCard = element.closest('.option-card');
+        const correctAnswerInput = document.getElementById('correct-answer');
+        
+        if (element.classList.contains('active')) {
+            // Si se activó
+            optionCard.classList.add('correct');
+            correctAnswerInput.value = optionCard.dataset.option;
         } else {
-            addOptionBtn.style.opacity = '1';
+            // Si se desactivó (el usuario hizo clic en una opción ya activa)
+            optionCard.classList.remove('correct');
+            correctAnswerInput.value = '';
+        }
+        
+        // Actualizar contadores y validar
+        updateCounts(); 
+    }
+
+    /**
+     * Muestra la siguiente opción oculta.
+     */
+    function addOption() {
+        const container = document.getElementById('options-container');
+        const hiddenOptions = container.querySelectorAll('.option-card[style*="display: none"]');
+        
+        if (hiddenOptions.length > 0) {
+            const nextOption = hiddenOptions[0];
+            nextOption.style.display = 'flex'; // Usar 'flex' para que coincida con el CSS
+            nextOption.classList.add('animate-fadeIn');
+            
+            // La nueva opción ahora es requerida
+            const input = nextOption.querySelector('.option-input');
+            input.required = true; 
+            
+            input.focus();
+            
+            // Actualizar contadores y validar
+            updateCounts();
         }
     }
-    
-    // Inicializar contadores
-    updateCounts();
-});
 
-function toggleCorrect(element) {
-    // Remover selección anterior
-    document.querySelectorAll('.correct-toggle').forEach(toggle => {
-        toggle.classList.remove('active');
-        toggle.parentElement.parentElement.classList.remove('correct');
-    });
-    
-    // Seleccionar nueva respuesta correcta
-    element.classList.add('active');
-    const optionCard = element.parentElement.parentElement;
-    optionCard.classList.add('correct');
-    
-    // Actualizar input oculto
-    const optionIndex = optionCard.dataset.option;
-    document.getElementById('correct-answer').value = optionIndex;
-    
-    // Actualizar contador
-    document.getElementById('correct-count').textContent = '1';
-    
-    // Validar formulario
-    document.dispatchEvent(new Event('input'));
-}
-
-function addOption() {
-    const container = document.getElementById('options-container');
-    const hiddenOptions = container.querySelectorAll('.option-card[style*="display: none"]');
-    
-    if (hiddenOptions.length > 0) {
-        const nextOption = hiddenOptions[0];
-        nextOption.style.display = 'block';
-        nextOption.classList.add('animate-fadeIn');
+    /**
+     * Oculta una opción (solo si hay más de 2).
+     */
+    function removeOption(button) {
+        const visibleOptionsCount = document.querySelectorAll('.option-card:not([style*="display: none"])').length;
         
-        // Actualizar contador de opciones visibles
-        window.visibleOptions = document.querySelectorAll('.option-card:not([style*="display: none"])').length;
+        if (visibleOptionsCount <= 2) {
+            alert('Debes tener al menos 2 opciones.');
+            return;
+        }
         
-        // Actualizar contadores
-        updateCounts();
-        
-        // Focus en el nuevo input
-        nextOption.querySelector('.option-input').focus();
-        
-        // Validar formulario
-        setTimeout(() => {
-            document.dispatchEvent(new Event('input'));
-        }, 100);
-    }
-}
-
-function removeOption(button) {
-    const optionCard = button.parentElement;
-    const visibleOptions = document.querySelectorAll('.option-card:not([style*="display: none"])');
-    
-    if (visibleOptions.length > 2) {
-        // Verificar si esta opción era la correcta
+        const optionCard = button.closest('.option-card');
         const wasCorrect = optionCard.classList.contains('correct');
         
         optionCard.style.display = 'none';
         optionCard.classList.remove('correct');
         
-        // Limpiar input
+        // Limpiar y marcar como no-requerido
         const input = optionCard.querySelector('.option-input');
         input.value = '';
+        input.required = false; 
         
-        // Si era la respuesta correcta, limpiar selección
+        // Si la opción borrada era la correcta, limpiar la selección
         if (wasCorrect) {
-            const toggle = optionCard.querySelector('.correct-toggle');
-            toggle.classList.remove('active');
+            optionCard.querySelector('.correct-toggle').classList.remove('active');
             document.getElementById('correct-answer').value = '';
         }
         
-        // Actualizar contador de opciones visibles
-        window.visibleOptions = document.querySelectorAll('.option-card:not([style*="display: none"])').length;
-        
-        // Actualizar contadores
+        // Actualizar contadores y validar
         updateCounts();
-        
-        // Validar formulario
-        document.dispatchEvent(new Event('input'));
     }
-}
 
-function updateCounts() {
-    const visibleOptionsCount = document.querySelectorAll('.option-card:not([style*="display: none"])').length;
-    const correctOptionsCount = document.querySelectorAll('.correct-toggle.active').length;
-    
-    document.getElementById('options-count').textContent = visibleOptionsCount;
-    document.getElementById('correct-count').textContent = correctOptionsCount;
-    
-    const addBtn = document.getElementById('add-option-btn');
-    addBtn.disabled = visibleOptionsCount >= 4;
-    addBtn.style.opacity = visibleOptionsCount >= 4 ? '0.6' : '1';
-    
-    window.visibleOptions = visibleOptionsCount;
-}
-
-function previewQuestion() {
-    const questionText = document.getElementById('question-text').value;
-    const options = [];
-    const correctIndex = document.getElementById('correct-answer').value;
-    
-    document.querySelectorAll('.option-card:not([style*="display: none"]) .option-input').forEach((input, index) => {
-        if (input.value.trim()) {
-            options.push({
-                text: input.value,
-                correct: index.toString() === correctIndex
-            });
-        }
-    });
-    
-    if (questionText && options.length >= 2) {
-        let previewHTML = `
-            <div style="background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); max-width: 500px;">
-                <h3 style="color: #333; margin-bottom: 20px;">${questionText}</h3>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-        `;
+    /**
+     * Muestra la vista previa (no afecta la validación).
+     */
+    function previewQuestion() {
+        const questionText = document.getElementById('question-text').value;
+        const options = [];
+        const correctIndex = document.getElementById('correct-answer').value;
         
-        const colors = ['#e74c3c', '#3498db', '#f1c40f', '#2ecc71'];
-        const letters = ['A', 'B', 'C', 'D'];
-        
-        options.forEach((option, index) => {
-            const bgColor = option.correct ? 'rgba(150, 206, 180, 0.3)' : 'rgba(0,0,0,0.05)';
-            const borderColor = option.correct ? '#2ecc71' : colors[index];
-            
-            previewHTML += `
-                <div style="background: ${bgColor}; border: 2px solid ${borderColor}; border-radius: 8px; padding: 15px; text-align: center;">
-                    <strong>${letters[index]}.</strong> ${option.text}
-                    ${option.correct ? ' ✓' : ''}
-                </div>
-            `;
+        document.querySelectorAll('.option-card:not([style*="display: none"]) .option-input').forEach((input) => {
+            const optionCard = input.closest('.option-card');
+            const originalIndex = optionCard.dataset.option;
+            if (input.value.trim()) {
+                options.push({
+                    text: input.value,
+                    correct: originalIndex === correctIndex,
+                    originalIndex: parseInt(originalIndex)
+                });
+            }
         });
         
-        previewHTML += '</div></div>';
-        
-        // Crear modal para vista previa
-        const modal = document.createElement('div');
-        modal.style.cssText = `
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.8); display: flex; align-items: center; 
-            justify-content: center; z-index: 1000; animation: fadeIn 0.3s ease;
-        `;
-        modal.innerHTML = `
-            <div style="position: relative;">
-                ${previewHTML}
-                <button onclick="this.parentElement.parentElement.remove()" 
-                        style="position: absolute; top: -10px; right: -10px; 
-                               background: #e74c3c; color: white; border: none; 
-                               border-radius: 50%; width: 30px; height: 30px; 
-                               cursor: pointer; font-weight: bold;">✕</button>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-    } else {
-        alert('Por favor completa la pregunta y al menos 2 opciones antes de previsualizar.');
+        if (questionText && options.length >= 2) {
+            let previewHTML = `
+                <div style="background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); max-width: 500px;">
+                    <h3 style="color: #333; margin-bottom: 20px;">${questionText}</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            `;
+            
+            const colors = ['#e74c3c', '#3498db', '#f1c40f', '#2ecc71'];
+            const letters = ['A', 'B', 'C', 'D'];
+            
+            options.forEach((option) => {
+                const index = option.originalIndex;
+                const bgColor = option.correct ? 'rgba(150, 206, 180, 0.3)' : 'rgba(0,0,0,0.05)';
+                const borderColor = option.correct ? '#2ecc71' : colors[index];
+                
+                previewHTML += `
+                    <div style="background: ${bgColor}; border: 2px solid ${borderColor}; border-radius: 8px; padding: 15px; text-align: center;">
+                        <strong>${letters[index]}.</strong> ${option.text}
+                        ${option.correct ? ' ✓' : ''}
+                    </div>
+                `;
+            });
+            
+            previewHTML += '</div></div>';
+            
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                background: rgba(0,0,0,0.8); display: flex; align-items: center; 
+                justify-content: center; z-index: 1000; animation: fadeIn 0.3s ease;
+            `;
+            modal.innerHTML = `
+                <div style="position: relative;">
+                    ${previewHTML}
+                    <button onclick="this.parentElement.parentElement.remove()" 
+                            style="position: absolute; top: -10px; right: -10px; 
+                                   background: #e74c3c; color: white; border: none; 
+                                   border-radius: 50%; width: 30px; height: 30px; 
+                                   cursor: pointer; font-weight: bold;">✕</button>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+        } else {
+            alert('Por favor completa la pregunta y al menos 2 opciones antes de previsualizar.');
+        }
     }
-}
 
-// Inicializar variables globales
-window.visibleOptions = 2;
+    // --- Inicialización al cargar la página ---
+
+    document.addEventListener('DOMContentLoaded', function() {
+        
+        // Listener para los campos de texto (pregunta y opciones)
+        // Llama a validateForm() directamente al escribir.
+        document.addEventListener('input', function(e) {
+            if (e.target.matches('#question-text') || e.target.matches('.option-input')) {
+                validateForm();
+            }
+        });
+
+        // Asegurarse de que las opciones ocultas (C y D) no sean 'required' al inicio
+        document.querySelectorAll('.option-card[style*="display: none"] .option-input').forEach(input => {
+            input.required = false;
+        });
+
+        // Correr el estado inicial de los contadores y la validación
+        updateCounts(); 
+    });
+
 </script>
 {% endblock %}

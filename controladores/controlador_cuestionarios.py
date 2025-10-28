@@ -473,3 +473,35 @@ def obtener_cuestionarios_publicados():
         import traceback
         traceback.print_exc()
         return []
+
+def asociar_pregunta(id_cuestionario, id_pregunta, orden):
+    """Asocia una pregunta a un cuestionario con un orden específico"""
+    try:
+        print(f"DEBUG asociar_pregunta: cuestionario={id_cuestionario}, pregunta={id_pregunta}, orden={orden}")
+        conexion = obtener_conexion()
+        cursor = conexion.cursor()
+        
+        query = """
+        INSERT INTO cuestionario_preguntas (id_cuestionario, id_pregunta, orden)
+        VALUES (%s, %s, %s)
+        """
+        
+        cursor.execute(query, (id_cuestionario, id_pregunta, orden))
+        conexion.commit()
+        
+        # Verificar que se insertó
+        cursor.execute("SELECT LAST_INSERT_ID()")
+        result = cursor.fetchone()
+        print(f"DEBUG: Registro insertado con ID: {result[0] if result else 'NULL'}")
+        
+        cursor.close()
+        conexion.close()
+        
+        print(f"DEBUG: Pregunta {id_pregunta} asociada exitosamente al cuestionario {id_cuestionario}")
+        return True
+        
+    except Exception as e:
+        print(f"Error al asociar pregunta al cuestionario: {e}")
+        import traceback
+        traceback.print_exc()
+        return False

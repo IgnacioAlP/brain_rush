@@ -750,9 +750,9 @@
     <!-- Acciones -->
     <div class="actions">
       {% if es_docente %}
-      <a href="/crear-sala" class="btn btn-primary">
-        🎮 Nuevo Juego
-      </a>
+      <a href="{{ url_for('dashboard_docente') }}" class="btn btn-primary">
+        🏠 Volver al Inicio
+      </a>
       <a href="/mis-cuestionarios" class="btn btn-secondary">
         📚 Mis Cuestionarios
       </a>

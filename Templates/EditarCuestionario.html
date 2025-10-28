@@ -448,6 +448,102 @@
         color: var(--secondary-color);
         border-color: var(--secondary-color);
     }
+
+    /* Botones de importación */
+    .import-actions {
+        display: flex;
+        gap: var(--space-md);
+        margin-bottom: var(--space-lg);
+        flex-wrap: wrap;
+    }
+
+    .import-btn,
+    .template-btn {
+        flex: 1;
+        min-width: 200px;
+        padding: var(--space-md) var(--space-lg);
+        border-radius: var(--radius-md);
+        font-size: 1rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: var(--transition-smooth);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--space-sm);
+        border: none;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .import-btn {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+    .import-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+
+    .template-btn {
+        background: linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%);
+        color: white;
+    }
+
+    .template-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+
+    #import-file-input {
+        display: none;
+    }
+
+    /* Modal de progreso */
+    .progress-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 10000;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .progress-content {
+        background: white;
+        padding: var(--space-xxl);
+        border-radius: var(--radius-xl);
+        text-align: center;
+        max-width: 500px;
+        width: 90%;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+
+    .progress-icon {
+        font-size: 64px;
+        margin-bottom: var(--space-lg);
+        animation: spin 2s linear infinite;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .progress-text {
+        font-size: 1.2rem;
+        color: var(--dark);
+        margin-bottom: var(--space-md);
+    }
+
+    .progress-detail {
+        font-size: 0.9rem;
+        color: var(--gray);
+    }
     
     .add-option-btn:hover {
         background: rgba(78, 205, 196, 0.2);
@@ -743,6 +839,23 @@
         <div id="tab-questions" class="tab-content animate-fadeIn" style="animation-delay: 0.2s;">
             <div class="form-section">
                 <h3 class="section-title"><i class="fas fa-question-circle"></i> Gestión de Preguntas</h3>
+                
+                <!-- Botones de importación -->
+                <div class="import-actions">
+                    <button type="button" class="template-btn" onclick="descargarPlantillaExcel()">
+                        <i class="fas fa-download"></i>
+                        Descargar Plantilla Excel
+                    </button>
+                    <button type="button" class="import-btn" onclick="document.getElementById('import-file-input').click()">
+                        <i class="fas fa-file-upload"></i>
+                        Importar desde Excel
+                    </button>
+                    <input type="file" 
+                           id="import-file-input" 
+                           accept=".xlsx,.xls" 
+                           onchange="importarPreguntasExcel(event)">
+                </div>
+                
                 <div class="questions-list" id="questions-list">
                     </div>
             </div>
@@ -1509,6 +1622,156 @@
     document.addEventListener('DOMContentLoaded', function() {
         renderQuestionsList();
     });
+
+    // ==================== IMPORTACIÓN DE PREGUNTAS DESDE EXCEL ====================
+    
+    function descargarPlantillaExcel() {
+        // Mostrar mensaje de descarga
+        Swal.fire({
+            title: 'Descargando plantilla...',
+            html: 'Se descargará un archivo Excel con el formato correcto para importar preguntas',
+            icon: 'info',
+            timer: 2000,
+            timerProgressBar: true,
+            showConfirmButton: false
+        });
+        
+        // Descargar plantilla desde el servidor
+        const link = document.createElement('a');
+        link.href = `/cuestionario/{{ cuestionario.id_cuestionario }}/descargar-plantilla`;
+        link.download = 'Plantilla_Preguntas_BrainRush.xlsx';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    function importarPreguntasExcel(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        // Validar que sea un archivo Excel
+        const validExtensions = ['.xlsx', '.xls'];
+        const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+        
+        if (!validExtensions.includes(fileExtension)) {
+            Swal.fire({
+                title: 'Archivo inválido',
+                text: 'Por favor selecciona un archivo Excel (.xlsx o .xls)',
+                icon: 'error',
+                confirmButtonColor: 'var(--secondary-color)'
+            });
+            event.target.value = '';
+            return;
+        }
+        
+        // Confirmar importación
+        Swal.fire({
+            title: '¿Importar preguntas?',
+            html: `
+                <p>Se importarán las preguntas del archivo:</p>
+                <p style="font-weight: bold; color: var(--secondary-color);">${file.name}</p>
+                <p style="font-size: 0.9rem; color: var(--gray); margin-top: 10px;">
+                    Las preguntas se agregarán al cuestionario actual
+                </p>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: 'var(--secondary-color)',
+            cancelButtonColor: '#aaa',
+            confirmButtonText: 'Sí, importar',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                procesarImportacionExcel(file);
+            } else {
+                event.target.value = '';
+            }
+        });
+    }
+
+    function procesarImportacionExcel(file) {
+        // Crear FormData
+        const formData = new FormData();
+        formData.append('excel_file', file);
+        
+        // Mostrar modal de progreso
+        Swal.fire({
+            title: 'Importando preguntas...',
+            html: `
+                <div style="text-align: center;">
+                    <i class="fas fa-spinner fa-spin" style="font-size: 48px; color: var(--secondary-color);"></i>
+                    <p style="margin-top: 20px; color: var(--gray);">Procesando archivo Excel...</p>
+                </div>
+            `,
+            showConfirmButton: false,
+            allowOutsideClick: false,
+            allowEscapeKey: false
+        });
+        
+        // Enviar al servidor
+        fetch(`/cuestionario/{{ cuestionario.id_cuestionario }}/importar-preguntas`, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Mostrar mensaje de éxito
+                Swal.fire({
+                    title: '¡Importación exitosa!',
+                    html: `
+                        <div style="text-align: center;">
+                            <i class="fas fa-check-circle" style="font-size: 64px; color: #4CAF50;"></i>
+                            <p style="margin-top: 20px; font-size: 1.1rem;">
+                                <strong>${data.total_importadas || 0}</strong> preguntas importadas correctamente
+                            </p>
+                            ${data.errores && data.errores.length > 0 ? `
+                                <div style="margin-top: 15px; padding: 10px; background: #FFF3CD; border-radius: 8px;">
+                                    <p style="color: #856404; font-size: 0.9rem;">
+                                        <strong>Advertencias:</strong><br>
+                                        ${data.errores.slice(0, 3).join('<br>')}
+                                        ${data.errores.length > 3 ? `<br>... y ${data.errores.length - 3} más` : ''}
+                                    </p>
+                                </div>
+                            ` : ''}
+                            <p style="margin-top: 15px; color: var(--gray); font-size: 0.9rem;">
+                                La página se recargará automáticamente...
+                            </p>
+                        </div>
+                    `,
+                    icon: 'success',
+                    confirmButtonColor: 'var(--secondary-color)',
+                    confirmButtonText: 'Aceptar',
+                    timer: 2000,
+                    timerProgressBar: true
+                }).then(() => {
+                    // Recargar la página para mostrar las preguntas nuevas
+                    window.location.reload();
+                });
+                
+                // Limpiar input
+                document.getElementById('import-file-input').value = '';
+            } else {
+                Swal.fire({
+                    title: 'Error en la importación',
+                    text: data.error || 'No se pudieron importar las preguntas',
+                    icon: 'error',
+                    confirmButtonColor: 'var(--secondary-color)'
+                });
+                document.getElementById('import-file-input').value = '';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            Swal.fire({
+                title: 'Error',
+                text: 'Hubo un problema al procesar el archivo Excel',
+                icon: 'error',
+                confirmButtonColor: 'var(--secondary-color)'
+            });
+            document.getElementById('import-file-input').value = '';
+        });
+    }
     
     // Version: 2025-10-27-20:15 - Fix botón guardando en bucle
 </script>
