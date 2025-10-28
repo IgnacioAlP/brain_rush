@@ -2745,6 +2745,10 @@ def descargar_plantilla_excel(id_cuestionario):
 @login_required
 def importar_preguntas_excel(id_cuestionario):
     """Importar preguntas desde un archivo Excel"""
+    import tempfile
+    import os
+    
+    temp_file_path = None
     try:
         from openpyxl import load_workbook
         
@@ -2769,8 +2773,14 @@ def importar_preguntas_excel(id_cuestionario):
         if not file.filename.endswith(('.xlsx', '.xls')):
             return jsonify({'success': False, 'error': 'El archivo debe ser de formato Excel (.xlsx o .xls)'}), 400
         
-        # Cargar el archivo Excel
-        wb = load_workbook(file)
+        # Guardar el archivo temporalmente
+        # Esto es necesario en PythonAnywhere y otros servidores
+        temp_fd, temp_file_path = tempfile.mkstemp(suffix='.xlsx')
+        os.close(temp_fd)  # Cerrar el file descriptor
+        file.save(temp_file_path)
+        
+        # Cargar el archivo Excel desde el archivo temporal
+        wb = load_workbook(temp_file_path)
         ws = wb.active
         
         print(f"DEBUG: Archivo Excel cargado. Hojas disponibles: {wb.sheetnames}")
@@ -2937,7 +2947,17 @@ def importar_preguntas_excel(id_cuestionario):
         
     except Exception as e:
         print(f"Error al importar preguntas: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'error': f'Error al procesar el archivo: {str(e)}'}), 500
+    finally:
+        # Limpiar el archivo temporal
+        if temp_file_path and os.path.exists(temp_file_path):
+            try:
+                os.remove(temp_file_path)
+                print(f"DEBUG: Archivo temporal eliminado: {temp_file_path}")
+            except Exception as e:
+                print(f"DEBUG: Error al eliminar archivo temporal: {str(e)}")
 
 @app.route('/pregunta/<int:pregunta_id>/editar', methods=['POST'])
 @login_required
