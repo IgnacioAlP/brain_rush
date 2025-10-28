@@ -431,24 +431,6 @@
                 <h1>¡Hola, {{ session.usuario_nombre or 'Estudiante' }}!</h1>
                 <p>¿Listo para tu próxima aventura de aprendizaje?</p>
             </div>
-            <div class="level-badge">
-                <i class="fas fa-star"></i>
-                Nivel 5 - Explorador
-            </div>
-        </div>
-        
-        <div class="progress-section">
-            <div class="progress-info">
-                <h3>Progreso hacia Nivel 6</h3>
-                <div class="progress-bar">
-                    <div class="progress-fill"></div>
-                </div>
-                <div class="progress-text">650 / 1000 XP</div>
-            </div>
-            <div class="xp-display">
-                <span class="xp-number">2,450</span>
-                <span class="xp-label">XP Total</span>
-            </div>
         </div>
     </div>
 
@@ -525,9 +507,9 @@
                     </span>
                 </div>
                 <div style="display: flex; gap: var(--space-sm);">
-                    <a href="#" class="btn-primary" style="flex: 1; text-align: center; padding: var(--space-sm) var(--space-md); background: var(--gradient-primary); color: white; border-radius: var(--radius-md); text-decoration: none; font-weight: 600; transition: var(--transition-fast);">
+                    <button onclick="jugarIndividual({{ cuestionario.id_cuestionario }})" class="btn-primary btn-jugar-individual" style="flex: 1; text-align: center; padding: var(--space-sm) var(--space-md); background: var(--gradient-primary); color: white; border-radius: var(--radius-md); border: none; font-weight: 600; transition: var(--transition-fast); cursor: pointer;">
                         <i class="fas fa-play"></i> Jugar
-                    </a>
+                    </button>
                     <a href="{{ url_for('ver_cuestionario', cuestionario_id=cuestionario.id_cuestionario) }}" class="btn-secondary" style="padding: var(--space-sm) var(--space-md); background: rgba(0,0,0,0.1); color: var(--dark); border-radius: var(--radius-md); text-decoration: none; font-weight: 600; transition: var(--transition-fast);">
                         <i class="fas fa-eye"></i>
                     </a>
@@ -548,7 +530,7 @@
             <div class="stat-icon">
                 <i class="fas fa-gamepad"></i>
             </div>
-            <div class="stat-number">47</div>
+            <div class="stat-number">{{ estadisticas.total_participaciones or 0 }}</div>
             <div class="stat-label">Partidas Jugadas</div>
         </div>
 
@@ -556,24 +538,24 @@
             <div class="stat-icon">
                 <i class="fas fa-chart-line"></i>
             </div>
-            <div class="stat-number">78%</div>
-            <div class="stat-label">Promedio Aciertos</div>
+            <div class="stat-number">{{ "%.0f"|format(estadisticas.promedio_puntaje or 0) }}</div>
+            <div class="stat-label">Promedio Puntos</div>
         </div>
 
         <div class="stat-item animate-fadeIn" style="animation-delay: 0.6s;">
             <div class="stat-icon">
-                <i class="fas fa-fire"></i>
+                <i class="fas fa-trophy"></i>
             </div>
-            <div class="stat-number">12</div>
-            <div class="stat-label">Racha Actual</div>
+            <div class="stat-number">{{ estadisticas.mejor_posicion or 'N/A' }}</div>
+            <div class="stat-label">Mejor Posición</div>
         </div>
 
         <div class="stat-item animate-fadeIn" style="animation-delay: 0.7s;">
             <div class="stat-icon">
-                <i class="fas fa-medal"></i>
+                <i class="fas fa-gift"></i>
             </div>
-            <div class="stat-number">5</div>
-            <div class="stat-label">Logros Desbloqueados</div>
+            <div class="stat-number">{{ estadisticas.recompensas_obtenidas or 0 }}</div>
+            <div class="stat-label">Recompensas Obtenidas</div>
         </div>
     </div>
 
@@ -585,40 +567,150 @@
             </h2>
         </div>
 
+        {% if partidas_recientes and partidas_recientes|length > 0 %}
         <div class="recent-games">
+            {% for partida in partidas_recientes %}
             <div class="game-item">
                 <div class="game-icon">
-                    <i class="fas fa-calculator"></i>
+                    <i class="fas fa-{% if partida.es_individual %}user{% else %}users{% endif %}"></i>
                 </div>
                 <div class="game-info">
-                    <div class="game-name">Matemáticas Avanzadas</div>
-                    <div class="game-details">Hace 2 horas • 15 preguntas</div>
+                    <div class="game-name">{{ partida.cuestionario_titulo }}</div>
+                    <div class="game-details">
+                        {{ partida.tipo }} • {{ partida.total_preguntas }} preguntas • 
+                        {% if partida.fecha %}
+                            {% set delta = (now() - partida.fecha).total_seconds() %}
+                            {% if delta < 3600 %}
+                                Hace {{ (delta / 60)|int }} min
+                            {% elif delta < 86400 %}
+                                Hace {{ (delta / 3600)|int }} horas
+                            {% elif delta < 172800 %}
+                                Ayer
+                            {% else %}
+                                Hace {{ (delta / 86400)|int }} días
+                            {% endif %}
+                        {% endif %}
+                    </div>
                 </div>
-                <div class="game-score">890 pts</div>
+                <div class="game-score">{{ partida.puntaje or 0 }} pts</div>
             </div>
-
-            <div class="game-item">
-                <div class="game-icon">
-                    <i class="fas fa-flask"></i>
-                </div>
-                <div class="game-info">
-                    <div class="game-name">Química Orgánica</div>
-                    <div class="game-details">Ayer • 20 preguntas</div>
-                </div>
-                <div class="game-score">750 pts</div>
-            </div>
-
-            <div class="game-item">
-                <div class="game-icon">
-                    <i class="fas fa-globe"></i>
-                </div>
-                <div class="game-info">
-                    <div class="game-name">Historia Mundial</div>
-                    <div class="game-details">Hace 3 días • 12 preguntas</div>
-                </div>
-                <div class="game-score">950 pts</div>
-            </div>
+            {% endfor %}
         </div>
+        {% else %}
+        <div style="text-align: center; padding: var(--space-xxl); color: rgba(0,0,0,0.4);">
+            <i class="fas fa-inbox" style="font-size: 3rem; margin-bottom: var(--space-md); opacity: 0.3;"></i>
+            <p style="font-size: 1.1rem;">Aún no has jugado ninguna partida.</p>
+            <p style="font-size: 0.9rem; color: var(--gray);">¡Únete a una sala o juega un cuestionario individual para comenzar!</p>
+        </div>
+        {% endif %}
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+async function jugarIndividual(cuestionarioId) {
+    console.log('🎮 Iniciando juego individual para cuestionario:', cuestionarioId);
+    
+    // Mostrar loading
+    Swal.fire({
+        title: 'Preparando tu juego...',
+        html: 'Creando sala automática',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+    
+    try {
+        const response = await fetch(`/jugar-individual/${cuestionarioId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Mostrar mensaje de éxito
+            await Swal.fire({
+                icon: 'success',
+                title: '¡Listo para jugar!',
+                text: `Sala creada con PIN: ${data.pin_sala}`,
+                showConfirmButton: true,
+                timer: 2000,
+                timerProgressBar: true
+            });
+            
+            // Redirigir al juego
+            window.location.href = data.redirect;
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: data.error || 'No se pudo crear la sala de juego',
+                confirmButtonColor: '#4ECDC4'
+            });
+        }
+    } catch (error) {
+        console.error('❌ Error al crear sala individual:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error de conexión',
+            text: 'No se pudo conectar con el servidor. Por favor intenta nuevamente.',
+            confirmButtonColor: '#4ECDC4'
+        });
+    }
+}
+
+// Animaciones de entrada
+document.addEventListener('DOMContentLoaded', function() {
+    // Animación de números
+    const statNumbers = document.querySelectorAll('.stat-number');
+    statNumbers.forEach(number => {
+        const finalValue = parseInt(number.textContent);
+        if (finalValue > 0) {
+            animateNumber(number, 0, finalValue, 1500);
+        }
+    });
+    
+    function animateNumber(element, start, end, duration) {
+        const startTime = performance.now();
+        
+        function update(currentTime) {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            const current = Math.floor(start + (end - start) * easeOutCubic(progress));
+            element.textContent = current;
+            
+            if (progress < 1) {
+                requestAnimationFrame(update);
+            }
+        }
+        
+        requestAnimationFrame(update);
+    }
+    
+    function easeOutCubic(t) {
+        return 1 - Math.pow(1 - t, 3);
+    }
+    
+    // Efecto hover en cards de cuestionarios
+    const cuestionarioCards = document.querySelectorAll('.cuestionario-card');
+    cuestionarioCards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-8px)';
+            this.style.boxShadow = 'var(--shadow-xl)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+            this.style.boxShadow = 'var(--shadow-md)';
+        });
+    });
+});
+</script>
 {% endblock %}

@@ -32,10 +32,18 @@ def obtener_participantes_sala(sala_id):
     try:
         with conexion.cursor() as cursor:
             cursor.execute('''
-                SELECT id_participante, id_usuario, nombre_participante, fecha_union, estado 
-                FROM participantes_sala 
-                WHERE id_sala = %s AND estado != 'desconectado'
-                ORDER BY fecha_union ASC
+                SELECT 
+                    ps.id_participante, 
+                    ps.id_usuario, 
+                    ps.nombre_participante, 
+                    ps.fecha_union, 
+                    ps.estado,
+                    ps.id_grupo,
+                    gs.nombre_grupo
+                FROM participantes_sala ps
+                LEFT JOIN grupos_sala gs ON ps.id_grupo = gs.id_grupo
+                WHERE ps.id_sala = %s AND ps.estado != 'desconectado'
+                ORDER BY ps.fecha_union ASC
             ''', (sala_id,))
             
             participantes = []
@@ -45,7 +53,9 @@ def obtener_participantes_sala(sala_id):
                     'id_usuario': row[1],
                     'nombre_participante': row[2],
                     'fecha_union': row[3],
-                    'estado': row[4]
+                    'estado': row[4],
+                    'id_grupo': row[5],
+                    'nombre_grupo': row[6]
                 })
             return participantes
     finally:

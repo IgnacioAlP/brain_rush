@@ -893,9 +893,9 @@ function mostrarListaSalas(salas, tituloQuestionario) {
                                 Descargar Excel
                             </button>
                             <button class="export-option" 
-                                    onclick="exportarSala(${sala.id_sala}, 'google-sheets', '${tituloQuestionario}')">
-                                <i class="fas fa-table"></i>
-                                Subir a Google Sheets
+                                    onclick="exportarSala(${sala.id_sala}, 'onedrive', '${tituloQuestionario}')">
+                                <i class="fas fa-envelope"></i>
+                                Exportar por Email
                             </button>
                         </div>
                     </div>
@@ -971,8 +971,8 @@ async function exportarSala(salaId, formato, cuestionarioTitulo) {
             exportarCSV(rankingData.ranking, totalPreguntas, cuestionarioTitulo);
         } else if (formato === 'excel') {
             await exportarExcel(salaId, rankingData.ranking, totalPreguntas, cuestionarioTitulo);
-        } else if (formato === 'google-sheets') {
-            await exportarGoogleSheets(salaId, rankingData.ranking, totalPreguntas, cuestionarioTitulo);
+        } else if (formato === 'onedrive') {
+            await exportarOneDrive(salaId, rankingData.ranking, totalPreguntas, cuestionarioTitulo);
         }
         
         // Cerrar menú
@@ -1040,33 +1040,51 @@ async function exportarExcel(salaId, ranking, totalPreguntas, titulo) {
     }
 }
 
-async function exportarGoogleSheets(salaId, ranking, totalPreguntas, titulo) {
-    const response = await fetch(`/api/exportar-resultados/${salaId}/google-sheets`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            ranking: ranking,
-            totalPreguntas: totalPreguntas,
-            cuestionarioTitulo: titulo
-        })
-    });
-    
-    const data = await response.json();
-    
-    if (data.auth_required) {
-        // Necesita autenticación
-        if (confirm('🔐 Necesitas autorizar el acceso a Google Sheets. ¿Continuar?')) {
-            window.open(data.auth_url, '_blank');
-            alert('✅ Después de autorizar, vuelve a intentar la exportación.');
+async function exportarOneDrive(salaId, ranking, totalPreguntas, titulo) {
+    try {
+        const response = await fetch(`/api/exportar-resultados/${salaId}/onedrive`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                ranking: ranking,
+                totalPreguntas: totalPreguntas,
+                cuestionarioTitulo: titulo
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            if (data.fallback) {
+                // OneDrive falló, se envió por email
+                alert(`⚠️ ${data.message}\n\nArchivo: ${data.file_name}\n\n💡 Revisa tu correo.`);
+            } else if (data.email_sent) {
+                // Solo email (sin intentar OneDrive)
+                alert(`✅ ${data.message}\n\nArchivo: ${data.file_name}`);
+            } else if (data.web_url) {
+                // Subido exitosamente a OneDrive
+                alert(`✅ ${data.message}\n\nCarpeta: ${data.folder}`);
+                if (confirm('¿Deseas abrir el archivo en OneDrive?')) {
+                    window.open(data.web_url, '_blank');
+                }
+            } else {
+                alert(`✅ ${data.message}\n\nArchivo: ${data.file_name}`);
+            }
+        } else if (data.require_auth) {
+            // Necesita autorizar OneDrive
+            if (confirm(`${data.message}\n\n¿Deseas autorizar OneDrive ahora?`)) {
+                window.location.href = data.auth_url;
+            }
+        } else {
+            alert('❌ ' + (data.error || 'Error al procesar la solicitud'));
         }
-    } else if (data.success) {
-        alert('📈 ¡Hoja creada en Google Sheets!');
-        window.open(data.sheet_url, '_blank');
-    } else {
-        alert('❌ ' + data.error);
+    } catch (error) {
+        console.error('Error:', error);
+        alert('❌ Error al procesar la solicitud');
     }
 }
 </script>
 {% endblock %}
+

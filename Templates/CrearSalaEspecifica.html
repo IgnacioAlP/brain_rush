@@ -319,6 +319,63 @@
                 <div class="form-help">Número máximo de estudiantes que pueden unirse a la sala</div>
             </div>
 
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="fas fa-layer-group"></i>
+                    Modo de Juego
+                </label>
+                <div class="capacidad-selector">
+                    <div class="capacidad-option modo-option selected" data-mode="individual">
+                        <div style="font-size: 2rem; margin-bottom: var(--space-xs);">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <div style="font-weight: 600;">Individual</div>
+                        <div style="font-size: 0.85rem; margin-top: var(--space-xs); color: rgba(255,255,255,0.8);">Cada uno juega solo</div>
+                    </div>
+                    <div class="capacidad-option modo-option" data-mode="grupo">
+                        <div style="font-size: 2rem; margin-bottom: var(--space-xs);">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div style="font-weight: 600;">Grupos</div>
+                        <div style="font-size: 0.85rem; margin-top: var(--space-xs); color: rgba(30,30,30,0.6);">Juego en equipos</div>
+                    </div>
+                </div>
+                <input type="hidden" id="modo_juego" name="modo_juego" value="individual">
+                <div class="form-help">Selecciona si los estudiantes jugarán individualmente o en grupos</div>
+            </div>
+
+            <!-- Configuración de Grupos (Oculto por defecto) -->
+            <div class="form-group" id="grupos-config" style="display: none;">
+                <label class="form-label">
+                    <i class="fas fa-hashtag"></i>
+                    Número de Grupos
+                </label>
+                <div class="capacidad-selector">
+                    <div class="capacidad-option grupos-option" data-value="2">
+                        <div class="capacidad-number">2</div>
+                        <div>Grupos</div>
+                    </div>
+                    <div class="capacidad-option grupos-option selected" data-value="3">
+                        <div class="capacidad-number">3</div>
+                        <div>Grupos</div>
+                    </div>
+                    <div class="capacidad-option grupos-option" data-value="4">
+                        <div class="capacidad-number">4</div>
+                        <div>Grupos</div>
+                    </div>
+                    <div class="capacidad-option grupos-option" data-value="5">
+                        <div class="capacidad-number">5</div>
+                        <div>Grupos</div>
+                    </div>
+                    <div class="capacidad-option grupos-option" data-value="6">
+                        <div class="capacidad-number">6</div>
+                        <div>Grupos</div>
+                    </div>
+                </div>
+                <input type="hidden" id="num_grupos" name="num_grupos" value="3">
+                <div class="form-help">Los estudiantes serán asignados automáticamente a grupos al unirse</div>
+            </div>
+
             <!-- Preview de la Sala -->
             <div class="preview-section">
                 <div class="preview-title">
@@ -328,6 +385,8 @@
                 <div class="preview-info">
                     <strong id="preview-name">Sala - {{ cuestionario.titulo }}</strong><br>
                     Capacidad: <span id="preview-capacity">50</span> estudiantes<br>
+                    Modo: <span id="preview-mode">Individual</span><br>
+                    <span id="preview-grupos" style="display: none;">Grupos: <span id="preview-grupos-num">3</span><br></span>
                     Cuestionario: {{ cuestionario.titulo }} ({{ cuestionario.num_preguntas }} preguntas)
                 </div>
             </div>
@@ -354,7 +413,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Manejo de selección de capacidad
-    const capacidadOptions = document.querySelectorAll('.capacidad-option');
+    const capacidadOptions = document.querySelectorAll('.capacidad-option:not(.modo-option):not(.grupos-option)');
     const capacidadInput = document.getElementById('capacidad_maxima');
     const previewCapacity = document.getElementById('preview-capacity');
     
@@ -370,6 +429,57 @@ document.addEventListener('DOMContentLoaded', function() {
             const value = this.dataset.value;
             capacidadInput.value = value;
             previewCapacity.textContent = value;
+        });
+    });
+    
+    // Manejo de selección de modo de juego
+    const modoOptions = document.querySelectorAll('.modo-option');
+    const modoInput = document.getElementById('modo_juego');
+    const gruposConfig = document.getElementById('grupos-config');
+    const previewMode = document.getElementById('preview-mode');
+    const previewGrupos = document.getElementById('preview-grupos');
+    
+    modoOptions.forEach(option => {
+        option.addEventListener('click', function() {
+            // Remover selección anterior
+            modoOptions.forEach(opt => opt.classList.remove('selected'));
+            
+            // Agregar selección actual
+            this.classList.add('selected');
+            
+            // Actualizar valor
+            const mode = this.dataset.mode;
+            modoInput.value = mode;
+            previewMode.textContent = mode === 'individual' ? 'Individual' : 'Por Grupos';
+            
+            // Mostrar/ocultar configuración de grupos
+            if (mode === 'grupo') {
+                gruposConfig.style.display = 'block';
+                previewGrupos.style.display = 'inline';
+            } else {
+                gruposConfig.style.display = 'none';
+                previewGrupos.style.display = 'none';
+            }
+        });
+    });
+    
+    // Manejo de selección de número de grupos
+    const gruposOptions = document.querySelectorAll('.grupos-option');
+    const gruposInput = document.getElementById('num_grupos');
+    const previewGruposNum = document.getElementById('preview-grupos-num');
+    
+    gruposOptions.forEach(option => {
+        option.addEventListener('click', function() {
+            // Remover selección anterior
+            gruposOptions.forEach(opt => opt.classList.remove('selected'));
+            
+            // Agregar selección actual
+            this.classList.add('selected');
+            
+            // Actualizar valor
+            const value = this.dataset.value;
+            gruposInput.value = value;
+            previewGruposNum.textContent = value;
         });
     });
     

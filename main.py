@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, Response, session, send_file
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, Response, session, send_file, current_app
 from werkzeug.exceptions import InternalServerError
 from config import config
 from bd import verificar_conexion, obtener_conexion, inicializar_usuarios_prueba
@@ -6,7 +6,9 @@ import random
 from flask_wtf.csrf import CSRFProtect
 import os, json
 from io import BytesIO
-from datetime import datetime
+from datetime import datetime, timedelta
+import requests
+import msal
 
 # Cargar variables de entorno desde .env
 from dotenv import load_dotenv
@@ -37,6 +39,15 @@ app.config['WTF_CSRF_TIME_LIMIT'] = None  # No expirar el token
 app.config['WTF_CSRF_SSL_STRICT'] = False  # No requerir HTTPS
 app.config['WTF_CSRF_CHECK_DEFAULT'] = True
 app.config['WTF_CSRF_ENABLED'] = False  # Deshabilitar CSRF globalmente para poder usar fetch() sin token
+
+# Agregar funciones al contexto de Jinja
+@app.context_processor
+def utility_processor():
+    """Agrega funciones útiles al contexto de Jinja"""
+    def now():
+        return datetime.now()
+    return dict(now=now)
+
 # Importar controladores
 from controladores import controlador_salas
 from controladores import controlador_usuario
@@ -69,6 +80,7 @@ def verificar_y_crear_tabla_salas():
                 id_cuestionario INT,
                 modo_juego ENUM('individual', 'grupo') DEFAULT 'individual',
                 estado ENUM('esperando', 'en_curso', 'finalizada') DEFAULT 'esperando',
+                tiempo_por_pregunta INT DEFAULT 30,
                 fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (id_cuestionario) REFERENCES cuestionarios(id_cuestionario)
             )
@@ -124,6 +136,61 @@ def crear_sala_simple(cuestionario_id):
         if 'conexion' in locals():
             conexion.close()
         return None, None
+
+def crear_grupos_para_sala(sala_id, num_grupos):
+    """
+    Crea grupos para una sala de juego.
+    
+    Args:
+        sala_id: ID de la sala
+        num_grupos: Número de grupos a crear (2-6)
+    
+    Returns:
+        True si se crearon exitosamente, False en caso de error
+    """
+    try:
+        print(f"DEBUG: crear_grupos_para_sala - Iniciando para sala {sala_id} con {num_grupos} grupos")
+        
+        if num_grupos < 2 or num_grupos > 6:
+            print(f"DEBUG: crear_grupos_para_sala - Número de grupos inválido: {num_grupos}")
+            return False
+        
+        conexion = obtener_conexion()
+        cursor = conexion.cursor()
+        
+        # Verificar que la sala exista
+        cursor.execute("SELECT id_sala FROM salas_juego WHERE id_sala = %s", (sala_id,))
+        if not cursor.fetchone():
+            print(f"DEBUG: crear_grupos_para_sala - Sala {sala_id} no encontrada")
+            conexion.close()
+            return False
+        
+        # Crear los grupos
+        for numero_grupo in range(1, num_grupos + 1):
+            nombre_grupo = f"Grupo {numero_grupo}"
+            cursor.execute("""
+                INSERT INTO grupos_sala (id_sala, numero_grupo, nombre_grupo)
+                VALUES (%s, %s, %s)
+            """, (sala_id, numero_grupo, nombre_grupo))
+            print(f"DEBUG: crear_grupos_para_sala - Grupo {numero_grupo} creado: {nombre_grupo}")
+        
+        conexion.commit()
+        print(f"DEBUG: crear_grupos_para_sala - {num_grupos} grupos creados exitosamente")
+        conexion.close()
+        
+        return True
+        
+    except Exception as e:
+        print(f"DEBUG: ERROR en crear_grupos_para_sala: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        if 'conexion' in locals():
+            try:
+                conexion.rollback()
+                conexion.close()
+            except:
+                pass
+        return False
 
 def obtener_sala_por_id_simple(id_sala):
     conexion = obtener_conexion()
@@ -254,6 +321,16 @@ def registrarse():
             email = (data.get('email') or '').strip().lower()
             password = data.get('password') or ''
             tipo_usuario = (data.get('tipo_usuario') or 'estudiante').strip().lower()
+            
+            # Validar dominio del correo electrónico
+            dominios_permitidos = ['@usat.pe', '@usat.edu.pe']
+            dominio_valido = any(email.endswith(dominio) for dominio in dominios_permitidos)
+            
+            if not dominio_valido:
+                error_msg = 'Solo se permiten correos institucionales con dominio @usat.pe o @usat.edu.pe'
+                flash(error_msg, 'error')
+                return render_template('Registrarse.html')
+            
             success, result = controlador_usuario.crear_usuario(nombre, apellidos, email, password, tipo_usuario)
             if not success:
                 error_msg = result or 'No se pudo registrar el usuario'
@@ -490,6 +567,15 @@ def unirse_a_sala():
         flash('Error al procesar la solicitud', 'error')
         return render_template('UnirseASala.html')
 
+# Middleware para corregir sesión corrupta (tipo_usuario vs usuario_tipo)
+@app.before_request
+def fix_session():
+    """Corrige inconsistencia de nombres en la sesión"""
+    if 'tipo_usuario' in session and 'usuario_tipo' not in session:
+        # Copiar tipo_usuario -> usuario_tipo
+        session['usuario_tipo'] = session['tipo_usuario']
+        print(f"🔧 Sesión corregida: tipo_usuario -> usuario_tipo = {session['usuario_tipo']}")
+
 # Ruta de error de sistema divertida
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -562,6 +648,10 @@ def login_required(f):
     """Decorador para requerir login"""
     def decorated_function(*args, **kwargs):
         if 'logged_in' not in session or not session['logged_in']:
+            # Si es una petición AJAX, devolver JSON
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'error': 'Sesión expirada', 'redirect': url_for('login')}), 401
+            # Si no es AJAX, redirigir normalmente
             return redirect(url_for('login'))
         return f(*args, **kwargs)
     decorated_function.__name__ = f.__name__
@@ -571,13 +661,144 @@ def admin_required(f):
     """Decorador para requerir permisos de administrador"""
     def decorated_function(*args, **kwargs):
         if 'logged_in' not in session or not session['logged_in']:
+            # Si es una petición AJAX, devolver JSON
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'error': 'Sesión expirada', 'redirect': url_for('login')}), 401
             return redirect(url_for('login'))
         if session.get('usuario_tipo') == 'estudiante':
+            # Si es una petición AJAX, devolver JSON
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'error': 'No tienes permisos para acceder'}), 403
             flash('No tienes permisos para acceder a esta sección', 'error')
             return redirect(url_for('dashboard_estudiante'))
         return f(*args, **kwargs)
     decorated_function.__name__ = f.__name__
     return decorated_function
+
+def obtener_partidas_recientes_estudiante(usuario_id, limit=5):
+    """Obtiene las partidas recientes de un estudiante (salas y juegos individuales)"""
+    conexion = obtener_conexion()
+    cursor = conexion.cursor()
+    
+    try:
+        # Consulta que une participantes_sala con información del cuestionario
+        query = """
+            SELECT 
+                ps.id_participante,
+                rs.puntaje_total,
+                rs.tiempo_total_respuestas,
+                ps.fecha_union,
+                s.id_sala,
+                s.pin_sala,
+                s.modo_juego,
+                c.id_cuestionario,
+                c.titulo as cuestionario_titulo,
+                c.descripcion as cuestionario_descripcion,
+                (SELECT COUNT(*) FROM cuestionario_preguntas cp WHERE cp.id_cuestionario = c.id_cuestionario) as total_preguntas
+            FROM participantes_sala ps
+            INNER JOIN salas_juego s ON ps.id_sala = s.id_sala
+            INNER JOIN cuestionarios c ON s.id_cuestionario = c.id_cuestionario
+            LEFT JOIN ranking_sala rs ON ps.id_participante = rs.id_participante AND ps.id_sala = rs.id_sala
+            WHERE ps.id_usuario = %s
+            ORDER BY ps.fecha_union DESC
+            LIMIT %s
+        """
+        
+        cursor.execute(query, (usuario_id, limit))
+        partidas = cursor.fetchall()
+        
+        # Formatear las partidas (PyMySQL devuelve tuplas, no diccionarios)
+        partidas_formateadas = []
+        for partida in partidas:
+            es_individual = (partida[6] == 'individual')  # modo_juego
+            
+            partidas_formateadas.append({
+                'id_participante': partida[0],
+                'puntaje': partida[1] if partida[1] is not None else 0,
+                'tiempo': partida[2] if partida[2] is not None else 0,
+                'fecha': partida[3],
+                'sala_id': partida[4],
+                'sala_pin': partida[5],
+                'modo_juego': partida[6],
+                'es_individual': es_individual,
+                'cuestionario_id': partida[7],
+                'cuestionario_titulo': partida[8],
+                'cuestionario_descripcion': partida[9],
+                'total_preguntas': partida[10],
+                'tipo': 'Individual' if es_individual else 'Multijugador'
+            })
+        
+        return partidas_formateadas
+        
+    except Exception as e:
+        print(f"Error en obtener_partidas_recientes_estudiante: {e}")
+        import traceback
+        traceback.print_exc()
+        return []
+    finally:
+        cursor.close()
+        conexion.close()
+
+def obtener_estadisticas_estudiante(usuario_id):
+    """Obtiene estadísticas reales del estudiante desde las tablas del sistema de juego"""
+    conexion = obtener_conexion()
+    cursor = conexion.cursor()
+    
+    try:
+        # Total de participaciones
+        cursor.execute("""
+            SELECT COUNT(*) 
+            FROM participantes_sala 
+            WHERE id_usuario = %s
+        """, (usuario_id,))
+        total_participaciones = cursor.fetchone()[0] or 0
+        
+        # Promedio de puntaje
+        cursor.execute("""
+            SELECT AVG(rs.puntaje_total) 
+            FROM ranking_sala rs
+            INNER JOIN participantes_sala ps ON rs.id_participante = ps.id_participante
+            WHERE ps.id_usuario = %s AND rs.puntaje_total IS NOT NULL
+        """, (usuario_id,))
+        promedio_puntaje = cursor.fetchone()[0] or 0
+        
+        # Mejor posición
+        cursor.execute("""
+            SELECT MIN(rs.posicion) 
+            FROM ranking_sala rs
+            INNER JOIN participantes_sala ps ON rs.id_participante = ps.id_participante
+            WHERE ps.id_usuario = %s AND rs.posicion IS NOT NULL
+        """, (usuario_id,))
+        mejor_posicion = cursor.fetchone()[0] or 'N/A'
+        
+        # Recompensas obtenidas (de la tabla recompensas_otorgadas)
+        cursor.execute("""
+            SELECT COUNT(*) 
+            FROM recompensas_otorgadas 
+            WHERE id_estudiante = %s
+        """, (usuario_id,))
+        recompensas_obtenidas = cursor.fetchone()[0] or 0
+        
+        return {
+            'total_participaciones': total_participaciones,
+            'promedio_puntaje': round(promedio_puntaje, 1) if promedio_puntaje else 0,
+            'mejor_posicion': mejor_posicion,
+            'recompensas_obtenidas': recompensas_obtenidas
+        }
+        
+    except Exception as e:
+        print(f"Error en obtener_estadisticas_estudiante: {e}")
+        import traceback
+        traceback.print_exc()
+        return {
+            'total_participaciones': 0,
+            'promedio_puntaje': 0,
+            'mejor_posicion': 'N/A',
+            'recompensas_obtenidas': 0
+        }
+    finally:
+        cursor.close()
+        conexion.close()
 
 @app.route('/estudiante')
 @login_required
@@ -596,8 +817,9 @@ def dashboard_estudiante():
     
     # Obtener estadísticas del estudiante
     try:
-        estadisticas = controlador_usuario.obtener_estadisticas_usuario(session['usuario_id'])
-    except:
+        estadisticas = obtener_estadisticas_estudiante(session['usuario_id'])
+    except Exception as e:
+        print(f"Error obteniendo estadísticas: {e}")
         estadisticas = {
             'total_participaciones': 0,
             'promedio_puntaje': 0,
@@ -611,10 +833,18 @@ def dashboard_estudiante():
     except:
         todos_cuestionarios = []
     
+    # Obtener partidas recientes del estudiante
+    try:
+        partidas_recientes = obtener_partidas_recientes_estudiante(session['usuario_id'])
+    except Exception as e:
+        print(f"Error obteniendo partidas recientes: {e}")
+        partidas_recientes = []
+    
     return render_template('DashboardEstudiante.html', 
                          usuario=usuario, 
                          estadisticas=estadisticas,
-                         cuestionarios=todos_cuestionarios)
+                         cuestionarios=todos_cuestionarios,
+                         partidas_recientes=partidas_recientes)
 
 @app.route('/admin')
 @login_required 
@@ -718,8 +948,79 @@ def historial_estudiante():
         return redirect(url_for('dashboard_admin'))
     
     try:
-        participaciones = controlador_participaciones.obtener_participaciones_por_usuario(session['usuario_id'])
-    except:
+        import pymysql.cursors
+        conexion = obtener_conexion()
+        cursor = conexion.cursor(pymysql.cursors.DictCursor)
+        
+        # Obtener historial del estudiante desde participantes_sala y ranking_sala
+        query = '''
+            SELECT 
+                p.id_participante,
+                p.nombre_participante,
+                s.id_sala,
+                s.pin_sala,
+                s.estado as estado_sala,
+                c.titulo as titulo_cuestionario,
+                c.id_cuestionario,
+                s.total_preguntas,
+                s.fecha_creacion as fecha_inicio,
+                r.puntaje_total,
+                r.respuestas_correctas,
+                r.tiempo_total_respuestas,
+                r.posicion,
+                g.nombre_grupo
+            FROM participantes_sala p
+            INNER JOIN salas_juego s ON p.id_sala = s.id_sala
+            INNER JOIN cuestionarios c ON s.id_cuestionario = c.id_cuestionario
+            LEFT JOIN ranking_sala r ON p.id_participante = r.id_participante AND p.id_sala = r.id_sala
+            LEFT JOIN grupos_sala g ON p.id_grupo = g.id_grupo
+            WHERE p.id_usuario = %s
+            AND s.estado = 'finalizada'
+            ORDER BY s.fecha_creacion DESC
+        '''
+        
+        cursor.execute(query, (session['usuario_id'],))
+        participaciones_raw = cursor.fetchall()
+        
+        # Procesar datos para calcular precisión y duración
+        participaciones = []
+        for part in participaciones_raw:
+            # Calcular precisión
+            if part['total_preguntas'] and part['total_preguntas'] > 0:
+                precision = round((part['respuestas_correctas'] / part['total_preguntas']) * 100)
+            else:
+                precision = 0
+            
+            # Formatear duración
+            if part['tiempo_total_respuestas']:
+                minutos = int(part['tiempo_total_respuestas'] // 60)
+                segundos = int(part['tiempo_total_respuestas'] % 60)
+                duracion = f"{minutos}m {segundos}s"
+            else:
+                duracion = "N/A"
+            
+            participaciones.append({
+                'id_participante': part['id_participante'],
+                'nombre_participante': part['nombre_participante'],
+                'titulo_cuestionario': part['titulo_cuestionario'],
+                'fecha_inicio': part['fecha_inicio'],
+                'puntaje_total': part['puntaje_total'] or 0,
+                'respuestas_correctas': part['respuestas_correctas'] or 0,
+                'total_preguntas': part['total_preguntas'] or 0,
+                'precision': precision,
+                'duracion': duracion,
+                'posicion': f"#{part['posicion']}" if part['posicion'] else "N/A",
+                'nombre_grupo': part['nombre_grupo'],
+                'pin_sala': part['pin_sala']
+            })
+        
+        cursor.close()
+        conexion.close()
+        
+    except Exception as e:
+        print(f"ERROR en historial_estudiante: {e}")
+        import traceback
+        traceback.print_exc()
         participaciones = []
     
     return render_template('HistorialEstudiante.html', participaciones=participaciones)
@@ -1089,6 +1390,17 @@ def obtener_pregunta_actual(sala_id):
         if not pregunta:
             return jsonify({'success': False, 'error': 'No hay pregunta activa'}), 404
         
+        # Obtener configuración de tiempo de la sala (por defecto 30 segundos)
+        conexion = obtener_conexion()
+        cursor = conexion.cursor()
+        cursor.execute("SELECT tiempo_por_pregunta FROM salas_juego WHERE id_sala = %s", (sala_id,))
+        resultado = cursor.fetchone()
+        tiempo_pregunta = resultado[0] if resultado and resultado[0] else 30
+        conexion.close()
+        
+        # Agregar tiempo de pregunta a la respuesta
+        pregunta['tiempo_limite'] = tiempo_pregunta
+        
         return jsonify({
             'success': True,
             'pregunta': pregunta
@@ -1121,10 +1433,14 @@ def responder_pregunta_juego(sala_id):
             tiempo_respuesta=tiempo_respuesta
         )
         
+        # CAMBIO: Ya no avanzar automáticamente en ningún modo
+        # El estudiante siempre debe esperar a que el docente avance
         return jsonify({
             'success': True,
-            'resultado': resultado
+            'resultado': resultado,
+            'mensaje': 'Respuesta registrada. Esperando a que el docente avance.'
         })
+        
     except Exception as e:
         print(f"ERROR responder_pregunta_juego: {e}")
         import traceback
@@ -1386,7 +1702,7 @@ def juego_estudiante(sala_id):
             flash('Debes unirte a una sala primero', 'error')
             return redirect(url_for('unirse_sala_route', codigo=''))
         
-        sala = obtener_sala_por_id(sala_id)
+        sala = obtener_sala_por_id_simple(sala_id)
         if not sala:
             flash('Sala no encontrada', 'error')
             return redirect(url_for('maestra'))
@@ -1410,7 +1726,7 @@ def siguiente_pregunta(sala_id):
 @app.route('/esperar-juego/<int:sala_id>')
 def esperar_juego(sala_id):
     try:
-        sala = obtener_sala_por_id(sala_id)
+        sala = obtener_sala_por_id_simple(sala_id)
         if not sala:
             flash('Sala no encontrada', 'error')
             return redirect(url_for('maestra'))
@@ -1540,7 +1856,9 @@ def api_obtener_participantes_por_pin(pin):
                 'id': p['id_participante'],
                 'nombre': p['nombre_participante'],
                 'estado': p['estado'],
-                'fecha_union': p['fecha_union'].isoformat() if p['fecha_union'] else None
+                'fecha_union': p['fecha_union'].isoformat() if p['fecha_union'] else None,
+                'id_grupo': p.get('id_grupo'),  # ID del grupo si está asignado
+                'nombre_grupo': p.get('nombre_grupo')  # Nombre del grupo si está asignado
             })
         
         return jsonify({
@@ -1891,9 +2209,11 @@ def crear_sala_para_cuestionario(cuestionario_id):
             
             nombre_sala = data.get('nombre_sala', f"Sala - {cuestionario[1]}")  # cuestionario[1] es el titulo
             capacidad_maxima = int(data.get('capacidad_maxima', 50))
+            modo_juego = data.get('modo_juego', 'individual')
+            num_grupos = int(data.get('num_grupos', 3)) if modo_juego == 'grupo' else 0
             id_docente = session.get('usuario_id', 1)
             
-            print(f"DEBUG: Creando sala - nombre: {nombre_sala}, capacidad: {capacidad_maxima}, docente: {id_docente}")
+            print(f"DEBUG: Creando sala - nombre: {nombre_sala}, capacidad: {capacidad_maxima}, modo: {modo_juego}, grupos: {num_grupos}, docente: {id_docente}")
             
             # Crear la sala
             try:
@@ -1901,6 +2221,15 @@ def crear_sala_para_cuestionario(cuestionario_id):
                 print(f"DEBUG: Sala creada con ID: {sala_id}, código: {codigo_sala}")
                 
                 if sala_id and codigo_sala:
+                    # Si es modo grupo, crear los grupos
+                    if modo_juego == 'grupo' and num_grupos > 0:
+                        try:
+                            crear_grupos_para_sala(sala_id, num_grupos)
+                            print(f"DEBUG: {num_grupos} grupos creados para sala {sala_id}")
+                        except Exception as grupos_error:
+                            print(f"DEBUG: Error al crear grupos: {grupos_error}")
+                            # No fallar si los grupos no se crean, la sala ya existe
+                    
                     # Para peticiones POST, siempre devolver JSON (ya que el frontend espera JSON)
                     print("DEBUG: Devolviendo respuesta JSON exitosa")
                     return jsonify({
@@ -1908,6 +2237,8 @@ def crear_sala_para_cuestionario(cuestionario_id):
                         'sala_id': sala_id,
                         'codigo_sala': codigo_sala,
                         'capacidad': capacidad_maxima,
+                        'modo_juego': modo_juego,
+                        'num_grupos': num_grupos if modo_juego == 'grupo' else 0,
                         'message': 'Sala creada exitosamente'
                     })
                 else:
@@ -2107,12 +2438,17 @@ def actualizar_cuestionario_route(cuestionario_id):
         if not resultado:
             raise ValueError("No se pudo actualizar el cuestionario")
         
-        if request.is_json:
+        # Verificar si es AJAX por el header, no solo por request.is_json
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json
+        
+        if is_ajax:
             return jsonify({'success': True, 'message': 'Cuestionario actualizado exitosamente'})
         flash('¡Cuestionario actualizado exitosamente!', 'success')
         return redirect(url_for('mis_cuestionarios'))
     except Exception as e:
-        if request.is_json:
+        is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json
+        
+        if is_ajax:
             return jsonify({'success': False, 'error': str(e)}), 400
         flash(f'Error al actualizar el cuestionario: {str(e)}', 'error')
         return redirect(url_for('error_sistema_page'))
@@ -3155,6 +3491,110 @@ def obtener_salas_por_cuestionario(cuestionario_id):
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/jugar-individual/<int:cuestionario_id>', methods=['POST'])
+@login_required
+def jugar_individual(cuestionario_id):
+    """Crear una sala automática individual para que el estudiante juegue solo"""
+    try:
+        if session.get('usuario_tipo') != 'estudiante':
+            return jsonify({'success': False, 'error': 'Solo estudiantes pueden jugar en modo individual'}), 403
+        
+        import random
+        import string
+        import pymysql.cursors
+        
+        conexion = obtener_conexion()
+        cursor = conexion.cursor(pymysql.cursors.DictCursor)
+        
+        # Verificar que el cuestionario existe y está publicado
+        cursor.execute('''
+            SELECT id_cuestionario, titulo 
+            FROM cuestionarios 
+            WHERE id_cuestionario = %s AND estado = 'publicado'
+        ''', (cuestionario_id,))
+        
+        cuestionario = cursor.fetchone()
+        if not cuestionario:
+            cursor.close()
+            conexion.close()
+            return jsonify({'success': False, 'error': 'Cuestionario no encontrado o no está publicado'}), 404
+        
+        # Obtener preguntas del cuestionario
+        cursor.execute('''
+            SELECT COUNT(*) as total
+            FROM cuestionario_preguntas
+            WHERE id_cuestionario = %s
+        ''', (cuestionario_id,))
+        
+        total_preguntas = cursor.fetchone()['total']
+        
+        if total_preguntas == 0:
+            cursor.close()
+            conexion.close()
+            return jsonify({'success': False, 'error': 'El cuestionario no tiene preguntas'}), 400
+        
+        # Generar PIN único de 6 dígitos
+        while True:
+            pin_sala = ''.join(random.choices(string.digits, k=6))
+            cursor.execute('SELECT id_sala FROM salas_juego WHERE pin_sala = %s', (pin_sala,))
+            if not cursor.fetchone():
+                break
+        
+        # Crear sala automática en modo individual
+        cursor.execute('''
+            INSERT INTO salas_juego 
+            (id_cuestionario, pin_sala, estado, modo_juego, total_preguntas, fecha_creacion, grupos_habilitados, num_grupos)
+            VALUES (%s, %s, 'en_curso', 'individual', %s, NOW(), 0, 0)
+        ''', (cuestionario_id, pin_sala, total_preguntas))
+        
+        id_sala = cursor.lastrowid
+        
+        # Crear participante automáticamente
+        nombre_participante = f"{session['usuario_nombre']} {session['usuario_apellidos']}"
+        cursor.execute('''
+            INSERT INTO participantes_sala 
+            (id_sala, id_usuario, nombre_participante, estado, fecha_union)
+            VALUES (%s, %s, %s, 'jugando', NOW())
+        ''', (id_sala, session['usuario_id'], nombre_participante))
+        
+        id_participante = cursor.lastrowid
+        
+        # Crear entrada en ranking_sala
+        cursor.execute('''
+            INSERT INTO ranking_sala 
+            (id_participante, id_sala, puntaje_total, respuestas_correctas, tiempo_total_respuestas, posicion)
+            VALUES (%s, %s, 0, 0, 0, 1)
+        ''', (id_participante, id_sala))
+        
+        # Crear estado del juego (empezar en pregunta 1)
+        cursor.execute('''
+            INSERT INTO estado_juego_sala 
+            (id_sala, pregunta_actual, estado_pregunta, tiempo_inicio_pregunta)
+            VALUES (%s, 1, 'mostrando', NOW())
+        ''', (id_sala,))
+        
+        conexion.commit()
+        cursor.close()
+        conexion.close()
+        
+        # Guardar en sesión
+        session['sala_actual'] = id_sala
+        session['participante_id'] = id_participante
+        
+        return jsonify({
+            'success': True,
+            'message': 'Sala individual creada exitosamente',
+            'sala_id': id_sala,
+            'pin_sala': pin_sala,
+            'redirect': url_for('juego_estudiante', sala_id=id_sala)
+        })
+        
+    except Exception as e:
+        print(f"ERROR en jugar_individual: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/api/cuestionarios/<int:cuestionario_id>/publicar', methods=['POST'])
 def api_publicar_cuestionario(cuestionario_id):
     """Publicar un cuestionario vía API"""
@@ -3525,38 +3965,408 @@ def exportar_resultados_excel(sala_id):
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@app.route('/api/exportar-resultados/<int:sala_id>/google-sheets', methods=['POST'])
-def exportar_resultados_google_sheets(sala_id):
-    """Exportar resultados a Google Sheets"""
+@app.route('/api/exportar-resultados/<int:sala_id>/onedrive', methods=['POST'])
+def exportar_resultados_onedrive(sala_id):
+    """Exportar resultados a OneDrive usando OAuth2"""
     try:
-        # Verificar que las librerías de Google están instaladas
-        try:
-            from google.oauth2.credentials import Credentials
-            from google_auth_oauthlib.flow import Flow
-            from googleapiclient.discovery import build
-        except ImportError:
-            return jsonify({
-                'success': False, 
-                'error': 'Librerías de Google no instaladas. Ejecuta: pip install google-auth google-auth-oauthlib google-api-python-client'
-            }), 500
-        
         data = request.get_json()
         ranking = data.get('ranking', [])
         total_preguntas = data.get('totalPreguntas', 0)
         cuestionario_titulo = data.get('cuestionarioTitulo', 'Cuestionario')
         
-        # TODO: Implementar OAuth2 flow completo
-        # Por ahora, retornar mensaje indicando que se necesita configuración
-        return jsonify({
-            'success': False,
-            'error': 'La integración con Google Sheets requiere configuración de OAuth2. Consulta CONFIGURAR_GMAIL.md para más detalles.'
-        }), 501
+        # Verificar autenticación del usuario
+        if 'usuario_id' not in session:
+            return jsonify({
+                'success': False,
+                'error': 'Usuario no autenticado'
+            }), 401
+        
+        # Obtener datos del usuario y verificar token de OneDrive
+        conexion = obtener_conexion()
+        cursor = conexion.cursor()
+        cursor.execute("""
+            SELECT email, nombre, apellidos, onedrive_access_token, 
+                   onedrive_refresh_token, onedrive_token_expires 
+            FROM usuarios WHERE id_usuario = %s
+        """, (session['usuario_id'],))
+        usuario = cursor.fetchone()
+        
+        if not usuario:
+            cursor.close()
+            conexion.close()
+            return jsonify({
+                'success': False,
+                'error': 'Usuario no encontrado'
+            }), 404
+        
+        email_usuario = usuario[0]
+        nombre_completo = f"{usuario[1]} {usuario[2]}"
+        access_token = usuario[3]
+        refresh_token = usuario[4]
+        token_expires = usuario[5]
+        
+        # Crear archivo Excel en memoria
+        import io
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, Alignment, PatternFill
+        
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Resultados"
+        
+        # Encabezados
+        headers = ['Posición', 'Estudiante', 'Grupo', 'Puntaje', 'Correctas', 'Incorrectas', 
+                   'Precisión (%)', 'Tiempo Total']
+        header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+        header_font = Font(bold=True, color="FFFFFF")
+        
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal='center', vertical='center')
+        
+        # Datos
+        for row_idx, participante in enumerate(ranking, 2):
+            ws.cell(row=row_idx, column=1, value=participante.get('posicion', row_idx-1))
+            ws.cell(row=row_idx, column=2, value=participante.get('nombre_completo', 'N/A'))
+            ws.cell(row=row_idx, column=3, value=participante.get('nombre_grupo', 'Sin grupo'))
+            ws.cell(row=row_idx, column=4, value=participante.get('puntaje_total', 0))
+            ws.cell(row=row_idx, column=5, value=participante.get('respuestas_correctas', 0))
+            
+            incorrectas = total_preguntas - participante.get('respuestas_correctas', 0)
+            ws.cell(row=row_idx, column=6, value=incorrectas)
+            
+            if total_preguntas > 0:
+                precision = (participante.get('respuestas_correctas', 0) / total_preguntas) * 100
+                ws.cell(row=row_idx, column=7, value=f"{precision:.1f}%")
+            else:
+                ws.cell(row=row_idx, column=7, value="0%")
+            
+            tiempo = participante.get('tiempo_total_respuestas', 0)
+            minutos = tiempo // 60
+            segundos = tiempo % 60
+            ws.cell(row=row_idx, column=8, value=f"{minutos}m {segundos}s")
+        
+        # Ajustar anchos de columna
+        for col in ws.columns:
+            max_length = 0
+            for cell in col:
+                if cell.value:
+                    max_length = max(max_length, len(str(cell.value)))
+            ws.column_dimensions[col[0].column_letter].width = max_length + 2
+        
+        # Guardar en memoria
+        excel_buffer = io.BytesIO()
+        wb.save(excel_buffer)
+        excel_buffer.seek(0)
+        excel_data = excel_buffer.getvalue()
+        
+        # Nombre del archivo
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"BrainRush_Resultados_{cuestionario_titulo}_{timestamp}.xlsx"
+        
+        # Verificar si el usuario tiene token de OneDrive
+        if not access_token:
+            cursor.close()
+            conexion.close()
+            return jsonify({
+                'success': False,
+                'require_auth': True,
+                'message': 'Necesitas autorizar acceso a OneDrive primero',
+                'auth_url': url_for('onedrive_auth', _external=True)
+            }), 401
+        
+        # Verificar si el token ha expirado
+        if token_expires and datetime.now() >= token_expires:
+            # Intentar refrescar el token
+            if refresh_token:
+                try:
+                    msal_app = msal.ConfidentialClientApplication(
+                        app.config['AZURE_CLIENT_ID'],
+                        authority=f"https://login.microsoftonline.com/{app.config['AZURE_TENANT_ID']}",
+                        client_credential=app.config['AZURE_CLIENT_SECRET']
+                    )
+                    
+                    result = msal_app.acquire_token_by_refresh_token(
+                        refresh_token,
+                        scopes=app.config['ONEDRIVE_SCOPES']
+                    )
+                    
+                    if "access_token" in result:
+                        access_token = result['access_token']
+                        new_refresh_token = result.get('refresh_token', refresh_token)
+                        expires_in = result.get('expires_in', 3600)
+                        new_token_expires = datetime.now() + timedelta(seconds=expires_in)
+                        
+                        # Actualizar tokens en la base de datos
+                        cursor.execute("""
+                            UPDATE usuarios 
+                            SET onedrive_access_token = %s,
+                                onedrive_refresh_token = %s,
+                                onedrive_token_expires = %s
+                            WHERE id_usuario = %s
+                        """, (access_token, new_refresh_token, new_token_expires, session['usuario_id']))
+                        conexion.commit()
+                    else:
+                        cursor.close()
+                        conexion.close()
+                        return jsonify({
+                            'success': False,
+                            'require_auth': True,
+                            'message': 'Tu sesión de OneDrive ha expirado. Autoriza nuevamente.',
+                            'auth_url': url_for('onedrive_auth', _external=True)
+                        }), 401
+                except Exception as e:
+                    print(f"Error refrescando token: {e}")
+                    cursor.close()
+                    conexion.close()
+                    return jsonify({
+                        'success': False,
+                        'require_auth': True,
+                        'message': 'Tu sesión de OneDrive ha expirado. Autoriza nuevamente.',
+                        'auth_url': url_for('onedrive_auth', _external=True)
+                    }), 401
+            else:
+                cursor.close()
+                conexion.close()
+                return jsonify({
+                    'success': False,
+                    'require_auth': True,
+                    'message': 'Tu sesión de OneDrive ha expirado. Autoriza nuevamente.',
+                    'auth_url': url_for('onedrive_auth', _external=True)
+                }), 401
+        
+        cursor.close()
+        conexion.close()
+        
+        # Subir archivo a OneDrive
+        try:
+            upload_url = f"https://graph.microsoft.com/v1.0/me/drive/root:/BrainRush/{filename}:/content"
+            headers = {
+                'Authorization': f'Bearer {access_token}',
+                'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            }
+            
+            response = requests.put(upload_url, headers=headers, data=excel_data)
+            
+            if response.status_code in [200, 201]:
+                file_info = response.json()
+                return jsonify({
+                    'success': True,
+                    'message': f'Archivo "{filename}" subido exitosamente a OneDrive',
+                    'file_name': filename,
+                    'file_id': file_info.get('id'),
+                    'web_url': file_info.get('webUrl'),
+                    'folder': 'BrainRush'
+                }), 200
+            else:
+                print(f"Error subiendo a OneDrive: {response.status_code} - {response.text}")
+                # Fallback a email
+                return enviar_por_email_fallback(
+                    email_usuario, nombre_completo, cuestionario_titulo,
+                    ranking, total_preguntas, filename, excel_data
+                )
+        
+        except requests.exceptions.RequestException as e:
+            print(f"Error de conexión con OneDrive: {e}")
+            # Fallback a email
+            return enviar_por_email_fallback(
+                email_usuario, nombre_completo, cuestionario_titulo,
+                ranking, total_preguntas, filename, excel_data
+            )
         
     except Exception as e:
-        print(f"ERROR exportar_google_sheets: {e}")
+        print(f"ERROR exportar_resultados_onedrive: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+def enviar_por_email_fallback(email_usuario, nombre_completo, cuestionario_titulo, 
+                               ranking, total_preguntas, filename, excel_data):
+    """Función auxiliar para enviar por email cuando OneDrive falla"""
+    try:
+        from flask_mail import Message
+        from extensions import mail
+        
+        if not app.config.get('MAIL_ENABLED') or not app.config.get('MAIL_USERNAME'):
+            return jsonify({
+                'success': False,
+                'error': 'No se pudo subir a OneDrive y el correo no está configurado'
+            }), 500
+        
+        mensaje_texto = f"""
+Hola {nombre_completo},
+
+No se pudo subir directamente a OneDrive, pero adjunto encontrarás los resultados de "{cuestionario_titulo}".
+
+📊 Detalles:
+- Total de participantes: {len(ranking)}
+- Total de preguntas: {total_preguntas}
+- Fecha de generación: {datetime.now().strftime("%d/%m/%Y %H:%M")}
+
+💡 Puedes guardar este archivo en tu OneDrive, Google Drive o donde prefieras.
+
+Saludos,
+Sistema BrainRush
+        """
+        
+        msg = Message(
+            subject=f'Resultados de BrainRush - {cuestionario_titulo}',
+            sender=app.config.get('MAIL_DEFAULT_SENDER', app.config.get('MAIL_USERNAME')),
+            recipients=[email_usuario],
+            body=mensaje_texto
+        )
+        
+        msg.attach(
+            filename,
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            excel_data
+        )
+        
+        mail.send(msg)
+        
+        return jsonify({
+            'success': True,
+            'message': f'No se pudo subir a OneDrive. Resultados enviados por correo a {email_usuario}',
+            'file_name': filename,
+            'email_sent': True,
+            'fallback': True
+        }), 200
+        
+    except Exception as e:
+        print(f"Error enviando email fallback: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Error subiendo a OneDrive y enviando email: {str(e)}'
+        }), 500
+
+@app.route('/auth/onedrive')
+def onedrive_auth():
+    """Iniciar flujo de autorización OAuth2 con OneDrive"""
+    try:
+        if 'usuario_id' not in session:
+            flash('Debes iniciar sesión primero', 'warning')
+            return redirect(url_for('login'))
+        
+        # Guardar usuario_id en el state para recuperarlo en el callback
+        state = str(session['usuario_id'])
+        
+        # Configurar MSAL
+        msal_app = msal.ConfidentialClientApplication(
+            app.config['AZURE_CLIENT_ID'],
+            authority=f"https://login.microsoftonline.com/{app.config['AZURE_TENANT_ID']}",
+            client_credential=app.config['AZURE_CLIENT_SECRET']
+        )
+        
+        # Generar URL de autorización
+        auth_url = msal_app.get_authorization_request_url(
+            scopes=app.config['ONEDRIVE_SCOPES'],
+            state=state,
+            redirect_uri=app.config['ONEDRIVE_REDIRECT_URI']
+        )
+        
+        return redirect(auth_url)
+        
+    except Exception as e:
+        print(f"Error en onedrive_auth: {e}")
+        import traceback
+        traceback.print_exc()
+        flash(f'Error iniciando autorización: {str(e)}', 'danger')
+        return redirect(url_for('dashboard'))
+
+
+@app.route('/callback/onedrive')
+def onedrive_callback():
+    """Callback de OAuth2 para OneDrive"""
+    try:
+        # Obtener el código de autorización
+        code = request.args.get('code')
+        state = request.args.get('state')
+        error = request.args.get('error')
+        
+        if error:
+            flash(f'Error en autorización de OneDrive: {error}', 'danger')
+            return redirect(url_for('login'))
+        
+        if not code:
+            flash('No se recibió código de autorización', 'danger')
+            return redirect(url_for('login'))
+        
+        # Recuperar usuario_id del state
+        try:
+            usuario_id = int(state) if state else None
+        except:
+            usuario_id = None
+        
+        if not usuario_id:
+            flash('Sesión expirada. Por favor, inicia sesión nuevamente.', 'warning')
+            return redirect(url_for('login'))
+        
+        # Configurar MSAL
+        msal_app = msal.ConfidentialClientApplication(
+            app.config['AZURE_CLIENT_ID'],
+            authority=f"https://login.microsoftonline.com/{app.config['AZURE_TENANT_ID']}",
+            client_credential=app.config['AZURE_CLIENT_SECRET']
+        )
+        
+        # Intercambiar código por token
+        result = msal_app.acquire_token_by_authorization_code(
+            code,
+            scopes=app.config['ONEDRIVE_SCOPES'],
+            redirect_uri=app.config['ONEDRIVE_REDIRECT_URI']
+        )
+        
+        if "access_token" in result:
+            # Guardar tokens en la base de datos
+            access_token = result['access_token']
+            refresh_token = result.get('refresh_token', '')
+            expires_in = result.get('expires_in', 3600)
+            token_expires = datetime.now() + timedelta(seconds=expires_in)
+            
+            conexion = obtener_conexion()
+            cursor = conexion.cursor()
+            
+            cursor.execute("""
+                UPDATE usuarios 
+                SET onedrive_access_token = %s, 
+                    onedrive_refresh_token = %s,
+                    onedrive_token_expires = %s
+                WHERE id_usuario = %s
+            """, (access_token, refresh_token, token_expires, usuario_id))
+            
+            conexion.commit()
+            
+            # Restaurar sesión
+            cursor.execute("SELECT nombre, tipo_usuario FROM usuarios WHERE id_usuario = %s", (usuario_id,))
+            usuario = cursor.fetchone()
+            
+            cursor.close()
+            conexion.close()
+            
+            if usuario:
+                # Restaurar la sesión
+                session['usuario_id'] = usuario_id
+                session['nombre_usuario'] = usuario[0]
+                session['usuario_tipo'] = usuario[1]  # CORREGIDO: usuario_tipo (no tipo_usuario)
+                
+                flash('✅ OneDrive conectado exitosamente. Ahora puedes exportar resultados directamente.', 'success')
+                return redirect(url_for('dashboard'))
+            else:
+                flash('Error restaurando sesión', 'danger')
+                return redirect(url_for('login'))
+        else:
+            error_desc = result.get('error_description', 'Error desconocido')
+            flash(f'Error al obtener token de OneDrive: {error_desc}', 'danger')
+            return redirect(url_for('login'))
+            
+    except Exception as e:
+        print(f"ERROR onedrive_callback: {e}")
+        import traceback
+        traceback.print_exc()
+        flash(f'Error en callback de OneDrive: {str(e)}', 'danger')
+        return redirect(url_for('dashboard'))
 
 @app.route('/perfil', methods=['GET', 'POST'])
 def perfil():
@@ -3651,5 +4461,5 @@ if __name__ == '__main__':
     else:
         print("❌ Error de conexión a la base de datos")
     
-    print("🚀 Iniciando servidor Flask en http://127.0.0.1:8081")
-    app.run(debug=True, port=8081)
+    print("🚀 Iniciando servidor Flask en http://127.0.0.1:5000")
+    app.run(debug=True, port=5000)

@@ -603,8 +603,8 @@
           <button onclick="exportarExcel()" class="export-option">
             📊 Descargar Excel
           </button>
-          <button onclick="exportarGoogleSheets()" class="export-option">
-            📈 Subir a Google Sheets
+          <button onclick="exportarOneDrive()" class="export-option">
+            📧 Exportar por Email
           </button>
         </div>
       </div>
@@ -810,9 +810,9 @@
       document.getElementById('export-menu').style.display = 'none';
     }
 
-    async function exportarGoogleSheets() {
+    async function exportarOneDrive() {
       try {
-        const response = await fetch('/api/exportar-resultados/{{ sala.id }}/google-sheets', {
+        const response = await fetch('/api/exportar-resultados/{{ sala.id }}/onedrive', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -827,21 +827,32 @@
         const data = await response.json();
         
         if (data.success) {
-          if (data.auth_url) {
-            // Necesita autenticación
-            window.open(data.auth_url, '_blank');
-            alert('🔐 Por favor, autoriza el acceso a Google Drive en la nueva ventana. Luego intenta exportar nuevamente.');
+          if (data.fallback) {
+            // OneDrive falló, se envió por email
+            alert(`⚠️ ${data.message}\n\nArchivo: ${data.file_name}\n\n💡 Revisa tu correo.`);
+          } else if (data.email_sent) {
+            // Solo email (sin intentar OneDrive)
+            alert(`✅ ${data.message}\n\nArchivo: ${data.file_name}`);
+          } else if (data.web_url) {
+            // Subido exitosamente a OneDrive
+            alert(`✅ ${data.message}\n\nCarpeta: ${data.folder}`);
+            if (confirm('¿Deseas abrir el archivo en OneDrive?')) {
+              window.open(data.web_url, '_blank');
+            }
           } else {
-            // Exportación exitosa
-            window.open(data.sheet_url, '_blank');
-            alert('📈 Resultados subidos a Google Sheets correctamente');
+            alert(`✅ ${data.message}\n\nArchivo: ${data.file_name}`);
+          }
+        } else if (data.require_auth) {
+          // Necesita autorizar OneDrive
+          if (confirm(`${data.message}\n\n¿Deseas autorizar OneDrive ahora?`)) {
+            window.location.href = data.auth_url;
           }
         } else {
-          alert('❌ ' + (data.error || 'Error al exportar a Google Sheets'));
+          alert('❌ ' + (data.error || 'Error al procesar la solicitud'));
         }
       } catch (error) {
         console.error('Error:', error);
-        alert('❌ Error al conectar con Google Sheets');
+        alert('❌ Error al procesar la solicitud');
       }
       document.getElementById('export-menu').style.display = 'none';
     }

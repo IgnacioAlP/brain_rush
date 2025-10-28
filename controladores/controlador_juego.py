@@ -145,6 +145,10 @@ def obtener_pregunta_actual_sala(sala_id):
             
             num_pregunta, tiempo_inicio, estado_pregunta, id_cuestionario, total_preguntas = estado
             
+            # Validar que num_pregunta sea >= 1
+            if num_pregunta < 1:
+                return None
+            
             # Obtener la pregunta específica
             cursor.execute('''
                 SELECT 

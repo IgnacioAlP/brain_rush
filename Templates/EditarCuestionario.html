@@ -1177,6 +1177,7 @@
     function closeQuestionModal() {
         document.getElementById('question-modal').style.display = 'none';
         currentQuestionId = null;
+        document.getElementById('question-form').reset();
     }
 
     function previewQuiz() {
@@ -1261,12 +1262,6 @@
             ? `/pregunta/${currentQuestionId}/editar`
             : `/cuestionario/{{ cuestionario.id_cuestionario }}/agregar-pregunta`;
 
-        // Deshabilitar botón mientras se guarda
-        const submitBtn = this.querySelector('button[type="submit"]');
-        const originalText = submitBtn.innerHTML;
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
-
         console.log('Enviando a URL:', url);
         console.log('Datos:', {
             enunciado: questionText,
@@ -1288,12 +1283,19 @@
             const contentType = response.headers.get('content-type');
             if (!contentType || !contentType.includes('application/json')) {
                 return response.text().then(text => {
-                console.error('Respuesta HTML recibida:', text.substring(0, 500));
-                throw new Error('El servidor devolvió HTML en lugar de JSON. Verifica la ruta del backend.');
+                    console.error('Respuesta HTML recibida:', text.substring(0, 500));
+                    throw new Error('El servidor devolvió HTML en lugar de JSON. Verifica la ruta del backend.');
                 });
             }
             
-            return response.json();
+            // Parsear JSON (tanto para éxito como para error)
+            return response.json().then(data => {
+                // Si la respuesta HTTP no es OK (200-299), lanzar error
+                if (!response.ok) {
+                    throw new Error(data.error || `Error HTTP ${response.status}`);
+                }
+                return data;
+            });
         })
         .then(data => {
             console.log('Respuesta del servidor:', data);
@@ -1313,13 +1315,18 @@
                 
                 // Recargar la lista de preguntas
                 renderQuestionsList();
+                
+                // Cerrar modal
                 closeQuestionModal();
                 
+                // Mostrar mensaje de éxito
                 Swal.fire({
                     icon: 'success',
                     title: '¡Guardado!',
                     text: (currentQuestionId ? 'Pregunta actualizada' : 'Pregunta agregada') + ' correctamente',
-                    confirmButtonColor: 'var(--secondary-color)'
+                    confirmButtonColor: 'var(--secondary-color)',
+                    timer: 1500,
+                    showConfirmButton: false
                 });
             } else {
                 throw new Error(data.error || 'Error al guardar la pregunta');
@@ -1327,16 +1334,26 @@
         })
         .catch(error => {
             console.error('Error completo:', error);
+            
+            // Verificar si es un error de respuesta HTTP
+            if (error.message && error.message.includes('Sesión expirada')) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Sesión expirada',
+                    text: 'Tu sesión ha expirado. Serás redirigido al login.',
+                    confirmButtonColor: 'var(--secondary-color)'
+                }).then(() => {
+                    window.location.href = '/login';
+                });
+                return;
+            }
+            
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
                 text: error.message || 'No se pudo guardar la pregunta',
                 confirmButtonColor: 'var(--secondary-color)'
             });
-        })
-        .finally(() => {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = originalText;
         });
     });
 
@@ -1492,6 +1509,8 @@
     document.addEventListener('DOMContentLoaded', function() {
         renderQuestionsList();
     });
+    
+    // Version: 2025-10-27-20:15 - Fix botón guardando en bucle
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>

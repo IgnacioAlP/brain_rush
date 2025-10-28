@@ -71,6 +71,156 @@
     background: linear-gradient(135deg, rgb(239, 68, 68), rgb(220, 38, 38));
     color: white;
 }
+
+/* Modal de confirmación personalizado */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(10px);
+    z-index: 9999;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 3rem;
+    border-radius: 2rem;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+    text-align: center;
+    min-width: 400px;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translate(-50%, -60%);
+        opacity: 0;
+    }
+    to {
+        transform: translate(-50%, -50%);
+        opacity: 1;
+    }
+}
+
+.modal-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.modal-title {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: white;
+    margin-bottom: 1rem;
+}
+
+.modal-message {
+    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 2rem;
+    line-height: 1.5;
+}
+
+.modal-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
+.modal-btn {
+    padding: 1rem 2.5rem;
+    border: none;
+    border-radius: 1rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.modal-btn-cancel {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+.modal-btn-cancel:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+}
+
+.modal-btn-confirm {
+    background: linear-gradient(135deg, #FF6B35, #F7931E);
+    color: white;
+}
+
+.modal-btn-confirm:hover {
+    background: linear-gradient(135deg, #F7931E, #FF6B35);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(255, 107, 53, 0.4);
+}
+
+/* Toast notification personalizado */
+.toast-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #4ECDC4, #44A08D);
+    color: white;
+    padding: 1.5rem 2rem;
+    border-radius: 1rem;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    z-index: 10000;
+    display: none;
+    animation: slideInRight 0.4s ease;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+}
+
+.toast-notification.hiding {
+    animation: slideOutRight 0.4s ease;
+}
+
+.toast-icon {
+    display: inline-block;
+    margin-right: 0.5rem;
+    font-size: 1.3rem;
+}
 </style>
 {% endblock %}
 
@@ -100,19 +250,10 @@
         <a href="{{ url_for('mis_cuestionarios') }}" class="control-btn" style="background: #ccc; color: #333; text-decoration: none;">Volver</a>
     </div>
 
-    <!-- Panel de Grupos -->
-    <div class="control-panel" id="panel-grupos">
-        <h2>⚙️ Configurar Grupos</h2>
-        <div id="config-grupos">
-            <p style="margin-bottom: 1rem; color: rgba(30,30,30,0.7);">Puedes crear grupos para dividir a los participantes. Cada estudiante seleccionará su grupo al unirse.</p>
-            <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem;">
-                <label for="num-grupos-input">Número de grupos:</label>
-                <input type="number" id="num-grupos-input" min="2" max="10" value="2" style="padding: 0.5rem; border: 2px solid #ccc; border-radius: 0.5rem; width: 80px; text-align: center;">
-                <button class="control-btn btn-success" onclick="habilitarGrupos()">✔️ Crear Grupos</button>
-            </div>
-        </div>
-        <div id="grupos-container" style="display: none; margin-top: 1.5rem;">
-            <h3 style="margin-bottom: 1rem;">Grupos Creados</h3>
+    <!-- Panel de Grupos (solo muestra grupos ya creados) -->
+    <div class="control-panel" id="panel-grupos" style="display: none;">
+        <h2>👥 Grupos de la Sala</h2>
+        <div id="grupos-container">
             <div id="grupos-list"></div>
         </div>
     </div>
@@ -139,6 +280,33 @@
         </div>
     </div>
 </div>
+
+<!-- Toast notification -->
+<div class="toast-notification" id="toastNotification">
+    <span class="toast-icon">✓</span>
+    <span id="toastMessage">Mensaje</span>
+</div>
+
+<!-- Modal de confirmación personalizado -->
+<div class="modal-overlay" id="confirmModal">
+    <div class="modal-content">
+        <div class="modal-icon">⚠️</div>
+        <div class="modal-title">¿Salir de la sala?</div>
+        <div class="modal-message">
+            Los participantes seguirán en la sala de espera.<br>
+            ¿Estás seguro de que deseas salir?
+        </div>
+        <div class="modal-buttons">
+            <button class="modal-btn modal-btn-cancel" onclick="cancelarSalida()">
+                ✖ Cancelar
+            </button>
+            <button class="modal-btn modal-btn-confirm" onclick="confirmarSalida()">
+                ✓ Salir
+            </button>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -147,38 +315,7 @@ const codigoSala = "{{ sala.pin_sala }}";
 const SALA_ID = {{ sala.id }};
 
 let gruposHabilitados = false;
-
-// Habilitar grupos: envía solicitud al servidor para crear grupos
-async function habilitarGrupos() {
-    const numGrupos = parseInt(document.getElementById('num-grupos-input').value);
-    if (numGrupos < 2 || numGrupos > 10) {
-        alert('Ingresa un número válido de grupos (2-10)');
-        return;
-    }
-
-    if (!confirm(`¿Crear ${numGrupos} grupos?`)) return;
-
-    try {
-        const response = await fetch(`/sala/${SALA_ID}/configurar-grupos`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ num_grupos: numGrupos })
-        });
-        const data = await response.json();
-        if (data.success) {
-            alert(`✅ Se crearon ${data.grupos_creados} grupos`);
-            gruposHabilitados = true;
-            document.getElementById('config-grupos').style.display = 'none';
-            document.getElementById('grupos-container').style.display = 'block';
-            await cargarGrupos();
-        } else {
-            alert('Error: ' + data.error);
-        }
-    } catch (error) {
-        console.error('Error habilitando grupos:', error);
-        alert('Error al crear grupos');
-    }
-}
+let gruposData = [];
 
 // Cargar grupos desde el servidor
 async function cargarGrupos() {
@@ -187,25 +324,40 @@ async function cargarGrupos() {
         const data = await response.json();
         if (data.success && data.grupos.length > 0) {
             gruposHabilitados = true;
+            gruposData = data.grupos;
+            document.getElementById('panel-grupos').style.display = 'block';
             mostrarGrupos(data.grupos);
+        } else {
+            // No hay grupos, ocultar panel
+            document.getElementById('panel-grupos').style.display = 'none';
+            gruposHabilitados = false;
         }
     } catch (error) {
         console.error('Error cargando grupos:', error);
     }
 }
 
-// Mostrar grupos en el DOM
+// Mostrar grupos en el DOM con participantes actualizados
 function mostrarGrupos(grupos) {
     const container = document.getElementById('grupos-list');
-    let html = '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">';
+    let html = '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-top: 1rem;">';
+    
     grupos.forEach(g => {
         html += `
-            <div class="grupo-card" data-grupo-id="${g.id_grupo}" style="background: rgba(34, 197, 94, 0.1); border: 2px solid rgba(34, 197, 94, 0.3); border-radius: 1rem; padding: 1rem; text-align: center;">
-                <h4 style="color: rgb(21, 128, 61);">${g.nombre_grupo}</h4>
-                <p id="grupo-${g.id_grupo}-count" style="font-size: 0.9rem; color: rgba(30,30,30,0.7);">0 estudiantes</p>
+            <div class="grupo-card" data-grupo-id="${g.id_grupo}" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(16, 185, 129, 0.1)); border: 2px solid rgba(34, 197, 94, 0.3); border-radius: 1.5rem; padding: 1.5rem;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                    <h3 style="color: rgb(21, 128, 61); margin: 0;">
+                        <i class="fas fa-users"></i> ${g.nombre_grupo}
+                    </h3>
+                    <span id="grupo-${g.id_grupo}-badge" style="background: rgba(34, 197, 94, 0.2); color: rgb(21, 128, 61); padding: 0.25rem 0.75rem; border-radius: 0.75rem; font-weight: 600; font-size: 0.9rem;">0</span>
+                </div>
+                <div id="grupo-${g.id_grupo}-participantes" style="min-height: 50px;">
+                    <p style="color: rgba(30,30,30,0.5); text-align: center; padding: 1rem;">Sin participantes</p>
+                </div>
             </div>
         `;
     });
+    
     html += '</div>';
     container.innerHTML = html;
 }
@@ -221,36 +373,26 @@ function actualizarParticipantes() {
                 
                 countElement.textContent = data.total;
                 
-                // Contar participantes por grupo si los grupos están habilitados
-                if (gruposHabilitados) {
-                    const gruposCuentas = {};
-                    data.participantes.forEach(p => {
-                        if (p.id_grupo) {
-                            gruposCuentas[p.id_grupo] = (gruposCuentas[p.id_grupo] || 0) + 1;
-                        }
-                    });
-                    // Actualizar contadores en las tarjetas de grupos
-                    Object.keys(gruposCuentas).forEach(grupoId => {
-                        const countEl = document.getElementById(`grupo-${grupoId}-count`);
-                        if (countEl) {
-                            const count = gruposCuentas[grupoId];
-                            countEl.textContent = `${count} estudiante${count !== 1 ? 's' : ''}`;
-                        }
-                    });
+                // Si hay grupos habilitados, actualizar la vista por grupos
+                if (gruposHabilitados && gruposData.length > 0) {
+                    actualizarVistaGrupos(data.participantes);
                 }
                 
+                // Actualizar lista general de participantes
                 if (data.participantes.length > 0) {
                     let html = '<div id="participantes-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">';
                     
                     data.participantes.forEach(participante => {
                         const grupoBadge = participante.nombre_grupo ? 
-                            `<span style="background: rgba(34, 197, 94, 0.2); color: rgb(21, 128, 61); padding: 0.25rem 0.75rem; border-radius: 0.5rem; font-size: 0.85rem; display: inline-block; margin-top: 0.5rem;">👥 ${participante.nombre_grupo}</span>` : 
+                            `<span style="background: rgba(34, 197, 94, 0.2); color: rgb(21, 128, 61); padding: 0.25rem 0.75rem; border-radius: 0.5rem; font-size: 0.85rem; display: inline-block; margin-top: 0.5rem;">
+                                <i class="fas fa-users"></i> ${participante.nombre_grupo}
+                            </span>` : 
                             '';
                         html += `
                             <div class="participante-card" style="background: rgba(79, 70, 229, 0.1); border-radius: 1rem; padding: 1rem; text-align: center;">
-                                <h4>${participante.nombre}</h4>
-                                <p style="color: #4F46E5; font-weight: 600;">${participante.estado.charAt(0).toUpperCase() + participante.estado.slice(1)}</p>
-                                <small>Unido: ${new Date(participante.fecha_union).toLocaleTimeString()}</small>
+                                <h4 style="margin: 0 0 0.5rem 0;">${participante.nombre}</h4>
+                                <p style="color: #4F46E5; font-weight: 600; margin: 0.25rem 0;">${participante.estado.charAt(0).toUpperCase() + participante.estado.slice(1)}</p>
+                                <small style="color: rgba(30,30,30,0.6);">Unido: ${new Date(participante.fecha_union).toLocaleTimeString()}</small>
                                 ${grupoBadge}
                             </div>
                         `;
@@ -261,8 +403,11 @@ function actualizarParticipantes() {
                 } else {
                     containerElement.innerHTML = `
                         <div id="no-participantes" style="text-align: center; padding: 2rem;">
-                            <p>No hay participantes aún</p>
-                            <p>Los estudiantes aparecerán cuando se unan con el código ${codigoSala}</p>
+                            <p style="font-size: 1.1rem; color: rgba(30,30,30,0.6);">
+                                <i class="fas fa-user-plus" style="font-size: 2rem; margin-bottom: 1rem; display: block;"></i>
+                                No hay participantes aún
+                            </p>
+                            <p style="color: rgba(30,30,30,0.5);">Los estudiantes aparecerán cuando se unan con el código <strong>${codigoSala}</strong></p>
                         </div>
                     `;
                 }
@@ -273,13 +418,65 @@ function actualizarParticipantes() {
         });
 }
 
-// Actualizar cada 3 segundos
-setInterval(actualizarParticipantes, 3000);
+// Actualizar vista de participantes por grupo
+function actualizarVistaGrupos(participantes) {
+    // Agrupar participantes por id_grupo
+    const participantesPorGrupo = {};
+    
+    participantes.forEach(p => {
+        if (p.id_grupo) {
+            if (!participantesPorGrupo[p.id_grupo]) {
+                participantesPorGrupo[p.id_grupo] = [];
+            }
+            participantesPorGrupo[p.id_grupo].push(p);
+        }
+    });
+    
+    // Actualizar cada grupo
+    gruposData.forEach(grupo => {
+        const grupoId = grupo.id_grupo;
+        const badge = document.getElementById(`grupo-${grupoId}-badge`);
+        const container = document.getElementById(`grupo-${grupoId}-participantes`);
+        
+        const participantesGrupo = participantesPorGrupo[grupoId] || [];
+        const count = participantesGrupo.length;
+        
+        // Actualizar badge con contador
+        if (badge) {
+            badge.textContent = count;
+            badge.style.background = count > 0 ? 'rgba(34, 197, 94, 0.3)' : 'rgba(150, 150, 150, 0.2)';
+            badge.style.color = count > 0 ? 'rgb(21, 128, 61)' : 'rgba(100, 100, 100, 0.7)';
+        }
+        
+        // Actualizar lista de participantes
+        if (container) {
+            if (count > 0) {
+                let html = '<div style="display: flex; flex-direction: column; gap: 0.5rem;">';
+                participantesGrupo.forEach(p => {
+                    html += `
+                        <div style="background: rgba(255, 255, 255, 0.5); padding: 0.5rem 0.75rem; border-radius: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fas fa-user-circle" style="color: rgb(21, 128, 61);"></i>
+                            <span style="flex: 1; font-weight: 500;">${p.nombre}</span>
+                            <span style="font-size: 0.75rem; color: rgba(30,30,30,0.5);">${new Date(p.fecha_union).toLocaleTimeString()}</span>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                container.innerHTML = html;
+            } else {
+                container.innerHTML = '<p style="color: rgba(30,30,30,0.5); text-align: center; padding: 1rem; font-size: 0.9rem;">Sin participantes</p>';
+            }
+        }
+    });
+}
+
+// Actualizar cada 2 segundos para tiempo real
+setInterval(actualizarParticipantes, 2000);
 
 // Cargar grupos existentes al cargar la página
 document.addEventListener('DOMContentLoaded', function() {
+    cargarGrupos(); // Cargar grupos si existen
     actualizarParticipantes(); // Cargar participantes inmediatamente
-    cargarGrupos(); // Intentar cargar grupos si ya existen
 });
 
 function iniciarJuego() {
@@ -322,10 +519,128 @@ function finalizarJuego() {
 
 function copiarCodigo() {
     navigator.clipboard.writeText(codigoSala).then(() => {
-        alert('Código copiado: ' + codigoSala);
+        mostrarToast('Código copiado: ' + codigoSala);
     }).catch(() => {
-        alert('Código: ' + codigoSala);
+        mostrarToast('Código: ' + codigoSala);
     });
 }
+
+// Función para mostrar toast notification
+function mostrarToast(mensaje) {
+    const toast = document.getElementById('toastNotification');
+    const toastMessage = document.getElementById('toastMessage');
+    
+    toastMessage.textContent = mensaje;
+    toast.style.display = 'block';
+    
+    // Ocultar después de 3 segundos
+    setTimeout(() => {
+        toast.classList.add('hiding');
+        setTimeout(() => {
+            toast.style.display = 'none';
+            toast.classList.remove('hiding');
+        }, 400); // Duración de la animación de salida
+    }, 3000);
+}
+
+// Variables para controlar la salida
+let permitirSalida = false;
+let urlDestino = null;
+let intentandoSalir = false;
+
+// Mostrar modal de confirmación
+function mostrarModalConfirmacion() {
+    const modal = document.getElementById('confirmModal');
+    if (modal) {
+        modal.style.display = 'block';
+        console.log('Modal mostrado');
+    } else {
+        console.error('Modal no encontrado');
+    }
+}
+
+// Cancelar salida
+function cancelarSalida() {
+    const modal = document.getElementById('confirmModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    permitirSalida = false;
+    intentandoSalir = false;
+}
+
+// Confirmar salida
+function confirmarSalida() {
+    permitirSalida = true;
+    intentandoSalir = false;
+    const modal = document.getElementById('confirmModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    
+    if (urlDestino) {
+        window.location.href = urlDestino;
+    } else {
+        window.location.reload();
+    }
+}
+
+// Interceptar enlaces de salida
+document.addEventListener('DOMContentLoaded', function() {
+    cargarGrupos(); // Cargar grupos si existen
+    actualizarParticipantes(); // Cargar participantes inmediatamente
+    
+    // Interceptar el botón "Volver"
+    const btnVolver = document.querySelector('a[href*="mis_cuestionarios"]');
+    if (btnVolver) {
+        btnVolver.addEventListener('click', function(e) {
+            if (!permitirSalida) {
+                e.preventDefault();
+                e.stopPropagation();
+                urlDestino = this.href;
+                mostrarModalConfirmacion();
+                return false;
+            }
+        });
+    }
+});
+
+// Prevenir recarga - SOLO usar beforeunload como fallback
+window.addEventListener('beforeunload', function(event) {
+    if (intentandoSalir || permitirSalida) {
+        return undefined; // Permitir salida
+    }
+    // El navegador mostrará su propio diálogo
+    event.preventDefault();
+    event.returnValue = '¿Seguro que deseas salir?';
+    return '¿Seguro que deseas salir?';
+});
+
+// Interceptar teclas de recarga
+document.addEventListener('keydown', function(e) {
+    // F5
+    if (e.key === 'F5' || e.keyCode === 116) {
+        if (!permitirSalida) {
+            e.preventDefault();
+            e.stopPropagation();
+            intentandoSalir = true;
+            urlDestino = null;
+            mostrarModalConfirmacion();
+            return false;
+        }
+    }
+    
+    // Ctrl+R o Cmd+R
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'r' || e.keyCode === 82)) {
+        if (!permitirSalida) {
+            e.preventDefault();
+            e.stopPropagation();
+            intentandoSalir = true;
+            urlDestino = null;
+            mostrarModalConfirmacion();
+            return false;
+        }
+    }
+}, true); // useCapture = true para interceptar antes
 </script>
 {% endblock %}

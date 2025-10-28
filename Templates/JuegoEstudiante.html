@@ -85,6 +85,48 @@
       width: 100%;
     }
 
+    .time-counter {
+      text-align: center;
+      margin: 20px 0;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 15px;
+      backdrop-filter: blur(10px);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .time-display {
+      font-size: 48px;
+      font-weight: bold;
+      font-family: var(--font-primary);
+      color: #4CAF50;
+      text-shadow: 2px 2px 8px rgba(0,0,0,0.3);
+      transition: color 0.3s ease;
+    }
+
+    .time-display.warning {
+      color: #FFC107;
+      animation: pulse 1s infinite;
+    }
+
+    .time-display.danger {
+      color: #F44336;
+      animation: pulse 0.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.1); opacity: 0.8; }
+    }
+
+    .time-label {
+      font-size: 14px;
+      opacity: 0.9;
+      margin-top: 5px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
     .game-container {
       max-width: 800px;
       margin: 0 auto;
@@ -307,6 +349,19 @@
         font-size: 20px;
       }
 
+      .time-counter {
+        margin: 15px 0;
+        padding: 10px;
+      }
+
+      .time-display {
+        font-size: 36px;
+      }
+
+      .time-label {
+        font-size: 12px;
+      }
+
       .options-grid {
         grid-template-columns: 1fr;
         gap: 15px;
@@ -358,6 +413,12 @@
         <div class="question-media" id="question-media" style="display: none;">
           <!-- Imagen o video si existe -->
         </div>
+      </div>
+
+      <!-- Contador de tiempo -->
+      <div class="time-counter">
+        <div class="time-display" id="time-display">30</div>
+        <div class="time-label">Segundos restantes</div>
       </div>
 
       <div class="options-grid" id="options-grid">
@@ -424,7 +485,9 @@
       timerInterval: null,
       questionStartTime: null,
       hasAnswered: false,
-      preguntaActual: 1
+      preguntaActual: 1,
+      tiempoRestante: 30,
+      tiempoLimitePregunta: 30 // Se actualizará con el valor del servidor
     };
 
     // Calcular puntaje según tiempo (igual que el backend)
@@ -434,17 +497,72 @@
       return Math.max(PUNTAJE_MINIMO, Math.min(PUNTAJE_MAXIMO, puntaje));
     }
 
-    // Mostrar puntaje en tiempo real
+    // Mostrar puntaje en tiempo real y manejar tiempo límite
     function actualizarPuntajeVisual() {
       if (!gameState.questionStartTime) return;
       
       const tiempoTranscurrido = (Date.now() - gameState.questionStartTime) / 1000;
+      const tiempoRestante = gameState.tiempoLimitePregunta - tiempoTranscurrido;
+      
+      // Actualizar tiempo restante
+      gameState.tiempoRestante = Math.max(0, tiempoRestante);
+      
+      // Actualizar contador numérico
+      const timeDisplay = document.getElementById('time-display');
+      const segundosRestantes = Math.ceil(Math.max(0, tiempoRestante));
+      timeDisplay.textContent = segundosRestantes;
+      
+      // Cambiar color y animación del contador según tiempo restante
+      const tercioTiempo = gameState.tiempoLimitePregunta / 3;
+      timeDisplay.classList.remove('warning', 'danger');
+      
+      if (tiempoRestante < tercioTiempo) {
+        timeDisplay.classList.add('danger');
+      } else if (tiempoRestante < tercioTiempo * 2) {
+        timeDisplay.classList.add('warning');
+      }
+      
+      // Si se acabó el tiempo y no ha respondido
+      if (tiempoRestante <= 0 && !gameState.hasAnswered) {
+        gameState.hasAnswered = true;
+        clearInterval(gameState.timerInterval);
+        
+        // Deshabilitar todos los botones
+        const buttons = document.querySelectorAll('.option-button');
+        buttons.forEach(btn => {
+          btn.disabled = true;
+          btn.style.opacity = '0.5';
+        });
+        
+        // Mostrar mensaje de tiempo agotado
+        console.log('⏰ Tiempo agotado - Esperando a que el docente avance');
+        
+        // Ir a pantalla de espera
+        setTimeout(() => {
+          mostrarPantallaEspera();
+          document.querySelector('.waiting-screen h2').textContent = '⏰ Tiempo agotado';
+          document.querySelector('.waiting-screen p').textContent = 'Esperando a que el docente avance a la siguiente pregunta';
+          iniciarPollingPregunta();
+        }, 1500);
+        
+        return;
+      }
+      
       const puntajeActual = calcularPuntaje(tiempoTranscurrido);
       
-      // Actualizar el indicador visual del puntaje potencial
+      // Actualizar el indicador visual del puntaje potencial (barra superior)
       const timerFill = document.getElementById('timer-fill');
-      const porcentaje = ((puntajeActual - PUNTAJE_MINIMO) / (PUNTAJE_MAXIMO - PUNTAJE_MINIMO)) * 100;
-      timerFill.style.width = porcentaje + '%';
+      const porcentajeTiempo = (tiempoRestante / gameState.tiempoLimitePregunta) * 100;
+      timerFill.style.width = porcentajeTiempo + '%';
+      
+      // Cambiar color de la barra según tiempo restante
+      if (tiempoRestante < tercioTiempo) {
+        timerFill.style.background = 'linear-gradient(90deg, #F44336, #E91E63)';
+      } else if (tiempoRestante < tercioTiempo * 2) {
+        timerFill.style.background = 'linear-gradient(90deg, #FFC107, #FF9800)';
+      } else {
+        timerFill.style.background = 'linear-gradient(90deg, #4CAF50, #8BC34A)';
+      }
     }
 
     // Cargar pregunta actual del servidor
@@ -459,6 +577,12 @@
           gameState.preguntaActual = data.pregunta.numero_pregunta;
           gameState.hasAnswered = false;
           gameState.questionStartTime = Date.now();
+          
+          // Actualizar tiempo límite desde el servidor
+          if (data.pregunta.tiempo_limite) {
+            gameState.tiempoLimitePregunta = data.pregunta.tiempo_limite;
+            gameState.tiempoRestante = data.pregunta.tiempo_limite;
+          }
           
           mostrarPregunta(data.pregunta);
         } else {
@@ -479,6 +603,11 @@
       // Mostrar enunciado
       document.getElementById('question-text').textContent = pregunta.enunciado;
       
+      // Resetear y mostrar contador de tiempo
+      const timeDisplay = document.getElementById('time-display');
+      timeDisplay.textContent = gameState.tiempoLimitePregunta;
+      timeDisplay.classList.remove('warning', 'danger');
+      
       // Cargar opciones
       const optionsGrid = document.getElementById('options-grid');
       const colores = ['a', 'b', 'c', 'd'];
@@ -491,10 +620,14 @@
         </button>
       `).join('');
 
+      // Resetear mensajes de pantalla de espera
+      document.querySelector('.waiting-screen h2').textContent = '⏳ Esperando siguiente pregunta...';
+      document.querySelector('.waiting-screen p').textContent = 'Tu respuesta ha sido registrada';
+
       // Mostrar pantalla de juego
       mostrarPantallaJuego();
       
-      // Iniciar actualización del puntaje visual
+      // Iniciar actualización del puntaje visual y temporizador
       clearInterval(gameState.timerInterval);
       gameState.timerInterval = setInterval(actualizarPuntajeVisual, 100);
     }
@@ -547,11 +680,10 @@
             selectedButton.classList.add('incorrect');
           }
           
-          // Esperar 2 segundos y luego esperar siguiente pregunta
+          // SIEMPRE esperar a que el docente avance (eliminado modo individual auto-avance)
           setTimeout(() => {
             mostrarPantallaEspera();
-            // Polling para siguiente pregunta o fin del juego
-            console.log('🔄 Iniciando polling para siguiente pregunta o fin del juego...');
+            console.log('⏳ Esperando a que el docente avance a la siguiente pregunta...');
             iniciarPollingPregunta();
           }, 2000);
         }

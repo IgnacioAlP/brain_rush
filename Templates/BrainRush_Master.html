@@ -288,7 +288,7 @@
   document.querySelectorAll('form').forEach(form => {
     form.addEventListener('submit', function (e) {
       // 🧠 Evitar interferir con formularios manejados por JavaScript o multipasos
-      const ignoredForms = ['form-recompensa', 'form-unirse', 'form-cuestionario', 'form-ajax'];
+      const ignoredForms = ['form-recompensa', 'form-unirse', 'form-cuestionario', 'form-ajax', 'question-form'];
       if (ignoredForms.some(id => form.id?.includes(id))) return;
 
       const submitBtn = form.querySelector('button[type="submit"], input[type="submit"]');

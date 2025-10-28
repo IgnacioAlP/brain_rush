@@ -177,6 +177,107 @@
     transform: none;
 }
 
+/* Modal de confirmación personalizado */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(10px);
+    z-index: 9999;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 3rem;
+    border-radius: 2rem;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+    text-align: center;
+    min-width: 400px;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translate(-50%, -60%);
+        opacity: 0;
+    }
+    to {
+        transform: translate(-50%, -50%);
+        opacity: 1;
+    }
+}
+
+.modal-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.modal-title {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: white;
+    margin-bottom: 1rem;
+}
+
+.modal-message {
+    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 2rem;
+    line-height: 1.5;
+}
+
+.modal-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
+.modal-btn {
+    padding: 1rem 2.5rem;
+    border: none;
+    border-radius: 1rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.modal-btn-cancel {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+.modal-btn-cancel:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+}
+
+.modal-btn-confirm {
+    background: linear-gradient(135deg, #FF6B35, #F7931E);
+    color: white;
+}
+
+.modal-btn-confirm:hover {
+    background: linear-gradient(135deg, #F7931E, #FF6B35);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(255, 107, 53, 0.4);
+}
+
 .ranking-preview {
     background: white;
     border-radius: 1.5rem;
@@ -324,7 +425,7 @@
         <button class="btn-control btn-primary" id="btn-siguiente" onclick="siguientePregunta()">
             ➡️ Siguiente Pregunta
         </button>
-        <button class="btn-control btn-secondary" onclick="finalizarJuego()">
+        <button class="btn-control btn-secondary" id="btn-finalizar" onclick="finalizarJuego()">
             🏁 Finalizar Juego
         </button>
     </div>
@@ -355,6 +456,27 @@
         </table>
     </div>
 </div>
+
+<!-- Modal de confirmación personalizado -->
+<div class="modal-overlay" id="confirmModal">
+    <div class="modal-content">
+        <div class="modal-icon">⚠️</div>
+        <div class="modal-title">¿Salir del control de juego?</div>
+        <div class="modal-message">
+            El juego seguirá en curso para los participantes.<br>
+            ¿Estás seguro de que deseas salir?
+        </div>
+        <div class="modal-buttons">
+            <button class="modal-btn modal-btn-cancel" onclick="cancelarSalida()">
+                ✖ Cancelar
+            </button>
+            <button class="modal-btn modal-btn-confirm" onclick="confirmarSalida()">
+                ✓ Salir
+            </button>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -409,6 +531,28 @@ function mostrarPregunta(pregunta) {
             </div>
         `;
     }).join('');
+    
+    // Controlar botones según si es la última pregunta
+    const btnSiguiente = document.getElementById('btn-siguiente');
+    const btnFinalizar = document.getElementById('btn-finalizar');
+    
+    if (pregunta.numero_pregunta >= pregunta.total_preguntas) {
+        // Última pregunta: desactivar "Siguiente" y activar "Finalizar"
+        btnSiguiente.disabled = true;
+        btnSiguiente.style.opacity = '0.5';
+        btnSiguiente.style.cursor = 'not-allowed';
+        
+        if (btnFinalizar) {
+            btnFinalizar.disabled = false;
+            btnFinalizar.style.opacity = '1';
+            btnFinalizar.style.cursor = 'pointer';
+        }
+    } else {
+        // No es la última: activar "Siguiente"
+        btnSiguiente.disabled = false;
+        btnSiguiente.style.opacity = '1';
+        btnSiguiente.style.cursor = 'pointer';
+    }
 }
 
 async function iniciarPollingEstadisticas() {
@@ -578,10 +722,90 @@ window.addEventListener('DOMContentLoaded', () => {
     cargarPreguntaActual();
 });
 
-// Limpiar intervalos al salir
-window.addEventListener('beforeunload', () => {
+// Variables para controlar la salida
+let permitirSalida = false;
+let urlDestino = null;
+let intentandoSalir = false;
+
+// Mostrar modal de confirmación
+function mostrarModalConfirmacion() {
+    const modal = document.getElementById('confirmModal');
+    if (modal) {
+        modal.style.display = 'block';
+        console.log('Modal mostrado');
+    } else {
+        console.error('Modal no encontrado');
+    }
+}
+
+// Cancelar salida
+function cancelarSalida() {
+    const modal = document.getElementById('confirmModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    permitirSalida = false;
+    intentandoSalir = false;
+}
+
+// Confirmar salida
+function confirmarSalida() {
+    permitirSalida = true;
+    intentandoSalir = false;
+    const modal = document.getElementById('confirmModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    
     if (pollingInterval) clearInterval(pollingInterval);
     if (estadisticasInterval) clearInterval(estadisticasInterval);
+    
+    if (urlDestino) {
+        window.location.href = urlDestino;
+    } else {
+        window.location.reload();
+    }
+}
+
+// Limpiar intervalos y mostrar confirmación
+window.addEventListener('beforeunload', (event) => {
+    if (intentandoSalir || permitirSalida) {
+        if (pollingInterval) clearInterval(pollingInterval);
+        if (estadisticasInterval) clearInterval(estadisticasInterval);
+        return undefined;
+    }
+    
+    // Mostrar confirmación nativa del navegador
+    event.preventDefault();
+    event.returnValue = '¿Seguro que deseas salir? El juego seguirá en curso.';
+    return '¿Seguro que deseas salir? El juego seguirá en curso.';
 });
+
+// Interceptar teclas de recarga para mostrar modal
+document.addEventListener('keydown', function(e) {
+    // F5
+    if (e.key === 'F5' || e.keyCode === 116) {
+        if (!permitirSalida) {
+            e.preventDefault();
+            e.stopPropagation();
+            intentandoSalir = true;
+            urlDestino = null;
+            mostrarModalConfirmacion();
+            return false;
+        }
+    }
+    
+    // Ctrl+R o Cmd+R
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'r' || e.keyCode === 82)) {
+        if (!permitirSalida) {
+            e.preventDefault();
+            e.stopPropagation();
+            intentandoSalir = true;
+            urlDestino = null;
+            mostrarModalConfirmacion();
+            return false;
+        }
+    }
+}, true);
 </script>
 {% endblock %}

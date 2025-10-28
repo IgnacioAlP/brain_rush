@@ -15,6 +15,13 @@ class Config:
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
     MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER') or 'noreply@brainrush.com'
+    
+    # Configuración de OneDrive Azure AD
+    AZURE_CLIENT_ID = os.environ.get('AZURE_CLIENT_ID')
+    AZURE_CLIENT_SECRET = os.environ.get('AZURE_CLIENT_SECRET')
+    AZURE_TENANT_ID = os.environ.get('AZURE_TENANT_ID')
+    ONEDRIVE_REDIRECT_URI = os.environ.get('ONEDRIVE_REDIRECT_URI') or 'http://localhost:5000/callback/onedrive'
+    ONEDRIVE_SCOPES = ['Files.ReadWrite', 'User.Read']
 
 class DevelopmentConfig(Config):
     """Configuración para desarrollo"""
