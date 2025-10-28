@@ -1546,7 +1546,7 @@ def ver_resultados_juego(sala_id):
         conexion = obtener_conexion()
         cursor = conexion.cursor()
         cursor.execute('''
-            SELECT c.titulo, c.descripcion 
+            SELECT c.id_cuestionario, c.titulo, c.descripcion 
             FROM cuestionarios c
             JOIN salas_juego s ON c.id_cuestionario = s.id_cuestionario
             WHERE s.id_sala = %s
@@ -1554,6 +1554,41 @@ def ver_resultados_juego(sala_id):
         cuestionario_data = cursor.fetchone()
         cursor.close()
         conexion.close()
+        
+        # Obtener recompensas otorgadas en este juego
+        recompensas_otorgadas = []
+        if cuestionario_data:
+            id_cuestionario = cuestionario_data[0]
+            # Obtener recompensas asignadas a los participantes de esta sala
+            conexion = obtener_conexion()
+            cursor = conexion.cursor()
+            cursor.execute('''
+                SELECT 
+                    r.nombre AS recompensa,
+                    r.tipo,
+                    p.nombre_participante,
+                    rk.posicion,
+                    ro.fecha_otorgacion
+                FROM recompensas_otorgadas ro
+                JOIN recompensas r ON ro.id_recompensa = r.id_recompensa
+                JOIN usuarios u ON ro.id_estudiante = u.id_usuario
+                JOIN participantes_sala p ON p.id_usuario = u.id_usuario AND p.id_sala = %s
+                JOIN ranking_sala rk ON rk.id_participante = p.id_participante
+                WHERE r.id_cuestionario = %s
+                ORDER BY rk.posicion ASC
+            ''', (sala_id, id_cuestionario))
+            
+            recompensas_otorgadas = []
+            for row in cursor.fetchall():
+                recompensas_otorgadas.append({
+                    'recompensa': row[0],
+                    'tipo': row[1],
+                    'nombre_participante': row[2],
+                    'posicion': row[3],
+                    'fecha': row[4]
+                })
+            cursor.close()
+            conexion.close()
         
         # Si es estudiante, obtener su resultado personal
         resultado_personal = None
@@ -1565,9 +1600,10 @@ def ver_resultados_juego(sala_id):
         return render_template('ResultadosJuego.html',
             sala=sala,
             ranking=ranking,
-            cuestionario_titulo=cuestionario_data[0] if cuestionario_data else 'Cuestionario',
-            cuestionario_descripcion=cuestionario_data[1] if cuestionario_data else '',
+            cuestionario_titulo=cuestionario_data[1] if cuestionario_data else 'Cuestionario',
+            cuestionario_descripcion=cuestionario_data[2] if cuestionario_data else '',
             resultado_personal=resultado_personal,
+            recompensas_otorgadas=recompensas_otorgadas,
             es_docente=(session.get('usuario_tipo') == 'docente')
         )
     except Exception as e:

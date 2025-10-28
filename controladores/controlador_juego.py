@@ -464,6 +464,7 @@ def finalizar_juego_sala(sala_id):
     - Cambia el estado a 'finalizada'
     - Calcula el ranking final
     - Actualiza el estado de los participantes
+    - Asigna recompensas automáticamente a los 3 primeros puestos
     
     Returns:
         True si se finalizó correctamente
@@ -490,6 +491,22 @@ def finalizar_juego_sala(sala_id):
             
             conexion.commit()
             print(f"✅ Juego finalizado para sala {sala_id}")
+            
+            # Asignar recompensas automáticamente a los 3 primeros puestos
+            try:
+                from controladores import controlador_recompensas
+                resultado_recompensas = controlador_recompensas.asignar_recompensas_top3(sala_id)
+                
+                if resultado_recompensas['success']:
+                    print(f"🏆 Recompensas asignadas: {resultado_recompensas['total_asignadas']}")
+                    for recompensa in resultado_recompensas.get('recompensas', []):
+                        print(f"   - {recompensa['nombre_participante']}: {recompensa['recompensa']} ({recompensa['tipo']})")
+                else:
+                    print(f"⚠️ No se pudieron asignar recompensas: {resultado_recompensas.get('error', 'Error desconocido')}")
+            except Exception as e_recompensas:
+                # No fallar el finalizamiento del juego si hay error en las recompensas
+                print(f"⚠️ Error al asignar recompensas (no crítico): {e_recompensas}")
+            
             return True
     except Exception as e:
         conexion.rollback()
