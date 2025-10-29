@@ -22,6 +22,11 @@ class Config:
     AZURE_TENANT_ID = os.environ.get('AZURE_TENANT_ID')
     ONEDRIVE_REDIRECT_URI = os.environ.get('ONEDRIVE_REDIRECT_URI') or 'http://localhost:5000/callback/onedrive'
     ONEDRIVE_SCOPES = ['Files.ReadWrite', 'User.Read']
+    
+    # Tokens del sistema OneDrive (cuenta centralizada)
+    ONEDRIVE_ACCESS_TOKEN = os.environ.get('ONEDRIVE_ACCESS_TOKEN')
+    ONEDRIVE_REFRESH_TOKEN = os.environ.get('ONEDRIVE_REFRESH_TOKEN')
+    ONEDRIVE_TOKEN_EXPIRES = os.environ.get('ONEDRIVE_TOKEN_EXPIRES')
 
 class DevelopmentConfig(Config):
     """Configuración para desarrollo"""

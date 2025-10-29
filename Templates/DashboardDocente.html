@@ -895,21 +895,47 @@
             {% endif %}
         </div>
 
+        <!-- Ranking Global de los cuestionarios del docente -->
         <div class="section-card">
             <h3 class="section-title">
                 <i class="fas fa-trophy"></i>
-                Ranking en Tiempo Real
-                <span id="live-indicator" class="live-indicator">
-                    <i class="fas fa-circle"></i> EN VIVO
-                </span>
+                Ranking Global de tus Estudiantes
             </h3>
 
-            <div id="ranking-container">
-                <div class="loading-state">
-                    <i class="fas fa-spinner fa-spin"></i>
-                    <p>Cargando ranking en tiempo real...</p>
+            {% if ranking_global %}
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: rgba(102, 126, 234, 0.1); border-bottom: 2px solid #667eea;">
+                            <th style="padding: 12px; text-align: center; font-weight: 600; color: #333; width: 80px;">Posición</th>
+                            <th style="padding: 12px; text-align: left; font-weight: 600; color: #333;">Estudiante</th>
+                            <th style="padding: 12px; text-align: center; font-weight: 600; color: #333; width: 120px;">Puntaje Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for estudiante in ranking_global %}
+                        <tr class="animate-fadeIn" style="animation-delay: {{ loop.index * 0.02 }}s; border-bottom: 1px solid #eee; transition: background 0.2s;" onmouseover="this.style.background='rgba(102, 126, 234, 0.05)'" onmouseout="this.style.background='transparent'">
+                            <td style="padding: 12px; text-align: center; font-weight: 600; color: #667eea; font-size: 1.1rem;">
+                                {% if estudiante.posicion == 1 %}🥇
+                                {% elif estudiante.posicion == 2 %}🥈
+                                {% elif estudiante.posicion == 3 %}🥉
+                                {% else %}{{ estudiante.posicion }}
+                                {% endif %}
+                            </td>
+                            <td style="padding: 12px; color: #333; font-weight: 500;">{{ estudiante.nombre_completo }}</td>
+                            <td style="padding: 12px; text-align: center; font-size: 1.2rem; font-weight: 700; color: #667eea;">
+                                {{ estudiante.puntaje_acumulado }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <div class="empty-ranking" style="text-align: center; padding: 3rem; color: #999;">
+                    <i class="fas fa-trophy" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.3;"></i>
+                    <p style="font-size: 1.1rem; font-weight: 600; color: #666;">No hay datos de ranking aún</p>
+                    <p>Los estudiantes aparecerán aquí una vez que completen tus cuestionarios.</p>
                 </div>
-            </div>
+            {% endif %}
         </div>
     </div>
 
@@ -939,11 +965,8 @@
 
 {% block extra_js %}
 <script>
-// Variable para controlar el intervalo de actualización
-let rankingInterval = null;
-
 document.addEventListener('DOMContentLoaded', function() {
-    // Animaciones de números
+    // Animaciones de números en las estadísticas
     const statNumbers = document.querySelectorAll('.stat-number');
     
     statNumbers.forEach(number => {
@@ -974,109 +997,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function easeOutCubic(t) {
         return 1 - Math.pow(1 - t, 3);
     }
-    
-    // Cargar ranking en tiempo real
-    cargarRankingTiempoReal();
-    
-    // Actualizar cada 5 segundos
-    rankingInterval = setInterval(cargarRankingTiempoReal, 5000);
 });
-
-// Limpiar intervalo cuando se sale de la página
-window.addEventListener('beforeunload', function() {
-    if (rankingInterval) {
-        clearInterval(rankingInterval);
-    }
-});
-
-async function cargarRankingTiempoReal() {
-    const docenteId = {{ usuario.id_usuario }};
-    const container = document.getElementById('ranking-container');
-    
-    try {
-        const response = await fetch(`/api/docente/${docenteId}/ranking-tiempo-real`);
-        const data = await response.json();
-        
-        if (data.success && data.salas && data.salas.length > 0) {
-            let html = '';
-            
-            data.salas.forEach(sala => {
-                html += `
-                    <div class="sala-ranking-group animate-fadeIn">
-                        <div class="sala-ranking-header">
-                            <div class="sala-ranking-title">
-                                <i class="fas fa-graduation-cap"></i>
-                                ${sala.cuestionario_titulo}
-                                <span class="sala-pin-badge">PIN: ${sala.pin_sala}</span>
-                            </div>
-                            <span class="sala-estado-badge ${sala.estado}">
-                                ${sala.estado === 'en_curso' ? 'En Curso' : 'Esperando'}
-                            </span>
-                        </div>
-                        <div class="ranking-list">
-                `;
-                
-                sala.ranking.forEach((participante, index) => {
-                    const medalEmojis = ['🥇', '🥈', '🥉'];
-                    const rankClass = `rank-${participante.posicion}`;
-                    
-                    html += `
-                        <div class="ranking-item ${rankClass}">
-                            <div class="ranking-medal">${medalEmojis[index] || ''}</div>
-                            <div class="ranking-position">${participante.posicion}</div>
-                            <div class="ranking-student-info">
-                                <div class="ranking-student-name">${participante.nombre_participante}</div>
-                                ${participante.nombre_grupo ? 
-                                    `<div class="ranking-student-group">
-                                        <i class="fas fa-users"></i> 
-                                        ${participante.nombre_grupo}
-                                    </div>` 
-                                    : ''}
-                            </div>
-                            <div class="ranking-stats">
-                                <div class="ranking-stat">
-                                    <span class="ranking-stat-value">${participante.respuestas_correctas}</span>
-                                    <span class="ranking-stat-label">Correctas</span>
-                                </div>
-                                <div class="ranking-stat">
-                                    <span class="ranking-stat-value">${participante.tiempo_total_respuestas}s</span>
-                                    <span class="ranking-stat-label">Tiempo</span>
-                                </div>
-                            </div>
-                            <div class="ranking-score">${participante.puntaje_total}</div>
-                        </div>
-                    `;
-                });
-                
-                html += `
-                        </div>
-                    </div>
-                `;
-            });
-            
-            container.innerHTML = html;
-        } else {
-            container.innerHTML = `
-                <div class="empty-ranking">
-                    <i class="fas fa-trophy"></i>
-                    <p>No hay juegos activos en este momento.</p>
-                    <p style="font-size: 0.85rem; margin-top: 0.5rem;">
-                        Crea una sala para comenzar a ver el ranking en tiempo real.
-                    </p>
-                </div>
-            `;
-        }
-    } catch (error) {
-        console.error('Error al cargar ranking en tiempo real:', error);
-        container.innerHTML = `
-            <div class="empty-ranking" style="color: #ef4444;">
-                <i class="fas fa-exclamation-triangle"></i>
-                <p>Error al cargar el ranking</p>
-                <p style="font-size: 0.85rem;">${error.message}</p>
-            </div>
-        `;
-    }
-}
 
 // Funciones de exportación
 function exportarResultados(cuestionarioId) {

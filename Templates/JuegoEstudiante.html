@@ -680,12 +680,48 @@
             selectedButton.classList.add('incorrect');
           }
           
-          // SIEMPRE esperar a que el docente avance (eliminado modo individual auto-avance)
-          setTimeout(() => {
-            mostrarPantallaEspera();
-            console.log('⏳ Esperando a que el docente avance a la siguiente pregunta...');
-            iniciarPollingPregunta();
-          }, 2000);
+          // Auto-avance: Esperar feedback visual, luego avanzar automáticamente
+          setTimeout(async () => {
+            try {
+              console.log('✅ Respuesta registrada, avanzando automáticamente...');
+              
+              // Llamar al endpoint para avanzar a la siguiente pregunta
+              const avanzarResponse = await fetch(`/api/sala/${SALA_ID}/siguiente-pregunta`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json'
+                }
+              });
+              
+              const avanzarData = await avanzarResponse.json();
+              
+              if (avanzarData.success) {
+                if (avanzarData.hay_mas_preguntas) {
+                  // Hay más preguntas, cargar la siguiente
+                  console.log('➡️ Cargando siguiente pregunta...');
+                  mostrarPantallaEspera();
+                  // Pequeña pausa para que el backend actualice
+                  setTimeout(() => {
+                    cargarPreguntaActual();
+                  }, 500);
+                } else {
+                  // Juego finalizado
+                  console.log('🏁 Juego finalizado, redirigiendo a resultados...');
+                  window.location.href = `/sala/${SALA_ID}/resultados`;
+                }
+              } else {
+                console.error('Error al avanzar:', avanzarData.error);
+                // Si falla, usar polling como respaldo
+                mostrarPantallaEspera();
+                iniciarPollingPregunta();
+              }
+            } catch (error) {
+              console.error('Error al avanzar pregunta:', error);
+              // En caso de error, usar polling como respaldo
+              mostrarPantallaEspera();
+              iniciarPollingPregunta();
+            }
+          }, 1500); // Espera 1.5s para mostrar el feedback visual
         }
       } catch (error) {
         console.error('Error al enviar respuesta:', error);

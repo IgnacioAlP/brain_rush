@@ -1154,14 +1154,24 @@ async function exportarOneDrive(salaId, ranking, totalPreguntas, titulo) {
         const data = await response.json();
         
         if (data.success) {
-            if (data.fallback) {
+            if (data.already_exported) {
+                // Archivo ya existe en OneDrive
+                let mensaje = `📂 ${data.message}\n\nArchivo: ${data.file_name}`;
+                if (data.email_sent) {
+                    mensaje += '\n\n📧 Se ha enviado el link a tu correo.';
+                }
+                alert(mensaje);
+                if (data.web_url && confirm('¿Deseas abrir el archivo en OneDrive?')) {
+                    window.open(data.web_url, '_blank');
+                }
+            } else if (data.fallback) {
                 // OneDrive falló, se envió por email
                 alert(`⚠️ ${data.message}\n\nArchivo: ${data.file_name}\n\n💡 Revisa tu correo.`);
             } else if (data.email_sent) {
                 // Solo email (sin intentar OneDrive)
                 alert(`✅ ${data.message}\n\nArchivo: ${data.file_name}`);
             } else if (data.web_url) {
-                // Subido exitosamente a OneDrive
+                // Subido exitosamente a OneDrive por primera vez
                 alert(`✅ ${data.message}\n\nCarpeta: ${data.folder}`);
                 if (confirm('¿Deseas abrir el archivo en OneDrive?')) {
                     window.open(data.web_url, '_blank');

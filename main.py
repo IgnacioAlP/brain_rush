@@ -8,7 +8,15 @@ import os, json
 from io import BytesIO
 from datetime import datetime, timedelta
 import requests
-import msal
+
+# Importar msal solo si está disponible (necesario para OneDrive)
+try:
+    import msal
+    MSAL_AVAILABLE = True
+except ImportError:
+    MSAL_AVAILABLE = False
+    print("WARNING: msal no está instalado. La funcionalidad de OneDrive no estará disponible.")
+    print("Para instalar: pip install msal")
 
 # Cargar variables de entorno desde .env
 from dotenv import load_dotenv
@@ -900,35 +908,37 @@ def dashboard_docente():
         id_docente = session['usuario_id']
         cuestionarios = obtener_cuestionarios_por_docente_simple(id_docente)
         
+        # Obtener ranking global de los cuestionarios del docente
+        ranking_global = controlador_ranking.obtener_ranking_global_por_docente(id_docente)
+        
         # Estadísticas específicas del docente
         estadisticas = {
             'total_cuestionarios': len(cuestionarios),
             'cuestionarios_activos': len([c for c in cuestionarios if c.get('estado') == 'activo']),
-            'total_estudiantes': 0,  # Implementar función para contar estudiantes únicos
-            'total_respuestas': 0,    # Implementar función para contar respuestas
-            'promedio_calificaciones': 0  # Implementar función para promedio
+            'total_estudiantes': len(ranking_global),  # Estudiantes únicos que han participado
+            'total_participaciones': sum(e.get('total_participaciones', 0) for e in ranking_global),
+            'promedio_calificaciones': round(sum(e.get('promedio_puntaje', 0) for e in ranking_global) / len(ranking_global), 1) if ranking_global else 0
         }
-        
-        # Obtener resultados recientes de estudiantes
-        resultados_recientes = []  # Implementar función para obtener resultados
         
     except Exception as e:
         print(f"Error obteniendo datos del docente: {e}")
+        import traceback
+        traceback.print_exc()
         cuestionarios = []
+        ranking_global = []
         estadisticas = {
             'total_cuestionarios': 0,
             'cuestionarios_activos': 0,
             'total_estudiantes': 0,
-            'total_respuestas': 0,
+            'total_participaciones': 0,
             'promedio_calificaciones': 0
         }
-        resultados_recientes = []
     
     return render_template('DashboardDocente.html', 
                          usuario=usuario, 
                          estadisticas=estadisticas,
                          cuestionarios=cuestionarios,
-                         resultados_recientes=resultados_recientes)
+                         ranking_global=ranking_global)
 
 @app.route('/dashboard')
 @login_required
@@ -1031,10 +1041,24 @@ def ranking_global():
     """Ranking global del sistema"""
     try:
         ranking = controlador_ranking.obtener_ranking_global()
-    except:
-        ranking = []
-    
-    return render_template('RankingGlobal.html', ranking=ranking)
+        
+        # Si el usuario es estudiante, encontrar su posición
+        usuario_actual = None
+        if session.get('usuario_tipo') == 'estudiante':
+            usuario_id = session.get('usuario_id')
+            for estudiante in ranking:
+                if estudiante['id_usuario'] == usuario_id:
+                    usuario_actual = estudiante
+                    break
+        
+        return render_template('RankingGlobal.html', 
+                             ranking=ranking, 
+                             usuario_actual=usuario_actual)
+    except Exception as e:
+        print(f"Error en ranking_global: {e}")
+        import traceback
+        traceback.print_exc()
+        return render_template('RankingGlobal.html', ranking=[], usuario_actual=None)
 
 @app.route('/mis-recompensas')
 @login_required
@@ -1449,10 +1473,80 @@ def responder_pregunta_juego(sala_id):
 
 @app.route('/api/sala/<int:sala_id>/siguiente-pregunta', methods=['POST'])
 def avanzar_pregunta(sala_id):
-    """Avanza a la siguiente pregunta (solo docente)"""
+    """Avanza a la siguiente pregunta (docente o estudiante en modo individual)"""
     try:
-        if session.get('usuario_tipo') != 'docente':
+        # Permitir tanto a docentes como a estudiantes avanzar
+        # (Estudiantes solo avanzan después de responder)
+        usuario_tipo = session.get('usuario_tipo')
+        
+        if usuario_tipo not in ['docente', 'estudiante']:
             return jsonify({'success': False, 'error': 'No autorizado'}), 403
+        
+        # Si es estudiante, verificar que haya respondido la pregunta actual
+        if usuario_tipo == 'estudiante':
+            participante_id = session.get('participante_id')
+            if not participante_id:
+                return jsonify({'success': False, 'error': 'No hay sesión de participante'}), 401
+            
+            # Verificar que el estudiante haya respondido la pregunta actual
+            conexion = obtener_conexion()
+            try:
+                with conexion.cursor() as cursor:
+                    # Obtener el número de pregunta actual y el id_cuestionario
+                    cursor.execute('''
+                        SELECT ejs.pregunta_actual, s.id_cuestionario
+                        FROM estado_juego_sala ejs
+                        JOIN salas_juego s ON ejs.id_sala = s.id_sala
+                        WHERE ejs.id_sala = %s
+                    ''', (sala_id,))
+                    
+                    estado_result = cursor.fetchone()
+                    if not estado_result:
+                        return jsonify({
+                            'success': False, 
+                            'error': 'No se pudo obtener el estado de la sala'
+                        }), 500
+                    
+                    # Usar índices numéricos en lugar de claves de diccionario
+                    num_pregunta_actual = estado_result[0]  # pregunta_actual
+                    id_cuestionario = estado_result[1]      # id_cuestionario
+                    
+                    # Obtener el id_pregunta correspondiente al número de pregunta actual
+                    cursor.execute('''
+                        SELECT p.id_pregunta
+                        FROM cuestionario_preguntas cp
+                        JOIN preguntas p ON cp.id_pregunta = p.id_pregunta
+                        WHERE cp.id_cuestionario = %s
+                        ORDER BY cp.orden
+                        LIMIT %s, 1
+                    ''', (id_cuestionario, num_pregunta_actual - 1))
+                    
+                    pregunta_result = cursor.fetchone()
+                    if not pregunta_result:
+                        return jsonify({
+                            'success': False, 
+                            'error': 'No se pudo obtener la pregunta actual'
+                        }), 500
+                    
+                    id_pregunta_actual = pregunta_result[0]  # id_pregunta
+                    
+                    # Verificar si el estudiante respondió esta pregunta
+                    cursor.execute('''
+                        SELECT COUNT(*) as count
+                        FROM respuestas_participantes
+                        WHERE id_participante = %s 
+                        AND id_sala = %s
+                        AND id_pregunta = %s
+                    ''', (participante_id, sala_id, id_pregunta_actual))
+                    
+                    result = cursor.fetchone()
+                    if not result or result[0] == 0:  # count es el primer elemento
+                        return jsonify({
+                            'success': False, 
+                            'error': 'Debes responder la pregunta actual antes de avanzar'
+                        }), 403
+            finally:
+                conexion.close()
         
         hay_mas = controlador_juego.avanzar_siguiente_pregunta(sala_id)
         
@@ -2735,7 +2829,7 @@ def descargar_plantilla_excel(id_cuestionario):
             as_attachment=True,
             download_name=filename
         )
-        
+
     except Exception as e:
         print(f"Error al generar plantilla Excel: {str(e)}")
         flash(f'Error al generar la plantilla: {str(e)}', 'error')
@@ -4354,33 +4448,33 @@ def exportar_resultados_excel(sala_id):
 
 @app.route('/api/exportar-resultados/<int:sala_id>/onedrive', methods=['POST'])
 def exportar_resultados_onedrive(sala_id):
-    """Exportar resultados a OneDrive usando OAuth2"""
+    """Exportar resultados a OneDrive usando sistema centralizado y enviar email con link"""
     try:
-        data = request.get_json()
-        ranking = data.get('ranking', [])
-        total_preguntas = data.get('totalPreguntas', 0)
-        cuestionario_titulo = data.get('cuestionarioTitulo', 'Cuestionario')
-        
-        # Verificar autenticación del usuario
+        # Verificar autenticación
         if 'usuario_id' not in session:
             return jsonify({
                 'success': False,
                 'error': 'Usuario no autenticado'
             }), 401
         
-        # Obtener datos del usuario y verificar token de OneDrive
+        # Obtener datos de la solicitud
+        data = request.get_json()
+        ranking = data.get('ranking', [])
+        total_preguntas = data.get('totalPreguntas', 0)
+        cuestionario_titulo = data.get('cuestionarioTitulo', 'Cuestionario')
+        
+        # Obtener datos del usuario (quien solicita la exportación)
         conexion = obtener_conexion()
         cursor = conexion.cursor()
         cursor.execute("""
-            SELECT email, nombre, apellidos, onedrive_access_token, 
-                   onedrive_refresh_token, onedrive_token_expires 
+            SELECT email, nombre, apellidos 
             FROM usuarios WHERE id_usuario = %s
         """, (session['usuario_id'],))
         usuario = cursor.fetchone()
+        cursor.close()
+        conexion.close()
         
         if not usuario:
-            cursor.close()
-            conexion.close()
             return jsonify({
                 'success': False,
                 'error': 'Usuario no encontrado'
@@ -4388,18 +4482,24 @@ def exportar_resultados_onedrive(sala_id):
         
         email_usuario = usuario[0]
         nombre_completo = f"{usuario[1]} {usuario[2]}"
-        access_token = usuario[3]
-        refresh_token = usuario[4]
-        token_expires = usuario[5]
         
         # Crear archivo Excel en memoria
-        import io
+        import tempfile
         from openpyxl import Workbook
         from openpyxl.styles import Font, Alignment, PatternFill
         
         wb = Workbook()
         ws = wb.active
         ws.title = "Resultados"
+        
+        # Título del cuestionario
+        ws.merge_cells('A1:H1')
+        titulo_cell = ws['A1']
+        titulo_cell.value = f"Resultados - {cuestionario_titulo}"
+        titulo_cell.font = Font(size=16, bold=True, color="FFFFFF")
+        titulo_cell.fill = PatternFill(start_color="667eea", end_color="667eea", fill_type="solid")
+        titulo_cell.alignment = Alignment(horizontal='center', vertical='center')
+        ws.row_dimensions[1].height = 30
         
         # Encabezados
         headers = ['Posición', 'Estudiante', 'Grupo', 'Puntaje', 'Correctas', 'Incorrectas', 
@@ -4408,15 +4508,16 @@ def exportar_resultados_onedrive(sala_id):
         header_font = Font(bold=True, color="FFFFFF")
         
         for col, header in enumerate(headers, 1):
-            cell = ws.cell(row=1, column=col, value=header)
+            cell = ws.cell(row=2, column=col, value=header)
             cell.fill = header_fill
             cell.font = header_font
             cell.alignment = Alignment(horizontal='center', vertical='center')
         
-        # Datos
-        for row_idx, participante in enumerate(ranking, 2):
-            ws.cell(row=row_idx, column=1, value=participante.get('posicion', row_idx-1))
-            ws.cell(row=row_idx, column=2, value=participante.get('nombre_completo', 'N/A'))
+        # Datos del ranking
+        for row_idx, participante in enumerate(ranking, 3):
+            ws.cell(row=row_idx, column=1, value=participante.get('posicion', row_idx-2))
+            # Usar nombre_participante en lugar de nombre_completo
+            ws.cell(row=row_idx, column=2, value=participante.get('nombre_participante', participante.get('nombre_completo', 'N/A')))
             ws.cell(row=row_idx, column=3, value=participante.get('nombre_grupo', 'Sin grupo'))
             ws.cell(row=row_idx, column=4, value=participante.get('puntaje_total', 0))
             ws.cell(row=row_idx, column=5, value=participante.get('respuestas_correctas', 0))
@@ -4431,143 +4532,397 @@ def exportar_resultados_onedrive(sala_id):
                 ws.cell(row=row_idx, column=7, value="0%")
             
             tiempo = participante.get('tiempo_total_respuestas', 0)
-            minutos = tiempo // 60
-            segundos = tiempo % 60
-            ws.cell(row=row_idx, column=8, value=f"{minutos}m {segundos}s")
+            if tiempo:
+                minutos = int(tiempo) // 60
+                segundos = int(tiempo) % 60
+                ws.cell(row=row_idx, column=8, value=f"{minutos}m {segundos}s")
+            else:
+                ws.cell(row=row_idx, column=8, value="0m 0s")
         
         # Ajustar anchos de columna
-        for col in ws.columns:
-            max_length = 0
-            for cell in col:
-                if cell.value:
-                    max_length = max(max_length, len(str(cell.value)))
-            ws.column_dimensions[col[0].column_letter].width = max_length + 2
+        column_widths = [12, 25, 15, 10, 12, 12, 15, 15]
+        for i, width in enumerate(column_widths, 1):
+            ws.column_dimensions[chr(64 + i)].width = width
         
-        # Guardar en memoria
-        excel_buffer = io.BytesIO()
-        wb.save(excel_buffer)
-        excel_buffer.seek(0)
-        excel_data = excel_buffer.getvalue()
+        # Guardar en archivo temporal para PythonAnywhere
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
+            wb.save(tmp_file.name)
+            tmp_file.seek(0)
+            with open(tmp_file.name, 'rb') as f:
+                excel_data = f.read()
+        
+        # Calcular estadísticas
+        total_participantes = len(ranking)
+        puntaje_maximo = max([p.get('puntaje_total', 0) for p in ranking]) if ranking else 0
+        promedio_correctas = sum([p.get('respuestas_correctas', 0) for p in ranking]) / total_participantes if total_participantes > 0 else 0
         
         # Nombre del archivo
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"BrainRush_Resultados_{cuestionario_titulo}_{timestamp}.xlsx"
+        filename = f"BrainRush_Resultados_{cuestionario_titulo.replace(' ', '_')}_{timestamp}.xlsx"
         
-        # Verificar si el usuario tiene token de OneDrive
-        if not access_token:
-            cursor.close()
-            conexion.close()
+        # Subir a OneDrive usando el sistema centralizado
+        print(f"📤 Subiendo resultados a OneDrive: {filename}")
+        resultado_onedrive = subir_archivo_onedrive_sistema(filename, excel_data, carpeta="BrainRush")
+        
+        if not resultado_onedrive['success']:
+            print(f"❌ Error al subir a OneDrive: {resultado_onedrive.get('error')}")
             return jsonify({
                 'success': False,
-                'require_auth': True,
-                'message': 'Necesitas autorizar acceso a OneDrive primero',
-                'auth_url': url_for('onedrive_auth', _external=True)
-            }), 401
+                'error': f"Error al subir a OneDrive: {resultado_onedrive.get('error')}"
+            }), 500
         
-        # Verificar si el token ha expirado
-        if token_expires and datetime.now() >= token_expires:
-            # Intentar refrescar el token
-            if refresh_token:
-                try:
-                    msal_app = msal.ConfidentialClientApplication(
-                        app.config['AZURE_CLIENT_ID'],
-                        authority=f"https://login.microsoftonline.com/{app.config['AZURE_TENANT_ID']}",
-                        client_credential=app.config['AZURE_CLIENT_SECRET']
-                    )
+        share_link = resultado_onedrive['share_link']
+        file_name = resultado_onedrive['file_name']
+        
+        print(f"✅ Archivo subido exitosamente a OneDrive")
+        print(f"🔗 Link compartido: {share_link}")
+        
+        # SIEMPRE enviar email con el link
+        email_sent = False
+        if app.config.get('MAIL_ENABLED') and app.config.get('MAIL_USERNAME'):
+            from flask_mail import Message
+            from extensions import mail
+            
+            try:
+                mensaje_html = f"""
+                <html>
+                <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
+                        <h1 style="color: white; margin: 0;">🎓 Brain RUSH</h1>
+                    </div>
                     
-                    result = msal_app.acquire_token_by_refresh_token(
-                        refresh_token,
-                        scopes=app.config['ONEDRIVE_SCOPES']
-                    )
-                    
-                    if "access_token" in result:
-                        access_token = result['access_token']
-                        new_refresh_token = result.get('refresh_token', refresh_token)
-                        expires_in = result.get('expires_in', 3600)
-                        new_token_expires = datetime.now() + timedelta(seconds=expires_in)
+                    <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
+                        <h2 style="color: #333;">¡Los Resultados están listos! 📊</h2>
                         
-                        # Actualizar tokens en la base de datos
-                        cursor.execute("""
-                            UPDATE usuarios 
-                            SET onedrive_access_token = %s,
-                                onedrive_refresh_token = %s,
-                                onedrive_token_expires = %s
-                            WHERE id_usuario = %s
-                        """, (access_token, new_refresh_token, new_token_expires, session['usuario_id']))
-                        conexion.commit()
-                    else:
-                        cursor.close()
-                        conexion.close()
-                        return jsonify({
-                            'success': False,
-                            'require_auth': True,
-                            'message': 'Tu sesión de OneDrive ha expirado. Autoriza nuevamente.',
-                            'auth_url': url_for('onedrive_auth', _external=True)
-                        }), 401
-                except Exception as e:
-                    print(f"Error refrescando token: {e}")
-                    cursor.close()
-                    conexion.close()
-                    return jsonify({
-                        'success': False,
-                        'require_auth': True,
-                        'message': 'Tu sesión de OneDrive ha expirado. Autoriza nuevamente.',
-                        'auth_url': url_for('onedrive_auth', _external=True)
-                    }), 401
-            else:
-                cursor.close()
-                conexion.close()
-                return jsonify({
-                    'success': False,
-                    'require_auth': True,
-                    'message': 'Tu sesión de OneDrive ha expirado. Autoriza nuevamente.',
-                    'auth_url': url_for('onedrive_auth', _external=True)
-                }), 401
-        
-        cursor.close()
-        conexion.close()
-        
-        # Subir archivo a OneDrive
-        try:
-            upload_url = f"https://graph.microsoft.com/v1.0/me/drive/root:/BrainRush/{filename}:/content"
-            headers = {
-                'Authorization': f'Bearer {access_token}',
-                'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            }
-            
-            response = requests.put(upload_url, headers=headers, data=excel_data)
-            
-            if response.status_code in [200, 201]:
-                file_info = response.json()
-                return jsonify({
-                    'success': True,
-                    'message': f'Archivo "{filename}" subido exitosamente a OneDrive',
-                    'file_name': filename,
-                    'file_id': file_info.get('id'),
-                    'web_url': file_info.get('webUrl'),
-                    'folder': 'BrainRush'
-                }), 200
-            else:
-                print(f"Error subiendo a OneDrive: {response.status_code} - {response.text}")
-                # Fallback a email
-                return enviar_por_email_fallback(
-                    email_usuario, nombre_completo, cuestionario_titulo,
-                    ranking, total_preguntas, filename, excel_data
+                        <p>Hola <strong>{nombre_completo}</strong>,</p>
+                        
+                        <p>Los resultados del cuestionario "<strong>{cuestionario_titulo}</strong>" han sido exportados exitosamente a OneDrive.</p>
+                        
+                        <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #667eea;">
+                            <p style="margin: 0 0 10px 0; color: #666;">📁 Archivo:</p>
+                            <p style="margin: 0; font-size: 16px; color: #333;"><strong>{file_name}</strong></p>
+                        </div>
+                        
+                        <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                            <p style="margin: 0 0 15px 0; font-size: 14px; color: #666; text-align: center;">📊 <strong>Resumen del Cuestionario</strong></p>
+                            <div style="display: flex; justify-content: space-around; text-align: center;">
+                                <div>
+                                    <p style="margin: 0; font-size: 24px; color: #667eea; font-weight: bold;">{total_participantes}</p>
+                                    <p style="margin: 5px 0 0 0; font-size: 12px; color: #666;">Participantes</p>
+                                </div>
+                                <div>
+                                    <p style="margin: 0; font-size: 24px; color: #667eea; font-weight: bold;">{puntaje_maximo}</p>
+                                    <p style="margin: 5px 0 0 0; font-size: 12px; color: #666;">Puntaje Máximo</p>
+                                </div>
+                                <div>
+                                    <p style="margin: 0; font-size: 24px; color: #667eea; font-weight: bold;">{promedio_correctas:.1f}</p>
+                                    <p style="margin: 5px 0 0 0; font-size: 12px; color: #666;">Promedio Correctas</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="{share_link}" 
+                               style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                                      color: white; padding: 15px 40px; text-decoration: none; border-radius: 25px; 
+                                      font-weight: bold; font-size: 16px;">
+                                📂 Ver Resultados en OneDrive
+                            </a>
+                        </div>
+                        
+                        <p style="color: #666; font-size: 14px; margin-top: 30px;">
+                            💡 <em>Puedes acceder a este archivo en cualquier momento desde tu carpeta "BrainRush" en OneDrive.</em>
+                        </p>
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 20px; color: #999; font-size: 12px;">
+                        <p>Brain RUSH - Sistema de Evaluación Interactiva</p>
+                    </div>
+                </body>
+                </html>
+                """
+                
+                msg = Message(
+                    subject=f"📊 Resultados de {cuestionario_titulo} - Brain RUSH",
+                    recipients=[email_usuario],
+                    html=mensaje_html,
+                    sender=app.config['MAIL_DEFAULT_SENDER']
                 )
+                
+                mail.send(msg)
+                email_sent = True
+                print(f"✅ Email enviado exitosamente a {email_usuario}")
+                
+            except Exception as email_error:
+                print(f"❌ Error enviando email: {email_error}")
+                import traceback
+                traceback.print_exc()
         
-        except requests.exceptions.RequestException as e:
-            print(f"Error de conexión con OneDrive: {e}")
-            # Fallback a email
-            return enviar_por_email_fallback(
-                email_usuario, nombre_completo, cuestionario_titulo,
-                ranking, total_preguntas, filename, excel_data
-            )
+        # Retornar respuesta con toda la información
+        return jsonify({
+            'success': True,
+            'message': f'Archivo exportado exitosamente a OneDrive',
+            'file_name': file_name,
+            'share_link': share_link,
+            'email_sent': email_sent,
+            'estadisticas': {
+                'total_participantes': total_participantes,
+                'puntaje_maximo': puntaje_maximo,
+                'promedio_correctas': round(promedio_correctas, 1)
+            }
+        }), 200
         
     except Exception as e:
-        print(f"ERROR exportar_resultados_onedrive: {e}")
+        print(f"❌ ERROR exportar_resultados_onedrive: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+def obtener_token_sistema_onedrive():
+    """
+    Obtener token de acceso del sistema OneDrive.
+    Primero intenta usar el token del .env, si está expirado lo refresca.
+    """
+    try:
+        # Obtener tokens del .env
+        access_token = app.config.get('ONEDRIVE_ACCESS_TOKEN')
+        refresh_token = app.config.get('ONEDRIVE_REFRESH_TOKEN')
+        token_expires_str = app.config.get('ONEDRIVE_TOKEN_EXPIRES')
+        
+        # Convertir fecha de expiración si existe
+        token_expires = None
+        if token_expires_str:
+            try:
+                from datetime import datetime
+                token_expires = datetime.fromisoformat(token_expires_str)
+            except:
+                pass
+        
+        # Si hay token y no ha expirado, usarlo
+        if access_token and token_expires and datetime.now() < token_expires:
+            print("✅ Usando token de OneDrive del .env (válido)")
+            return access_token
+        
+        # Si hay refresh_token, intentar refrescar
+        if refresh_token and MSAL_AVAILABLE:
+            print("🔄 Token expirado, refrescando...")
+            try:
+                authority = f"https://login.microsoftonline.com/{app.config['AZURE_TENANT_ID']}"
+                
+                msal_app = msal.ConfidentialClientApplication(
+                    app.config['AZURE_CLIENT_ID'],
+                    authority=authority,
+                    client_credential=app.config['AZURE_CLIENT_SECRET']
+                )
+                
+                result = msal_app.acquire_token_by_refresh_token(
+                    refresh_token,
+                    scopes=app.config.get('ONEDRIVE_SCOPES', [
+                        'Files.ReadWrite.All',
+                        'offline_access'
+                    ])
+                )
+                
+                if "access_token" in result:
+                    new_access_token = result['access_token']
+                    new_refresh_token = result.get('refresh_token', refresh_token)
+                    expires_in = result.get('expires_in', 3600)
+                    new_token_expires = datetime.now() + timedelta(seconds=expires_in)
+                    
+                    # Actualizar tokens en memoria
+                    app.config['ONEDRIVE_ACCESS_TOKEN'] = new_access_token
+                    app.config['ONEDRIVE_REFRESH_TOKEN'] = new_refresh_token
+                    app.config['ONEDRIVE_TOKEN_EXPIRES'] = new_token_expires.isoformat()
+                    
+                    # Actualizar archivo .env
+                    actualizar_env_tokens(new_access_token, new_refresh_token, new_token_expires)
+                    
+                    print("✅ Token refrescado exitosamente")
+                    return new_access_token
+                else:
+                    error_desc = result.get("error_description", "Unknown error")
+                    print(f"❌ Error refrescando token: {error_desc}")
+                    
+            except Exception as e:
+                print(f"⚠️ Error al refrescar token: {e}")
+        
+        # Si no hay tokens o falla el refresh, intentar Client Credentials Flow
+        # (solo funciona con Application Permissions)
+        if MSAL_AVAILABLE:
+            print("🔄 Intentando obtener token con Client Credentials...")
+            authority = f"https://login.microsoftonline.com/{app.config['AZURE_TENANT_ID']}"
+            
+            msal_app = msal.ConfidentialClientApplication(
+                app.config['AZURE_CLIENT_ID'],
+                authority=authority,
+                client_credential=app.config['AZURE_CLIENT_SECRET']
+            )
+            
+            result = msal_app.acquire_token_for_client(
+                scopes=["https://graph.microsoft.com/.default"]
+            )
+            
+            if "access_token" in result:
+                print("✅ Token obtenido con Client Credentials")
+                return result['access_token']
+            else:
+                error_desc = result.get("error_description", "Unknown error")
+                print(f"❌ Error con Client Credentials: {error_desc}")
+        
+        print("❌ No se pudo obtener token de OneDrive")
+        print("💡 Necesitas configurar ONEDRIVE_ACCESS_TOKEN y ONEDRIVE_REFRESH_TOKEN en .env")
+        print("💡 O configurar Application Permissions en Azure AD")
+        return None
+            
+    except Exception as e:
+        print(f"ERROR en obtener_token_sistema_onedrive: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
+
+
+def actualizar_env_tokens(access_token, refresh_token, token_expires):
+    """Actualizar tokens en el archivo .env"""
+    try:
+        import os
+        env_path = os.path.join(os.path.dirname(__file__), '.env')
+        
+        # Leer archivo .env
+        with open(env_path, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+        
+        # Actualizar líneas con nuevos tokens
+        new_lines = []
+        for line in lines:
+            if line.startswith('ONEDRIVE_ACCESS_TOKEN='):
+                new_lines.append(f'ONEDRIVE_ACCESS_TOKEN={access_token}\n')
+            elif line.startswith('ONEDRIVE_REFRESH_TOKEN='):
+                new_lines.append(f'ONEDRIVE_REFRESH_TOKEN={refresh_token}\n')
+            elif line.startswith('ONEDRIVE_TOKEN_EXPIRES='):
+                new_lines.append(f'ONEDRIVE_TOKEN_EXPIRES={token_expires.isoformat()}\n')
+            else:
+                new_lines.append(line)
+        
+        # Escribir archivo actualizado
+        with open(env_path, 'w', encoding='utf-8') as f:
+            f.writelines(new_lines)
+        
+        print("✅ Tokens actualizados en .env")
+        
+    except Exception as e:
+        print(f"⚠️ No se pudo actualizar .env: {e}")
+        print("   Los tokens están en memoria pero no se guardaron en disco")
+
+
+def subir_archivo_onedrive_sistema(filename, file_data, carpeta="BrainRush"):
+    """
+    Subir archivo a OneDrive del sistema y crear link de compartición
+    
+    Args:
+        filename: Nombre del archivo
+        file_data: Datos binarios del archivo
+        carpeta: Carpeta en OneDrive (default: BrainRush)
+    
+    Returns:
+        dict: {'success': bool, 'web_url': str, 'share_link': str, 'error': str}
+    """
+    try:
+        # Obtener token del sistema
+        access_token = obtener_token_sistema_onedrive()
+        
+        if not access_token:
+            return {
+                'success': False,
+                'error': 'No se pudo obtener token de acceso a OneDrive'
+            }
+        
+        # 1. Verificar/crear carpeta BrainRush
+        folder_url = f"https://graph.microsoft.com/v1.0/me/drive/root:/{carpeta}"
+        headers = {'Authorization': f'Bearer {access_token}'}
+        
+        folder_response = requests.get(folder_url, headers=headers, timeout=10)
+        
+        if folder_response.status_code == 404:
+            # Crear carpeta si no existe
+            create_folder_url = "https://graph.microsoft.com/v1.0/me/drive/root/children"
+            folder_data = {
+                "name": carpeta,
+                "folder": {},
+                "@microsoft.graph.conflictBehavior": "rename"
+            }
+            requests.post(create_folder_url, headers={**headers, 'Content-Type': 'application/json'}, 
+                         json=folder_data, timeout=10)
+            print(f"✅ Carpeta '{carpeta}' creada en OneDrive")
+        
+        # 2. Subir archivo
+        upload_url = f"https://graph.microsoft.com/v1.0/me/drive/root:/{carpeta}/{filename}:/content"
+        upload_headers = {
+            'Authorization': f'Bearer {access_token}',
+            'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        }
+        
+        print(f"📤 Subiendo archivo a OneDrive: {filename}")
+        upload_response = requests.put(upload_url, headers=upload_headers, data=file_data, timeout=30)
+        
+        if upload_response.status_code not in [200, 201]:
+            print(f"❌ Error subiendo archivo: {upload_response.status_code} - {upload_response.text}")
+            return {
+                'success': False,
+                'error': f'Error subiendo archivo: {upload_response.status_code}'
+            }
+        
+        file_info = upload_response.json()
+        file_id = file_info.get('id')
+        web_url = file_info.get('webUrl')
+        
+        print(f"✅ Archivo subido exitosamente. ID: {file_id}")
+        
+        # 3. Crear link de compartición público
+        share_url = f"https://graph.microsoft.com/v1.0/me/drive/items/{file_id}/createLink"
+        share_data = {
+            "type": "view",  # view = solo lectura, edit = edición
+            "scope": "anonymous"  # anonymous = cualquiera con el link
+        }
+        share_headers = {
+            'Authorization': f'Bearer {access_token}',
+            'Content-Type': 'application/json'
+        }
+        
+        share_response = requests.post(share_url, headers=share_headers, json=share_data, timeout=10)
+        
+        if share_response.status_code in [200, 201]:
+            share_info = share_response.json()
+            share_link = share_info.get('link', {}).get('webUrl')
+            print(f"✅ Link de compartición creado: {share_link}")
+            
+            return {
+                'success': True,
+                'web_url': web_url,
+                'share_link': share_link,
+                'file_id': file_id,
+                'file_name': filename
+            }
+        else:
+            # Si falla la compartición, al menos devolver la URL del archivo
+            print(f"⚠️ No se pudo crear link de compartición, pero archivo subido")
+            return {
+                'success': True,
+                'web_url': web_url,
+                'share_link': web_url,  # Usar web_url como fallback
+                'file_id': file_id,
+                'file_name': filename,
+                'warning': 'Link de compartición no creado'
+            }
+            
+    except Exception as e:
+        print(f"ERROR en subir_archivo_onedrive_sistema: {e}")
+        import traceback
+        traceback.print_exc()
+        return {
+            'success': False,
+            'error': str(e)
+        }
 
 
 def enviar_por_email_fallback(email_usuario, nombre_completo, cuestionario_titulo, 
@@ -4629,6 +4984,323 @@ Sistema BrainRush
             'error': f'Error subiendo a OneDrive y enviando email: {str(e)}'
         }), 500
 
+@app.route('/api/exportar-historial-estudiante/onedrive', methods=['POST'])
+@login_required
+def exportar_historial_estudiante_onedrive():
+    """Exportar historial completo del estudiante a OneDrive del sistema"""
+    try:
+        usuario_id = session.get('usuario_id')
+        
+        # Obtener datos del usuario
+        conexion = obtener_conexion()
+        cursor = conexion.cursor()
+        cursor.execute("""
+            SELECT email, nombre, apellidos
+            FROM usuarios WHERE id_usuario = %s
+        """, (usuario_id,))
+        usuario = cursor.fetchone()
+        
+        if not usuario:
+            cursor.close()
+            conexion.close()
+            return jsonify({'success': False, 'error': 'Usuario no encontrado'}), 404
+        
+        email_usuario = usuario[0]
+        nombre_completo = f"{usuario[1]} {usuario[2]}"
+        
+        # Obtener historial de participaciones del estudiante
+        cursor.execute("""
+            SELECT 
+                c.titulo as titulo_cuestionario,
+                s.fecha_inicio,
+                rs.puntaje_total,
+                rs.respuestas_correctas,
+                rp.total_preguntas,
+                rs.posicion,
+                rs.tiempo_total_respuestas,
+                CONCAT(u_docente.nombre, ' ', u_docente.apellidos) as docente
+            FROM participantes_sala ps
+            INNER JOIN salas_juego s ON ps.id_sala = s.id
+            INNER JOIN cuestionarios c ON s.id_cuestionario = c.id_cuestionario
+            INNER JOIN ranking_sala rs ON ps.id_participante = rs.id_participante
+            LEFT JOIN usuarios u_docente ON c.id_docente = u_docente.id_usuario
+            LEFT JOIN (
+                SELECT id_sala, COUNT(DISTINCT id_pregunta) as total_preguntas
+                FROM respuestas_participantes
+                GROUP BY id_sala
+            ) rp ON s.id = rp.id_sala
+            WHERE ps.id_usuario = %s
+                AND s.estado = 'finalizado'
+            ORDER BY s.fecha_inicio DESC
+        """, (usuario_id,))
+        
+        participaciones = cursor.fetchall()
+        cursor.close()
+        conexion.close()
+        
+        if not participaciones:
+            return jsonify({
+                'success': False,
+                'error': 'No tienes participaciones en tu historial'
+            }), 404
+        
+        # Crear archivo Excel con el historial
+        import io
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, Alignment, PatternFill
+        
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Mi Historial"
+        
+        # Título del documento
+        ws.merge_cells('A1:H1')
+        titulo_cell = ws['A1']
+        titulo_cell.value = f"Historial de Participaciones - {nombre_completo}"
+        titulo_cell.font = Font(size=16, bold=True, color="FFFFFF")
+        titulo_cell.fill = PatternFill(start_color="667eea", end_color="667eea", fill_type="solid")
+        titulo_cell.alignment = Alignment(horizontal='center', vertical='center')
+        ws.row_dimensions[1].height = 30
+        
+        # Encabezados
+        headers = ['Cuestionario', 'Fecha', 'Puntaje', 'Correctas', 'Total Preguntas', 
+                   'Precisión (%)', 'Posición', 'Tiempo', 'Docente']
+        header_fill = PatternFill(start_color="4ECDC4", end_color="4ECDC4", fill_type="solid")
+        header_font = Font(bold=True, color="FFFFFF")
+        
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=2, column=col, value=header)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal='center', vertical='center')
+        
+        # Datos
+        for row_idx, participacion in enumerate(participaciones, 3):
+            titulo_cuest = participacion[0]
+            fecha_inicio = participacion[1]
+            puntaje = participacion[2] or 0
+            correctas = participacion[3] or 0
+            total_pregs = participacion[4] or 10
+            posicion = participacion[5] or 'N/A'
+            tiempo = participacion[6] or 0
+            docente = participacion[7] or 'N/A'
+            
+            ws.cell(row=row_idx, column=1, value=titulo_cuest)
+            ws.cell(row=row_idx, column=2, value=fecha_inicio.strftime("%d/%m/%Y %H:%M") if fecha_inicio else 'N/A')
+            ws.cell(row=row_idx, column=3, value=puntaje)
+            ws.cell(row=row_idx, column=4, value=correctas)
+            ws.cell(row=row_idx, column=5, value=total_pregs)
+            
+            # Calcular precisión
+            if total_pregs > 0:
+                precision = (correctas / total_pregs) * 100
+                ws.cell(row=row_idx, column=6, value=f"{precision:.1f}%")
+            else:
+                ws.cell(row=row_idx, column=6, value="0%")
+            
+            ws.cell(row=row_idx, column=7, value=str(posicion))
+            
+            # Formatear tiempo
+            minutos = tiempo // 60
+            segundos = tiempo % 60
+            ws.cell(row=row_idx, column=8, value=f"{minutos}m {segundos}s")
+            
+            ws.cell(row=row_idx, column=9, value=docente)
+        
+        # Agregar estadísticas al final
+        ultima_fila = len(participaciones) + 4
+        ws.merge_cells(f'A{ultima_fila}:I{ultima_fila}')
+        stats_cell = ws[f'A{ultima_fila}']
+        stats_cell.value = "📊 Estadísticas Generales"
+        stats_cell.font = Font(size=14, bold=True, color="FFFFFF")
+        stats_cell.fill = PatternFill(start_color="667eea", end_color="667eea", fill_type="solid")
+        stats_cell.alignment = Alignment(horizontal='center', vertical='center')
+        
+        # Calcular estadísticas
+        total_juegos = len(participaciones)
+        total_puntaje = sum(p[2] or 0 for p in participaciones)
+        promedio_puntaje = total_puntaje / total_juegos if total_juegos > 0 else 0
+        total_correctas = sum(p[3] or 0 for p in participaciones)
+        
+        stats_data = [
+            ['Total de Juegos:', total_juegos],
+            ['Puntos Totales:', total_puntaje],
+            ['Promedio por Juego:', f"{promedio_puntaje:.1f}"],
+            ['Respuestas Correctas:', total_correctas]
+        ]
+        
+        for i, (label, value) in enumerate(stats_data):
+            fila = ultima_fila + 1 + i
+            ws.cell(row=fila, column=1, value=label).font = Font(bold=True)
+            ws.cell(row=fila, column=2, value=value)
+        
+        # Ajustar anchos de columna
+        column_widths = [30, 18, 10, 10, 15, 12, 10, 12, 25]
+        for i, width in enumerate(column_widths, 1):
+            ws.column_dimensions[chr(64 + i)].width = width
+        
+        # Guardar en memoria
+        excel_buffer = io.BytesIO()
+        wb.save(excel_buffer)
+        excel_buffer.seek(0)
+        excel_data = excel_buffer.getvalue()
+        
+        # Nombre del archivo
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"BrainRush_MiHistorial_{nombre_completo.replace(' ', '_')}_{timestamp}.xlsx"
+        
+        # Usar sistema centralizado de OneDrive
+        print(f"📤 Intentando subir historial a OneDrive del sistema para {nombre_completo}")
+        
+        resultado_onedrive = subir_archivo_onedrive_sistema(filename, excel_data, carpeta="BrainRush")
+        
+        if resultado_onedrive['success']:
+            # Archivo subido exitosamente, enviar email con el link
+            share_link = resultado_onedrive.get('share_link')
+            file_name = resultado_onedrive.get('file_name')
+            
+            try:
+                from flask_mail import Message
+                from extensions import mail
+                
+                if app.config.get('MAIL_ENABLED'):
+                    mensaje_html = f"""
+                    <html>
+                    <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+                            <h1 style="color: white; margin: 0; font-size: 2rem;">🎓 Brain RUSH</h1>
+                        </div>
+                        
+                        <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
+                            <h2 style="color: #333; margin-top: 0;">¡Tu Historial está listo! 📊</h2>
+                            
+                            <p style="color: #555; font-size: 1.1rem;">Hola <strong>{nombre_completo}</strong>,</p>
+                            
+                            <p style="color: #666;">Tu historial de participaciones ha sido exportado exitosamente a OneDrive.</p>
+                            
+                            <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #667eea;">
+                                <p style="margin: 0 0 10px 0; color: #666;">📁 <strong>Archivo:</strong></p>
+                                <p style="margin: 0; font-size: 14px; color: #333;">{file_name}</p>
+                            </div>
+                            
+                            <div style="background: #e8f4f8; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                                <p style="margin: 0; color: #555; font-size: 0.95rem;">
+                                    <strong>📊 Estadísticas:</strong><br>
+                                    Total de juegos: {total_juegos}<br>
+                                    Puntos acumulados: {total_puntaje}<br>
+                                    Promedio: {promedio_puntaje:.1f} pts/juego
+                                </p>
+                            </div>
+                            
+                            <div style="text-align: center; margin: 30px 0;">
+                                <a href="{share_link}" 
+                                   style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                                          color: white; padding: 15px 40px; text-decoration: none; border-radius: 25px; 
+                                          font-weight: bold; font-size: 1.1rem; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
+                                    📂 Ver mi Historial en OneDrive
+                                </a>
+                            </div>
+                            
+                            <p style="color: #999; font-size: 0.9rem; text-align: center; margin-top: 30px;">
+                                💡 <em>Puedes descargar y guardar este archivo para tus registros personales.</em>
+                            </p>
+                        </div>
+                        
+                        <div style="text-align: center; margin-top: 20px; color: #999; font-size: 0.85rem;">
+                            <p style="margin: 5px 0;">Brain RUSH - Sistema de Evaluación Interactiva</p>
+                            <p style="margin: 5px 0;">Este archivo estará disponible en OneDrive</p>
+                        </div>
+                    </body>
+                    </html>
+                    """
+                    
+                    msg = Message(
+                        subject=f"📊 Tu Historial de Brain RUSH está listo",
+                        recipients=[email_usuario],
+                        html=mensaje_html,
+                        sender=app.config['MAIL_DEFAULT_SENDER']
+                    )
+                    
+                    mail.send(msg)
+                    print(f"✅ Email enviado a {email_usuario} con link de OneDrive")
+                    
+                    return jsonify({
+                        'success': True,
+                        'message': 'Historial exportado a OneDrive y link enviado por correo',
+                        'file_name': file_name,
+                        'share_link': share_link,
+                        'email_sent': True
+                    }), 200
+                else:
+                    # Email no configurado, solo devolver el link
+                    return jsonify({
+                        'success': True,
+                        'message': 'Historial exportado a OneDrive',
+                        'file_name': file_name,
+                        'share_link': share_link,
+                        'email_sent': False
+                    }), 200
+                    
+            except Exception as email_error:
+                print(f"⚠️ Error enviando email: {email_error}")
+                # Aunque falle el email, el archivo está en OneDrive
+                return jsonify({
+                    'success': True,
+                    'message': 'Historial exportado a OneDrive (email no enviado)',
+                    'file_name': file_name,
+                    'share_link': share_link,
+                    'email_sent': False,
+                    'warning': 'No se pudo enviar el email'
+                }), 200
+        else:
+            # OneDrive falló, usar email como fallback
+            print(f"❌ OneDrive falló: {resultado_onedrive.get('error')}")
+            return enviar_historial_por_email(email_usuario, nombre_completo, filename, excel_data)
+    
+    except Exception as e:
+        print(f"ERROR exportar_historial_estudiante: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+def enviar_historial_por_email(email_usuario, nombre_completo, filename, excel_data):
+    """Enviar historial por email como fallback"""
+    try:
+        from flask_mail import Message
+        from extensions import mail
+        
+        if not app.config.get('MAIL_ENABLED'):
+            return jsonify({
+                'success': False,
+                'error': 'No se pudo subir a OneDrive y el correo no está configurado'
+            }), 500
+        
+        msg = Message(
+            subject='Tu Historial de Brain RUSH',
+            sender=app.config.get('MAIL_DEFAULT_SENDER'),
+            recipients=[email_usuario],
+            body=f'Hola {nombre_completo},\n\nAdjunto tu historial de participaciones en Brain RUSH.'
+        )
+        
+        msg.attach(filename, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', excel_data)
+        mail.send(msg)
+        
+        return jsonify({
+            'success': True,
+            'message': f'Historial enviado por correo a {email_usuario}',
+            'file_name': filename,
+            'email_sent': True,
+            'fallback': True
+        }), 200
+    
+    except Exception as e:
+        print(f"Error enviando email: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'No se pudo subir a OneDrive ni enviar por email: {str(e)}'
+        }), 500
+
 @app.route('/auth/onedrive')
 def onedrive_auth():
     """Iniciar flujo de autorización OAuth2 con OneDrive"""
@@ -4664,6 +5336,81 @@ def onedrive_auth():
         return redirect(url_for('dashboard'))
 
 
+@app.route('/auth/onedrive-sistema')
+def onedrive_auth_sistema():
+    """
+    Autorizar OneDrive para el SISTEMA (almacenar tokens en .env)
+    TEMPORAL: Accesible por administradores Y docentes (para configuración inicial)
+    """
+    try:
+        # Verificar que haya sesión
+        if 'usuario_id' not in session:
+            return """
+            <html>
+            <head><title>Error - Brain RUSH</title></head>
+            <body style="font-family: Arial; padding: 40px; max-width: 600px; margin: 0 auto;">
+                <h1 style="color: #ef4444;">❌ Error</h1>
+                <p>Debes iniciar sesión para configurar OneDrive del sistema.</p>
+                <a href="/login" style="color: #667eea;">Iniciar sesión</a>
+            </body>
+            </html>
+            """
+        
+        # Verificar que sea admin O docente (temporal)
+        conexion = obtener_conexion()
+        cursor = conexion.cursor()
+        cursor.execute("SELECT tipo_usuario FROM usuarios WHERE id_usuario = %s", (session['usuario_id'],))
+        usuario = cursor.fetchone()
+        cursor.close()
+        conexion.close()
+        
+        if not usuario or usuario[0] not in ['admin', 'docente']:
+            return """
+            <html>
+            <head><title>Acceso Denegado - Brain RUSH</title></head>
+            <body style="font-family: Arial; padding: 40px; max-width: 600px; margin: 0 auto;">
+                <h1 style="color: #ef4444;">🚫 Acceso Denegado</h1>
+                <p>Solo los administradores y docentes pueden configurar OneDrive del sistema.</p>
+                <a href="/" style="color: #667eea;">Volver al inicio</a>
+            </body>
+            </html>
+            """
+        
+        # Usar state especial para indicar que es configuración del sistema
+        state = "SISTEMA_CONFIG"
+        
+        # Configurar MSAL
+        msal_app = msal.ConfidentialClientApplication(
+            app.config['AZURE_CLIENT_ID'],
+            authority=f"https://login.microsoftonline.com/{app.config['AZURE_TENANT_ID']}",
+            client_credential=app.config['AZURE_CLIENT_SECRET']
+        )
+        
+        # Generar URL de autorización
+        auth_url = msal_app.get_authorization_request_url(
+            scopes=app.config['ONEDRIVE_SCOPES'],
+            state=state,
+            redirect_uri=app.config['ONEDRIVE_REDIRECT_URI']
+        )
+        
+        return redirect(auth_url)
+        
+    except Exception as e:
+        print(f"Error en onedrive_auth_sistema: {e}")
+        import traceback
+        traceback.print_exc()
+        return f"""
+        <html>
+        <head><title>Error - Brain RUSH</title></head>
+        <body style="font-family: Arial; padding: 40px; max-width: 600px; margin: 0 auto;">
+            <h1 style="color: #ef4444;">❌ Error</h1>
+            <p>Error iniciando autorización: {str(e)}</p>
+            <a href="/" style="color: #667eea;">Volver al inicio</a>
+        </body>
+        </html>
+        """
+
+
 @app.route('/callback/onedrive')
 def onedrive_callback():
     """Callback de OAuth2 para OneDrive"""
@@ -4674,22 +5421,28 @@ def onedrive_callback():
         error = request.args.get('error')
         
         if error:
-            flash(f'Error en autorización de OneDrive: {error}', 'danger')
-            return redirect(url_for('login'))
+            return f"""
+            <html>
+            <head><title>Error - Brain RUSH</title></head>
+            <body style="font-family: Arial; padding: 40px; max-width: 600px; margin: 0 auto;">
+                <h1 style="color: #ef4444;">❌ Error en Autorización</h1>
+                <p>Error: {error}</p>
+                <a href="/" style="color: #667eea;">Volver al inicio</a>
+            </body>
+            </html>
+            """
         
         if not code:
-            flash('No se recibió código de autorización', 'danger')
-            return redirect(url_for('login'))
-        
-        # Recuperar usuario_id del state
-        try:
-            usuario_id = int(state) if state else None
-        except:
-            usuario_id = None
-        
-        if not usuario_id:
-            flash('Sesión expirada. Por favor, inicia sesión nuevamente.', 'warning')
-            return redirect(url_for('login'))
+            return """
+            <html>
+            <head><title>Error - Brain RUSH</title></head>
+            <body style="font-family: Arial; padding: 40px; max-width: 600px; margin: 0 auto;">
+                <h1 style="color: #ef4444;">❌ Error</h1>
+                <p>No se recibió código de autorización</p>
+                <a href="/" style="color: #667eea;">Volver al inicio</a>
+            </body>
+            </html>
+            """
         
         # Configurar MSAL
         msal_app = msal.ConfidentialClientApplication(
@@ -4706,12 +5459,83 @@ def onedrive_callback():
         )
         
         if "access_token" in result:
-            # Guardar tokens en la base de datos
             access_token = result['access_token']
             refresh_token = result.get('refresh_token', '')
             expires_in = result.get('expires_in', 3600)
             token_expires = datetime.now() + timedelta(seconds=expires_in)
             
+            # Verificar si es configuración del sistema
+            if state == "SISTEMA_CONFIG":
+                # Guardar tokens en .env
+                actualizar_env_tokens(access_token, refresh_token, token_expires)
+                
+                # También actualizar en memoria
+                app.config['ONEDRIVE_ACCESS_TOKEN'] = access_token
+                app.config['ONEDRIVE_REFRESH_TOKEN'] = refresh_token
+                app.config['ONEDRIVE_TOKEN_EXPIRES'] = token_expires.isoformat()
+                
+                return f"""
+                <html>
+                <head>
+                    <title>Configuración Exitosa - Brain RUSH</title>
+                    <style>
+                        body {{ font-family: Arial, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }}
+                        .success {{ background: #10b981; color: white; padding: 20px; border-radius: 8px; margin: 20px 0; }}
+                        .code-block {{ background: #1f2937; color: #10b981; padding: 15px; border-radius: 8px; font-family: monospace; margin: 20px 0; overflow-x: auto; }}
+                        .warning {{ background: #fef3c7; color: #92400e; padding: 15px; border-radius: 8px; margin: 20px 0; }}
+                        h1 {{ color: #667eea; }}
+                        a {{ color: #667eea; text-decoration: none; font-weight: bold; }}
+                    </style>
+                </head>
+                <body>
+                    <h1>✅ Configuración de OneDrive Exitosa</h1>
+                    
+                    <div class="success">
+                        <h2 style="margin-top: 0;">🎉 ¡Tokens Guardados!</h2>
+                        <p>Los tokens de OneDrive del sistema han sido guardados en el archivo .env</p>
+                    </div>
+                    
+                    <h3>📋 Tokens Obtenidos:</h3>
+                    <div class="code-block">
+ONEDRIVE_ACCESS_TOKEN={access_token[:50]}...
+ONEDRIVE_REFRESH_TOKEN={refresh_token[:50]}...
+ONEDRIVE_TOKEN_EXPIRES={token_expires.isoformat()}
+                    </div>
+                    
+                    <div class="warning">
+                        <h3 style="margin-top: 0;">⚠️ Importante</h3>
+                        <ul>
+                            <li>Los tokens se han guardado automáticamente en tu archivo .env</li>
+                            <li>El access_token expira en {expires_in // 3600} hora(s)</li>
+                            <li>El refresh_token se usará para obtener nuevos access_tokens automáticamente</li>
+                            <li>Asegúrate de que el archivo .env esté en tu .gitignore</li>
+                        </ul>
+                    </div>
+                    
+                    <h3>✅ Siguiente Paso:</h3>
+                    <p>Los archivos exportados ahora se guardarán en la cuenta de OneDrive que acabas de autorizar.</p>
+                    
+                    <p><a href="/">← Volver al inicio</a></p>
+                </body>
+                </html>
+                """
+            
+            # Si no es configuración del sistema, es un usuario normal
+            try:
+                usuario_id = int(state)
+            except:
+                return """
+                <html>
+                <head><title>Error - Brain RUSH</title></head>
+                <body style="font-family: Arial; padding: 40px; max-width: 600px; margin: 0 auto;">
+                    <h1 style="color: #ef4444;">❌ Error</h1>
+                    <p>Sesión inválida</p>
+                    <a href="/login" style="color: #667eea;">Iniciar sesión</a>
+                </body>
+                </html>
+                """
+            
+            # Guardar tokens en la base de datos para el usuario
             conexion = obtener_conexion()
             cursor = conexion.cursor()
             

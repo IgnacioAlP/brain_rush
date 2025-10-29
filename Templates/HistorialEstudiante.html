@@ -343,6 +343,14 @@
                 </div>
             </div>
 
+            <!-- Botón de exportación a OneDrive -->
+            <div style="text-align: center; margin: var(--space-xl) 0;">
+                <button onclick="exportarHistorialOneDrive()" class="export-btn" style="background: var(--gradient-accent); color: white; border: none; border-radius: var(--radius-md); padding: var(--space-md) var(--space-xl); font-weight: 600; cursor: pointer; transition: var(--transition-smooth); display: inline-flex; align-items: center; gap: var(--space-sm); font-size: 1rem;">
+                    <i class="fab fa-microsoft"></i>
+                    Exportar mi Historial a OneDrive
+                </button>
+            </div>
+
             <!-- Lista de participaciones -->
             <div class="history-list">
                 <h3 class="section-title">
@@ -495,5 +503,60 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
+// Función para exportar historial a OneDrive
+async function exportarHistorialOneDrive() {
+    const btn = event.target.closest('button');
+    const originalHTML = btn.innerHTML;
+    
+    try {
+        // Mostrar loading
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Exportando...';
+        
+        const response = await fetch('/api/exportar-historial-estudiante/onedrive', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            if (data.email_sent) {
+                // Email enviado con link
+                let mensaje = `✅ ${data.message}\n\n`;
+                mensaje += `📄 Archivo: ${data.file_name}\n`;
+                mensaje += `📧 Hemos enviado el link a tu correo.\n\n`;
+                mensaje += `¿Deseas abrir el archivo ahora?`;
+                
+                if (confirm(mensaje)) {
+                    window.open(data.share_link || data.web_url, '_blank');
+                }
+            } else if (data.fallback) {
+                // Fallback a email con archivo adjunto
+                alert(`⚠️ ${data.message}\n\n📧 Se ha enviado tu historial por correo electrónico como archivo adjunto.`);
+            } else {
+                // Éxito sin email
+                let mensaje = `✅ ${data.message}\n\n📄 Archivo: ${data.file_name}`;
+                alert(mensaje);
+                
+                if (data.share_link && confirm('¿Deseas abrir el archivo en OneDrive?')) {
+                    window.open(data.share_link, '_blank');
+                }
+            }
+        } else {
+            alert(`❌ Error: ${data.error || 'No se pudo exportar el historial'}`);
+        }
+    } catch (error) {
+        console.error('Error al exportar:', error);
+        alert('❌ Error al exportar el historial. Por favor, intenta nuevamente.');
+    } finally {
+        // Restaurar botón
+        btn.disabled = false;
+        btn.innerHTML = originalHTML;
+    }
+}
 </script>
 {% endblock %}

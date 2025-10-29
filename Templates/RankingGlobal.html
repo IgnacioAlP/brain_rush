@@ -172,6 +172,17 @@
     border-color: var(--secondary-color);
 }
 
+.ranking-item.user-actual {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(118, 75, 162, 0.15));
+    border: 2px solid #667eea;
+    box-shadow: 0 4px 16px rgba(102, 126, 234, 0.2);
+}
+
+.ranking-item.user-actual:hover {
+    transform: translateY(-2px) scale(1.01);
+    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+}
+
 .ranking-position {
     width: 50px;
     height: 50px;
@@ -353,6 +364,40 @@
 
     <div class="ranking-container animate-fadeIn">
         {% if ranking %}
+            <!-- Posición del usuario actual (si es estudiante) -->
+            {% if usuario_actual %}
+            <div class="user-position-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 24px; border-radius: 12px; margin-bottom: 32px; box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);">
+                <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+                    <div>
+                        <h3 style="margin: 0 0 8px 0; font-size: 1.1rem; opacity: 0.9;">Tu Posición</h3>
+                        <div style="display: flex; align-items: center; gap: 16px;">
+                            <div style="font-size: 3rem; font-weight: 900;">#{{ usuario_actual.posicion }}</div>
+                            <div>
+                                <div style="font-size: 1.3rem; font-weight: 700;">{{ usuario_actual.nombre_completo }}</div>
+                                <div style="opacity: 0.9; font-size: 0.95rem;">{{ usuario_actual.puntaje_acumulado }} puntos acumulados</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="display: flex; gap: 24px; flex-wrap: wrap;">
+                            <div>
+                                <div style="font-size: 1.8rem; font-weight: 700;">{{ usuario_actual.total_participaciones }}</div>
+                                <div style="opacity: 0.8; font-size: 0.85rem;">Participaciones</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 1.8rem; font-weight: 700;">{{ usuario_actual.precision_global }}%</div>
+                                <div style="opacity: 0.8; font-size: 0.85rem;">Precisión</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 1.8rem; font-weight: 700;">{{ usuario_actual.promedio_puntaje }}</div>
+                                <div style="opacity: 0.8; font-size: 0.85rem;">Promedio</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
             <!-- Estadísticas globales -->
             <div class="ranking-stats">
                 <div class="stat-card">
@@ -377,37 +422,40 @@
                 <!-- Segundo lugar -->
                 {% if ranking|length > 1 %}
                 <div class="podium-place second">
-                    <div class="podium-crown">👑</div>
+                    <div class="podium-crown">🥈</div>
                     <div class="podium-position">2</div>
-                    <div class="podium-name">{{ ranking[1].nombre }}</div>
+                    <div class="podium-name">{{ ranking[1].nombre_completo }}</div>
                     <div class="podium-score">
                         <i class="fas fa-star"></i>
-                        {{ ranking[1].puntaje_acumulado or 0 }} pts
+                        {{ ranking[1].puntaje_acumulado }} pts
                     </div>
+                    <small style="color: rgba(0,0,0,0.6);">{{ ranking[1].total_participaciones }} juegos</small>
                 </div>
                 {% endif %}
 
                 <!-- Primer lugar -->
                 <div class="podium-place first">
-                    <div class="podium-crown">👑</div>
+                    <div class="podium-crown">🥇</div>
                     <div class="podium-position">1</div>
-                    <div class="podium-name">{{ ranking[0].nombre }}</div>
+                    <div class="podium-name">{{ ranking[0].nombre_completo }}</div>
                     <div class="podium-score">
                         <i class="fas fa-star"></i>
-                        {{ ranking[0].puntaje_acumulado or 0 }} pts
+                        {{ ranking[0].puntaje_acumulado }} pts
                     </div>
+                    <small style="color: rgba(0,0,0,0.6);">{{ ranking[0].total_participaciones }} juegos</small>
                 </div>
 
                 <!-- Tercer lugar -->
                 {% if ranking|length > 2 %}
                 <div class="podium-place third">
-                    <div class="podium-crown">👑</div>
+                    <div class="podium-crown">🥉</div>
                     <div class="podium-position">3</div>
-                    <div class="podium-name">{{ ranking[2].nombre }}</div>
+                    <div class="podium-name">{{ ranking[2].nombre_completo }}</div>
                     <div class="podium-score">
                         <i class="fas fa-star"></i>
-                        {{ ranking[2].puntaje_acumulado or 0 }} pts
+                        {{ ranking[2].puntaje_acumulado }} pts
                     </div>
+                    <small style="color: rgba(0,0,0,0.6);">{{ ranking[2].total_participaciones }} juegos</small>
                 </div>
                 {% endif %}
             </div>
@@ -420,39 +468,37 @@
                     Ranking Completo
                 </h3>
                 
-                {% for usuario in ranking[:20] %}
-                <div class="ranking-item animate-fadeIn" style="animation-delay: {{ (loop.index * 0.1) + 0.3 }}s;">
-                    <div class="ranking-position">{{ loop.index }}</div>
+                {% for usuario in ranking %}
+                <div class="ranking-item animate-fadeIn {% if usuario_actual and usuario.id_usuario == usuario_actual.id_usuario %}user-actual{% endif %}" style="animation-delay: {{ (loop.index * 0.1) + 0.3 }}s;">
+                    <div class="ranking-position">{{ usuario.posicion }}</div>
                     
                     <div class="ranking-info">
                         <div class="user-details">
-                            <div class="user-name">{{ usuario.nombre }}</div>
+                            <div class="user-name">
+                                {{ usuario.nombre_completo }}
+                                {% if usuario_actual and usuario.id_usuario == usuario_actual.id_usuario %}
+                                <span style="color: #667eea; font-size: 0.9rem; margin-left: 8px;">
+                                    <i class="fas fa-user"></i> Tú
+                                </span>
+                                {% endif %}
+                            </div>
                             <div class="user-stats">
-                                <span><i class="fas fa-gamepad"></i> Juegos completados</span>
-                                <span><i class="fas fa-clock"></i> Miembro desde {{ usuario.fecha_registro.strftime('%b %Y') if usuario.fecha_registro else 'N/A' }}</span>
+                                <span><i class="fas fa-gamepad"></i> {{ usuario.total_participaciones }} participaciones</span>
+                                <span><i class="fas fa-bullseye"></i> {{ usuario.precision_global }}% precisión</span>
+                                <span><i class="fas fa-chart-line"></i> Promedio: {{ usuario.promedio_puntaje }} pts</span>
                             </div>
                         </div>
                         
                         <div class="score-display">
                             <div class="main-score">
                                 <i class="fas fa-star"></i>
-                                {{ usuario.puntaje_acumulado or 0 }}
+                                {{ usuario.puntaje_acumulado }}
                             </div>
-                            <div class="score-label">Puntos totales</div>
+                            <div class="score-label">Puntos acumulados</div>
                         </div>
                     </div>
                 </div>
                 {% endfor %}
-                
-                {% if ranking|length > 20 %}
-                <div class="ranking-item" style="background: rgba(0,0,0,0.05); border-style: dashed;">
-                    <div class="ranking-info" style="justify-content: center;">
-                        <span style="color: var(--gray); font-style: italic;">
-                            ... y {{ ranking|length - 20 }} estudiantes más
-                        </span>
-                    </div>
-                </div>
-                {% endif %}
             </div>
 
         {% else %}
