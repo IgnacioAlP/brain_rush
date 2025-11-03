@@ -1593,6 +1593,28 @@ def obtener_estadisticas_pregunta(sala_id):
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/api/sala/<int:sala_id>/detalle-respuestas')
+def obtener_detalle_respuestas(sala_id):
+    """Obtiene el detalle de qué estudiantes han respondido la pregunta actual"""
+    try:
+        detalle = controlador_juego.obtener_detalle_respuestas_estudiantes(sala_id)
+        
+        if not detalle:
+            return jsonify({
+                'success': False,
+                'error': 'No se pudo obtener el detalle de respuestas'
+            }), 404
+        
+        return jsonify({
+            'success': True,
+            'detalle': detalle
+        })
+    except Exception as e:
+        print(f"ERROR obtener_detalle_respuestas: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/sala/<int:sala_id>/finalizar', methods=['POST'])
 def finalizar_juego(sala_id):
     """Finaliza el juego y redirige a resultados"""

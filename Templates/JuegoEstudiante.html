@@ -267,6 +267,7 @@
 
     .loading-dots span:nth-child(1) { animation-delay: -0.32s; }
     .loading-dots span:nth-child(2) { animation-delay: -0.16s; }
+    .loading-dots span:nth-child(2) { animation-delay: -0.16s; }
 
     @keyframes loadingBounce {
       0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
@@ -705,9 +706,33 @@
                     cargarPreguntaActual();
                   }, 500);
                 } else {
-                  // Juego finalizado
-                  console.log('🏁 Juego finalizado, redirigiendo a resultados...');
-                  window.location.href = `/sala/${SALA_ID}/resultados`;
+                  // No hay más preguntas - Mostrar pantalla final de resultados
+                  console.log('✅ Has completado todas las preguntas. Mostrando resultados finales...');
+                  
+                  // Obtener ranking y mostrar pantalla de resultados
+                  try {
+                    const rankingResponse = await fetch(`/api/sala/${SALA_ID}/ranking`);
+                    const rankingData = await rankingResponse.json();
+                    
+                    if (rankingData.success && rankingData.ranking) {
+                      // Actualizar totalQuestions si no se ha hecho
+                      if (gameState.totalQuestions === 0) {
+                        gameState.totalQuestions = gameState.correctAnswers + 
+                          (avanzarData.total_preguntas || 0) - gameState.correctAnswers;
+                      }
+                      
+                      // Mostrar pantalla de resultados final
+                      mostrarResultados(rankingData.ranking);
+                    } else {
+                      console.error('Error al obtener ranking final');
+                      // Como fallback, mostrar resultados sin posición
+                      mostrarResultados([]);
+                    }
+                  } catch (error) {
+                    console.error('Error al obtener ranking:', error);
+                    // Como fallback, mostrar resultados sin posición
+                    mostrarResultados([]);
+                  }
                 }
               } else {
                 console.error('Error al avanzar:', avanzarData.error);
@@ -792,6 +817,8 @@
       }
     }
 
+
+
     function mostrarResultados(ranking) {
       // Encontrar posición del jugador actual
       const participanteId = {{ session.get('participante_id', 0) }};
@@ -837,7 +864,7 @@
     }
 
     function volverAlInicio() {
-      window.location.href = '/dashboard-estudiante';
+      window.location.href = '/estudiante';
     }
 
     // Inicializar juego cuando carga la página

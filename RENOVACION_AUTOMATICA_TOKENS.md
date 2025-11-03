@@ -51,7 +51,7 @@ Cada vez que alguien exporta a OneDrive, el sistema:
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │  PRIMERA AUTORIZACIÓN (Una sola vez)                            │
-│  http://localhost:5000/auth/onedrive-sistema                    │
+│   │
 │                                                                  │
 │  ├─ access_token  (válido ~1 hora)                             │
 │  ├─ refresh_token (válido meses/años)                          │

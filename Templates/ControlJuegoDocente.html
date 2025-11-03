@@ -306,6 +306,164 @@
 
 .ranking-table td {
     padding: 0.75rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.ranking-table tr:hover {
+    background: #f7fafc;
+}
+
+/* Estilos para lista de estudiantes */
+.estudiantes-status-container {
+    background: white;
+    border-radius: 1.5rem;
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+.estudiantes-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.timer-display {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 1rem;
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+.timer-icon {
+    font-size: 1.5rem;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+.estudiantes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+}
+
+.estudiante-card {
+    background: #f7fafc;
+    border-radius: 1rem;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: all 0.3s;
+    border-left: 4px solid #cbd5e0;
+}
+
+.estudiante-card.respondido {
+    background: #f0fff4;
+    border-left-color: #48bb78;
+}
+
+.estudiante-card.pendiente {
+    background: #fffaf0;
+    border-left-color: #ed8936;
+}
+
+.estudiante-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.estudiante-icon {
+    font-size: 2rem;
+    flex-shrink: 0;
+}
+
+.estudiante-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.estudiante-nombre {
+    font-weight: 600;
+    color: #1a202c;
+    margin-bottom: 0.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.estudiante-grupo {
+    font-size: 0.85rem;
+    color: #64748b;
+}
+
+.estudiante-status {
+    flex-shrink: 0;
+    padding: 0.25rem 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.estudiante-status.correcto {
+    background: #48bb78;
+    color: white;
+}
+
+.estudiante-status.incorrecto {
+    background: #f56565;
+    color: white;
+}
+
+.estudiante-status.esperando {
+    background: #ed8936;
+    color: white;
+}
+
+.estudiantes-grid::-webkit-scrollbar {
+    width: 8px;
+}
+
+.estudiantes-grid::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.estudiantes-grid::-webkit-scrollbar-thumb {
+    background: #cbd5e0;
+    border-radius: 10px;
+}
+
+.estudiantes-grid::-webkit-scrollbar-thumb:hover {
+    background: #a0aec0;
+}
+
+.ranking-table th {
+    background: #f7fafc;
+    padding: 0.75rem;
+    text-align: left;
+    font-weight: 600;
+    color: #4a5568;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.ranking-table td {
+    padding: 0.75rem;
     border-bottom: 1px solid #f7fafc;
 }
 
@@ -383,6 +541,20 @@
         <div class="status-item">
             <div class="status-label">Estado</div>
             <div class="status-value" id="estado-juego">En Curso</div>
+        </div>
+    </div>
+
+    <!-- Lista de Estudiantes con Estado de Respuesta -->
+    <div class="estudiantes-status-container" id="estudiantes-container" style="display: none;">
+        <div class="estudiantes-header">
+            <h3 style="margin: 0;">👥 Estado de Respuestas</h3>
+            <div class="timer-display" id="timer-pregunta">
+                <span class="timer-icon">⏱️</span>
+                <span id="timer-value">00:00</span>
+            </div>
+        </div>
+        <div class="estudiantes-grid" id="estudiantes-grid">
+            <!-- Se llenará dinámicamente -->
         </div>
     </div>
 
@@ -496,6 +668,7 @@ async function cargarPreguntaActual() {
             document.getElementById('waiting-message').style.display = 'none';
             document.getElementById('pregunta-container').style.display = 'block';
             document.getElementById('stats-container').style.display = 'grid';
+            document.getElementById('estudiantes-container').style.display = 'block';
             document.getElementById('control-buttons').style.display = 'flex';
             document.getElementById('ranking-container').style.display = 'block';
             
@@ -564,12 +737,169 @@ async function iniciarPollingEstadisticas() {
     // Actualizar cada 2 segundos
     estadisticasInterval = setInterval(async () => {
         await actualizarEstadisticas();
+        await actualizarDetalleEstudiantes();
         await actualizarRanking();
     }, 2000);
     
-    // Actualizar inmediatamente
+    // Actualizar inmediatamente (el timer se iniciará automáticamente al detectar la pregunta)
     await actualizarEstadisticas();
+    await actualizarDetalleEstudiantes();
     await actualizarRanking();
+}
+
+let tiempoInicioPregunta = null;
+let tiempoPorPregunta = 30; // Tiempo límite por defecto (se actualiza dinámicamente)
+let timerInterval = null;
+let preguntaActualId = null; // Para detectar cambio de pregunta
+
+function iniciarTimer() {
+    // Limpiar intervalo anterior
+    if (timerInterval) {
+        clearInterval(timerInterval);
+    }
+    
+    // Actualizar inmediatamente
+    actualizarTimer();
+    
+    // Actualizar cada segundo
+    timerInterval = setInterval(() => {
+        actualizarTimer();
+    }, 1000);
+}
+
+function reiniciarTimer(nuevaPreguntaId) {
+    // Verificar si cambió la pregunta
+    if (preguntaActualId !== nuevaPreguntaId) {
+        console.log(`🔄 Nueva pregunta detectada (${preguntaActualId} → ${nuevaPreguntaId}), reiniciando timer...`);
+        preguntaActualId = nuevaPreguntaId;
+        
+        // Reiniciar el timer desde el tiempo configurado
+        iniciarTimer();
+    }
+}
+
+function actualizarTimer() {
+    if (!tiempoInicioPregunta || !tiempoPorPregunta) {
+        console.log('⚠️ No hay tiempo de inicio o límite de pregunta');
+        return;
+    }
+    
+    const ahora = new Date();
+    const inicio = new Date(tiempoInicioPregunta);
+    const transcurrido = Math.floor((ahora - inicio) / 1000); // Segundos transcurridos
+    const restante = Math.max(0, tiempoPorPregunta - transcurrido); // Tiempo restante (no menor a 0)
+    
+    const minutos = Math.floor(restante / 60);
+    const segundos = restante % 60;
+    
+    const timerValue = document.getElementById('timer-value');
+    if (timerValue) {
+        timerValue.textContent = `${String(minutos).padStart(2, '0')}:${String(segundos).padStart(2, '0')}`;
+        
+        // Cambiar color si queda poco tiempo
+        const timerDisplay = document.getElementById('timer-pregunta');
+        if (timerDisplay) {
+            if (restante <= 10) {
+                timerDisplay.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)'; // Rojo
+            } else if (restante <= 30) {
+                timerDisplay.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)'; // Naranja
+            } else {
+                timerDisplay.style.background = 'linear-gradient(135deg, #667eea, #764ba2)'; // Púrpura original
+            }
+        }
+    } else {
+        console.error('❌ No se encontró timer-value');
+    }
+}
+
+async function actualizarDetalleEstudiantes() {
+    try {
+        const response = await fetch(`/api/sala/${SALA_ID}/detalle-respuestas`);
+        const data = await response.json();
+        
+        console.log('📊 Detalle de estudiantes recibido:', data);
+        
+        if (data.success && data.detalle) {
+            const { estudiantes, tiempo_inicio_pregunta, tiempo_por_pregunta, numero_pregunta_actual, estadisticas } = data.detalle;
+            
+            console.log('✅ Estudiantes:', estudiantes.length);
+            console.log('⏱️ Tiempo inicio:', tiempo_inicio_pregunta);
+            console.log('⏱️ Tiempo por pregunta:', tiempo_por_pregunta);
+            console.log('📝 Número de pregunta actual:', numero_pregunta_actual);
+            
+            // Guardar tiempo de inicio y límite para el timer
+            if (tiempo_inicio_pregunta) {
+                tiempoInicioPregunta = tiempo_inicio_pregunta;
+                console.log('✅ Timer iniciado con:', tiempoInicioPregunta);
+            }
+            
+            if (tiempo_por_pregunta) {
+                tiempoPorPregunta = tiempo_por_pregunta;
+                console.log('✅ Tiempo límite configurado:', tiempoPorPregunta, 'segundos');
+            }
+            
+            // Reiniciar timer si cambió la pregunta
+            if (numero_pregunta_actual) {
+                reiniciarTimer(numero_pregunta_actual);
+            }
+            
+            // Mostrar contenedor
+            const container = document.getElementById('estudiantes-container');
+            if (container) {
+                container.style.display = 'block';
+                console.log('✅ Contenedor de estudiantes mostrado');
+            } else {
+                console.error('❌ No se encontró el contenedor estudiantes-container');
+            }
+            
+            // Actualizar grid de estudiantes
+            const grid = document.getElementById('estudiantes-grid');
+            if (!grid) {
+                console.error('❌ No se encontró estudiantes-grid');
+                return;
+            }
+            
+            grid.innerHTML = estudiantes.map(est => {
+                let statusHTML = '';
+                let cardClass = 'estudiante-card ';
+                let iconoEstudiante = '👤';
+                
+                if (est.ha_respondido) {
+                    cardClass += 'respondido';
+                    if (est.es_correcta) {
+                        statusHTML = '<span class="estudiante-status correcto">✓ Correcto</span>';
+                        iconoEstudiante = '✅';
+                    } else {
+                        statusHTML = '<span class="estudiante-status incorrecto">✗ Incorrecto</span>';
+                        iconoEstudiante = '❌';
+                    }
+                } else {
+                    cardClass += 'pendiente';
+                    statusHTML = '<span class="estudiante-status esperando">⏳ Esperando</span>';
+                    iconoEstudiante = '⏳';
+                }
+                
+                return `
+                    <div class="${cardClass}">
+                        <div class="estudiante-icon">${iconoEstudiante}</div>
+                        <div class="estudiante-info">
+                            <div class="estudiante-nombre">${est.nombre}</div>
+                            <div class="estudiante-grupo">Grupo ${est.grupo || '-'}</div>
+                        </div>
+                        ${statusHTML}
+                    </div>
+                `;
+            }).join('');
+            
+            // Actualizar estadísticas también
+            document.getElementById('respondieron-count').textContent = estadisticas.respondieron;
+            document.getElementById('pendientes-count').textContent = estadisticas.pendientes;
+            const porcentaje = estadisticas.porcentaje || 0;
+            document.getElementById('progress-respuestas').style.width = porcentaje + '%';
+        }
+    } catch (error) {
+        console.error('Error al actualizar detalle de estudiantes:', error);
+    }
 }
 
 async function actualizarEstadisticas() {

@@ -285,22 +285,9 @@ def avanzar_siguiente_pregunta(sala_id):
             
             # Verificar si hay más preguntas
             if pregunta_actual >= total_preguntas:
-                # Finalizar juego
-                cursor.execute('''
-                    UPDATE salas_juego 
-                    SET estado = 'finalizado', pregunta_actual = %s
-                    WHERE id_sala = %s
-                ''', (total_preguntas, sala_id))
-                
-                cursor.execute('''
-                    UPDATE estado_juego_sala
-                    SET estado_pregunta = 'finalizada'
-                    WHERE id_sala = %s
-                ''', (sala_id,))
-                
-                # Calcular posiciones finales
-                calcular_ranking_final(sala_id, cursor)
-                
+                # NO finalizar automáticamente cuando se avanza a la última pregunta
+                # El docente debe finalizar manualmente
+                # Solo retornar que no hay más preguntas
                 conexion.commit()
                 return False
             
@@ -378,14 +365,15 @@ def obtener_ranking_sala(sala_id):
             cursor.execute('''
                 SELECT 
                     r.posicion,
-                    p.nombre_participante,
+                    COALESCE(CONCAT(u.nombre, ' ', u.apellidos), p.nombre_participante) as nombre_completo,
                     r.puntaje_total,
                     r.respuestas_correctas,
                     r.tiempo_total_respuestas,
-                    g.nombre_grupo,
+                    g.numero_grupo,
                     p.id_participante
                 FROM ranking_sala r
                 JOIN participantes_sala p ON r.id_participante = p.id_participante
+                LEFT JOIN usuarios u ON p.id_usuario = u.id_usuario
                 LEFT JOIN grupos_sala g ON p.id_grupo = g.id_grupo
                 WHERE r.id_sala = %s
                 ORDER BY r.puntaje_total DESC, r.tiempo_total_respuestas ASC
@@ -394,12 +382,12 @@ def obtener_ranking_sala(sala_id):
             ranking = []
             for row in cursor.fetchall():
                 ranking.append({
-                    'posicion': row[0],  # Usar la posición de la BD
-                    'nombre_participante': row[1],
-                    'puntaje_total': row[2],
+                    'posicion': row[0],
+                    'nombre_completo': row[1],
+                    'puntos_totales': row[2],  # Cambio de puntaje_total a puntos_totales para consistencia
                     'respuestas_correctas': row[3],
                     'tiempo_total_respuestas': float(row[4]),
-                    'nombre_grupo': row[5],
+                    'numero_grupo': row[5],
                     'id_participante': row[6]
                 })
             
@@ -454,6 +442,108 @@ def obtener_estadisticas_pregunta_actual(sala_id):
                 'total': total_participantes,
                 'respondieron': respondieron,
                 'pendientes': total_participantes - respondieron
+            }
+    finally:
+        conexion.close()
+
+def obtener_detalle_respuestas_estudiantes(sala_id):
+    """
+    Obtiene el detalle de qué estudiantes han respondido la pregunta actual
+    
+    Returns:
+        Diccionario con lista de estudiantes, tiempo de inicio de pregunta y estadísticas
+    """
+    conexion = obtener_conexion()
+    try:
+        with conexion.cursor() as cursor:
+            # Obtener pregunta actual, tiempo de inicio y tiempo configurado por pregunta
+            cursor.execute('''
+                SELECT ejs.pregunta_actual, ejs.tiempo_inicio_pregunta, s.id_cuestionario, s.tiempo_por_pregunta
+                FROM estado_juego_sala ejs
+                JOIN salas_juego s ON ejs.id_sala = s.id_sala
+                WHERE ejs.id_sala = %s
+            ''', (sala_id,))
+            
+            estado = cursor.fetchone()
+            if not estado:
+                return None
+            
+            num_pregunta_actual = estado[0]
+            tiempo_inicio = estado[1]
+            id_cuestionario = estado[2]
+            tiempo_por_pregunta = estado[3]  # Tiempo límite configurado (en segundos)
+            
+            # Obtener id_pregunta actual
+            cursor.execute('''
+                SELECT p.id_pregunta
+                FROM cuestionario_preguntas cp
+                JOIN preguntas p ON cp.id_pregunta = p.id_pregunta
+                WHERE cp.id_cuestionario = %s
+                ORDER BY cp.orden
+                LIMIT %s, 1
+            ''', (id_cuestionario, num_pregunta_actual - 1))
+            
+            pregunta_result = cursor.fetchone()
+            if not pregunta_result:
+                return None
+            
+            id_pregunta_actual = pregunta_result[0]
+            
+            # Obtener todos los participantes con su estado de respuesta
+            cursor.execute('''
+                SELECT 
+                    ps.id_participante,
+                    CONCAT(u.nombre, ' ', u.apellidos) as nombre_completo,
+                    COALESCE(gs.numero_grupo, ps.id_grupo, 0) as numero_grupo,
+                    CASE 
+                        WHEN rp.id_respuesta_participante IS NOT NULL THEN 1 
+                        ELSE 0 
+                    END as ha_respondido,
+                    rp.tiempo_respuesta,
+                    rp.es_correcta,
+                    rp.puntaje_obtenido
+                FROM participantes_sala ps
+                JOIN usuarios u ON ps.id_usuario = u.id_usuario
+                LEFT JOIN grupos_sala gs ON ps.id_grupo = gs.id_grupo
+                LEFT JOIN respuestas_participantes rp ON 
+                    rp.id_participante = ps.id_participante 
+                    AND rp.id_sala = ps.id_sala
+                    AND rp.id_pregunta = %s
+                WHERE ps.id_sala = %s AND ps.estado = 'jugando'
+                ORDER BY ha_respondido DESC, nombre_completo ASC
+            ''', (id_pregunta_actual, sala_id))
+            
+            estudiantes = []
+            total = 0
+            respondieron = 0
+            
+            for row in cursor.fetchall():
+                total += 1
+                ha_respondido = bool(row[3])
+                if ha_respondido:
+                    respondieron += 1
+                
+                estudiantes.append({
+                    'id_participante': row[0],
+                    'nombre': row[1],
+                    'grupo': row[2],
+                    'ha_respondido': ha_respondido,
+                    'tiempo_respuesta': float(row[4]) if row[4] else None,
+                    'es_correcta': bool(row[5]) if row[5] is not None else None,
+                    'puntaje': row[6] if row[6] else None
+                })
+            
+            return {
+                'estudiantes': estudiantes,
+                'tiempo_inicio_pregunta': tiempo_inicio.isoformat() if tiempo_inicio else None,
+                'tiempo_por_pregunta': tiempo_por_pregunta,  # Tiempo límite configurado
+                'numero_pregunta_actual': num_pregunta_actual,  # Número de pregunta para detectar cambios
+                'estadisticas': {
+                    'total': total,
+                    'respondieron': respondieron,
+                    'pendientes': total - respondieron,
+                    'porcentaje': round((respondieron / total * 100) if total > 0 else 0, 1)
+                }
             }
     finally:
         conexion.close()
