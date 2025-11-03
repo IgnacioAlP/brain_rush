@@ -65,6 +65,14 @@
     border-radius: 1rem;
     border-left: 4px solid #cbd5e0;
     position: relative;
+    word-wrap: break-word;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+    min-height: 60px;
+    display: flex;
+    flex-direction: column;
+    line-height: 1.5;
 }
 
 .opcion-card.correcta {
@@ -936,12 +944,14 @@ async function actualizarRanking() {
                                      index === 1 ? 'posicion-2' : 
                                      index === 2 ? 'posicion-3' : 'posicion-other';
                 
+                console.log('👤 Participante:', participante); // Debug: ver datos
+                
                 return `
                     <tr>
                         <td><span class="posicion-badge ${posicionClass}">${participante.posicion || (index + 1)}</span></td>
-                        <td>${participante.nombre_participante || participante.nombre || 'Participante'}</td>
-                        <td>${participante.nombre_grupo || participante.grupo || '-'}</td>
-                        <td><strong>${participante.puntaje_total || participante.puntaje || 0}</strong></td>
+                        <td>${participante.nombre_completo || participante.nombre_participante || participante.nombre || 'Participante'}</td>
+                        <td>${participante.numero_grupo || participante.nombre_grupo || participante.grupo || '-'}</td>
+                        <td><strong>${participante.puntos_totales || participante.puntaje_total || participante.puntaje || 0}</strong></td>
                         <td>${participante.respuestas_correctas || participante.correctas || 0}</td>
                         <td>${(participante.tiempo_total_respuestas || participante.tiempo_total || 0).toFixed(1)}s</td>
                     </tr>
@@ -999,9 +1009,15 @@ async function siguientePregunta() {
                     btn.textContent = '➡️ Siguiente Pregunta';
                 }, 1000);
             } else {
-                // Juego terminado
-                alert('¡Juego completado! Mostrando resultados finales...');
-                window.location.href = `/sala/${SALA_ID}/resultados`;
+                // No hay más preguntas, pero NO finalizar automáticamente
+                // El docente debe usar el botón "Finalizar Juego"
+                alert('Esta es la última pregunta. Cuando estés listo, usa el botón "Finalizar Juego".');
+                btn.disabled = true;
+                btn.textContent = 'Última Pregunta';
+                // Recargar para actualizar el estado
+                setTimeout(() => {
+                    cargarPreguntaActual();
+                }, 500);
             }
         } else {
             alert('Error: ' + data.error);

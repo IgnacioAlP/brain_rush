@@ -180,8 +180,8 @@
       border: none;
       border-radius: 16px;
       padding: 20px;
-      font-size: 18px;
-      font-weight: bold;
+      font-size: 16px;
+      font-weight: 600;
       cursor: pointer;
       transition: all 0.3s;
       color: #222;
@@ -192,6 +192,11 @@
       text-align: center;
       position: relative;
       overflow: hidden;
+      word-wrap: break-word;
+      word-break: break-word;
+      white-space: normal;
+      line-height: 1.4;
+      height: auto;
     }
 
     .option-button:hover:not(:disabled) {
@@ -369,9 +374,12 @@
       }
 
       .option-button {
-        font-size: 16px;
+        font-size: 14px;
         padding: 16px;
         min-height: 60px;
+        word-wrap: break-word;
+        word-break: break-word;
+        white-space: normal;
       }
 
       .game-info {
@@ -474,10 +482,21 @@
     const PUNTAJE_MINIMO = 10;
     const DECREMENTO_POR_MEDIO_SEGUNDO = 100;
     const SALA_ID = {{ sala.id }};
+    const TIENE_DOCENTE = {{ 'true' if sala.tiene_docente else 'false' }};
+    
+    // Debug: Mostrar información de la sala
+    console.log('🎮 INFORMACIÓN DE LA SALA:');
+    console.log('   Sala ID:', {{ sala.id }});
+    console.log('   PIN Sala:', '{{ sala.pin_sala }}');
+    console.log('   Estado:', '{{ sala.estado }}');
+    console.log('   Modo Juego:', '{{ sala.modo_juego }}');
+    console.log('   Tiene Docente:', TIENE_DOCENTE);
+    console.log('   Modo:', TIENE_DOCENTE ? '✅ MANUAL (con docente)' : '🤖 AUTOMÁTICO (sin docente)');
     
     // Estado del juego
     let gameState = {
       salaId: SALA_ID,
+      tieneDocente: TIENE_DOCENTE,  // true = modo manual, false = modo automático
       currentQuestion: null,
       totalQuestions: 0,
       score: 0,
@@ -634,132 +653,196 @@
     }
 
     async function seleccionarRespuesta(idOpcion) {
-      if (gameState.hasAnswered) return;
+  if (gameState.hasAnswered) return;
+  
+  gameState.hasAnswered = true;
+  clearInterval(gameState.timerInterval);
+  
+  const tiempoRespuesta = (Date.now() - gameState.questionStartTime) / 1000;
+  
+  // Deshabilitar botones
+  const buttons = document.querySelectorAll('.option-button');
+  buttons.forEach(btn => btn.disabled = true);
+  
+  // Marcar selección
+  const selectedButton = document.querySelector(`[data-opcion-id="${idOpcion}"]`);
+  selectedButton.classList.add('selected');
+  
+  try {
+    // Enviar respuesta al servidor
+    const response = await fetch(`/api/sala/${SALA_ID}/responder`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id_pregunta: gameState.currentQuestion.id_pregunta,
+        id_opcion: idOpcion,
+        tiempo_respuesta: tiempoRespuesta
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      const resultado = data.resultado;
       
-      gameState.hasAnswered = true;
-      clearInterval(gameState.timerInterval);
+      console.log('📊 RESULTADO DE LA RESPUESTA:');
+      console.log('   Es correcta:', resultado.es_correcta);
+      console.log('   Puntaje obtenido:', resultado.puntaje_obtenido);
+      console.log('   Tiempo respuesta:', resultado.tiempo_respuesta);
+      console.log('   Score antes:', gameState.score);
       
-      // Calcular tiempo de respuesta
-      const tiempoRespuesta = (Date.now() - gameState.questionStartTime) / 1000;
-      
-      // Deshabilitar botones
-      const buttons = document.querySelectorAll('.option-button');
-      buttons.forEach(btn => btn.disabled = true);
-      
-      // Marcar selección
-      const selectedButton = document.querySelector(`[data-opcion-id="${idOpcion}"]`);
-      selectedButton.classList.add('selected');
-      
-      try {
-        // Enviar respuesta al servidor
-        const response = await fetch(`/api/sala/${SALA_ID}/responder`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            id_pregunta: gameState.currentQuestion.id_pregunta,
-            id_opcion: idOpcion,
-            tiempo_respuesta: tiempoRespuesta
-          })
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          const resultado = data.resultado;
-          
-          // Mostrar resultado visual
-          if (resultado.es_correcta) {
-            selectedButton.classList.add('correct');
-            gameState.correctAnswers++;
-            gameState.score += resultado.puntaje_obtenido;
-            
-            // Actualizar score en UI
-            document.getElementById('current-score').textContent = gameState.score;
-          } else {
-            selectedButton.classList.add('incorrect');
-          }
-          
-          // Auto-avance: Esperar feedback visual, luego avanzar automáticamente
-          setTimeout(async () => {
-            try {
-              console.log('✅ Respuesta registrada, avanzando automáticamente...');
-              
-              // Llamar al endpoint para avanzar a la siguiente pregunta
-              const avanzarResponse = await fetch(`/api/sala/${SALA_ID}/siguiente-pregunta`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json'
-                }
-              });
-              
-              const avanzarData = await avanzarResponse.json();
-              
-              if (avanzarData.success) {
-                if (avanzarData.hay_mas_preguntas) {
-                  // Hay más preguntas, cargar la siguiente
-                  console.log('➡️ Cargando siguiente pregunta...');
-                  mostrarPantallaEspera();
-                  // Pequeña pausa para que el backend actualice
-                  setTimeout(() => {
-                    cargarPreguntaActual();
-                  }, 500);
-                } else {
-                  // No hay más preguntas - Mostrar pantalla final de resultados
-                  console.log('✅ Has completado todas las preguntas. Mostrando resultados finales...');
-                  
-                  // Obtener ranking y mostrar pantalla de resultados
-                  try {
-                    const rankingResponse = await fetch(`/api/sala/${SALA_ID}/ranking`);
-                    const rankingData = await rankingResponse.json();
-                    
-                    if (rankingData.success && rankingData.ranking) {
-                      // Actualizar totalQuestions si no se ha hecho
-                      if (gameState.totalQuestions === 0) {
-                        gameState.totalQuestions = gameState.correctAnswers + 
-                          (avanzarData.total_preguntas || 0) - gameState.correctAnswers;
-                      }
-                      
-                      // Mostrar pantalla de resultados final
-                      mostrarResultados(rankingData.ranking);
-                    } else {
-                      console.error('Error al obtener ranking final');
-                      // Como fallback, mostrar resultados sin posición
-                      mostrarResultados([]);
-                    }
-                  } catch (error) {
-                    console.error('Error al obtener ranking:', error);
-                    // Como fallback, mostrar resultados sin posición
-                    mostrarResultados([]);
-                  }
-                }
-              } else {
-                console.error('Error al avanzar:', avanzarData.error);
-                // Si falla, usar polling como respaldo
-                mostrarPantallaEspera();
-                iniciarPollingPregunta();
-              }
-            } catch (error) {
-              console.error('Error al avanzar pregunta:', error);
-              // En caso de error, usar polling como respaldo
-              mostrarPantallaEspera();
-              iniciarPollingPregunta();
-            }
-          }, 1500); // Espera 1.5s para mostrar el feedback visual
-        }
-      } catch (error) {
-        console.error('Error al enviar respuesta:', error);
-        alert('Error al enviar respuesta. Intenta nuevamente.');
-        // Rehabilitar botones
-        buttons.forEach(btn => btn.disabled = false);
-        gameState.hasAnswered = false;
-        gameState.questionStartTime = Date.now();
-        gameState.timerInterval = setInterval(actualizarPuntajeVisual, 100);
+      // Mostrar resultado visual
+      if (resultado.es_correcta) {
+        selectedButton.classList.add('correct');
+        gameState.correctAnswers++;
+        gameState.score += resultado.puntaje_obtenido;
+        console.log('   Score después:', gameState.score);
+        document.getElementById('current-score').textContent = gameState.score;
+      } else {
+        selectedButton.classList.add('incorrect');
       }
+      
+      // Esperar feedback visual (1.5s), luego decidir según el modo
+      setTimeout(async () => {
+        await procesarSiguienteAccion();
+      }, 1500);
     }
+  } catch (error) {
+    console.error('Error al enviar respuesta:', error);
+    alert('Error al enviar respuesta. Intenta nuevamente.');
+    buttons.forEach(btn => btn.disabled = false);
+    gameState.hasAnswered = false;
+    gameState.questionStartTime = Date.now();
+    gameState.timerInterval = setInterval(actualizarPuntajeVisual, 100);
+  }
+}
+
+// Nueva función auxiliar para procesar la siguiente acción
+async function procesarSiguienteAccion() {
+  try {
+    console.log('🔍 Procesando siguiente acción...');
+    console.log('   tieneDocente:', gameState.tieneDocente);
+    console.log('   Modo:', gameState.tieneDocente ? 'MANUAL' : 'AUTOMÁTICO');
+    
+    if (gameState.tieneDocente) {
+      // MODO MANUAL: Esperar al docente
+      console.log('⏳ MODO MANUAL: Esperando a que el docente avance...');
+      mostrarPantallaEspera();
+      document.querySelector('.waiting-screen h2').textContent = '✅ Respuesta registrada';
+      document.querySelector('.waiting-screen p').textContent = 'Esperando a que el docente avance a la siguiente pregunta...';
+      iniciarPollingPreguntaDocente();
+    } else {
+      // MODO AUTOMÁTICO: Auto-avanzar
+      console.log('🚀 MODO AUTOMÁTICO: Avanzando automáticamente...');
+      await avanzarModoAutomatico();
+    }
+  } catch (error) {
+    console.error('Error en procesarSiguienteAccion:', error);
+    mostrarPantallaEspera();
+    if (gameState.tieneDocente) {
+      iniciarPollingPreguntaDocente();
+    } else {
+      iniciarPollingPregunta();
+    }
+  }
+}
+
+// Nueva función para el modo automático
+async function avanzarModoAutomatico() {
+  try {
+    console.log('✅ Respuesta registrada, avanzando automáticamente...');
+    
+    const response = await fetch(`/api/sala/${SALA_ID}/siguiente-pregunta`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      if (data.hay_mas_preguntas) {
+        // Hay más preguntas
+        console.log('➡️ Cargando siguiente pregunta...');
+        mostrarPantallaEspera();
+        setTimeout(() => cargarPreguntaActual(), 500);
+      } else {
+        // Terminó - Mostrar resultados
+        await mostrarResultadosFinales();
+      }
+    } else {
+      console.error('Error al avanzar:', data.error);
+      mostrarPantallaEspera();
+      iniciarPollingPregunta();
+    }
+  } catch (error) {
+    console.error('Error en avanzarModoAutomatico:', error);
+    mostrarPantallaEspera();
+    iniciarPollingPregunta();
+  }
+}
+
+// Nueva función para mostrar resultados finales
+async function mostrarResultadosFinales() {
+  try {
+    const response = await fetch(`/api/sala/${SALA_ID}/ranking`);
+    const data = await response.json();
+    
+    if (data.success && data.ranking) {
+      if (gameState.totalQuestions === 0) {
+        gameState.totalQuestions = gameState.correctAnswers;
+      }
+      mostrarResultados(data.ranking);
+    } else {
+      mostrarResultados([]);
+    }
+  } catch (error) {
+    console.error('Error al obtener ranking:', error);
+    mostrarResultados([]);
+  }
+}
 
     let pollingInterval = null;
+    
+    // Polling para MODO MANUAL (con docente)
+    function iniciarPollingPreguntaDocente() {
+      pollingInterval = setInterval(async () => {
+        try {
+          // Verificar el estado de la sala
+          const estadoResponse = await fetch(`/api/sala/${SALA_ID}/estado`);
+          const estadoData = await estadoResponse.json();
+          
+          if (estadoData.success && estadoData.sala) {
+            const estadoSala = estadoData.sala.estado;
+            
+            if (estadoSala === 'finalizada') {
+              // El docente finalizó el juego
+              console.log('🏁 El docente finalizó el juego, redirigiendo a resultados...');
+              clearInterval(pollingInterval);
+              window.location.href = `/sala/${SALA_ID}/resultados`;
+              return;
+            }
+            
+            if (estadoSala === 'en_juego') {
+              // Verificar si hay nueva pregunta
+              const response = await fetch(`/api/sala/${SALA_ID}/pregunta-actual`);
+              const data = await response.json();
+              
+              if (data.success && data.pregunta) {
+                // Nueva pregunta disponible
+                if (!gameState.currentQuestion || 
+                    data.pregunta.numero_pregunta !== gameState.currentQuestion.numero_pregunta) {
+                  console.log('➡️ El docente avanzó a la siguiente pregunta');
+                  clearInterval(pollingInterval);
+                  cargarPreguntaActual();
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error en polling docente:', error);
+        }
+      }, 2000);
+    }
     
     function iniciarPollingPregunta() {
       // Verificar cada 2 segundos si hay nueva pregunta o si el juego finalizó

@@ -211,6 +211,48 @@ def obtener_sala_por_id_simple(id_sala):
         """, (id_sala,))
         sala = cursor.fetchone()
         if sala:
+            # Determinar si es sala con docente (modo manual) o juego individual (modo automático)
+            # REGLA DEFINITIVA:
+            #   - Si tiene PIN de sala (modo colaborativo) = Sala con docente
+            #   - Si estado es 'esperando' = Sala con docente (esperando que docente inicie)
+            #   - Si modo_juego es 'colaborativo' = Sala con docente
+            #   - Si hay múltiples participantes = Sala con docente (clase)
+            #   - En cualquier otro caso = Juego individual
+            
+            modo_juego = sala[3]
+            estado = sala[4]
+            pin_sala = sala[1]
+            
+            # Debug logs
+            print(f"\n🔍 DEBUG - Detectando modo de sala {id_sala}:")
+            print(f"   PIN: {pin_sala} (tipo: {type(pin_sala)}, len: {len(str(pin_sala)) if pin_sala else 0})")
+            print(f"   Modo juego: {modo_juego}")
+            print(f"   Estado: {estado}")
+            
+            # REGLA 1: Salas colaborativas siempre tienen docente
+            if modo_juego == 'colaborativo':
+                tiene_docente = True
+                print(f"   ✅ REGLA 1: modo_juego='colaborativo' → tiene_docente = True")
+            # REGLA 2: Si está esperando, significa que el docente aún no inició
+            elif estado == 'esperando':
+                tiene_docente = True
+                print(f"   ✅ REGLA 2: estado='esperando' → tiene_docente = True")
+            # REGLA 3: Si tiene PIN visible (6 dígitos), es sala de clase con docente
+            elif pin_sala and len(str(pin_sala)) == 6:
+                tiene_docente = True
+                print(f"   ✅ REGLA 3: PIN de 6 dígitos → tiene_docente = True")
+            else:
+                # REGLA 4: Verificar si hay múltiples participantes (indica sala de clase)
+                cursor.execute("""
+                    SELECT COUNT(*) FROM participantes_sala 
+                    WHERE id_sala = %s AND estado != 'desconectado'
+                """, (id_sala,))
+                num_participantes = cursor.fetchone()[0]
+                tiene_docente = (num_participantes > 1)
+                print(f"   🔍 REGLA 4: {num_participantes} participantes → tiene_docente = {tiene_docente}")
+            
+            print(f"   🎯 RESULTADO FINAL: tiene_docente = {tiene_docente}\n")
+            
             return {
                 'id': sala[0],
                 'pin_sala': sala[1],
@@ -219,7 +261,8 @@ def obtener_sala_por_id_simple(id_sala):
                 'estado': sala[4],
                 'max_participantes': sala[5],
                 'fecha_creacion': sala[6],
-                'total_preguntas': sala[7] if len(sala) > 7 and sala[7] is not None else 0
+                'total_preguntas': sala[7] if len(sala) > 7 and sala[7] is not None else 0,
+                'tiene_docente': tiene_docente  # True = modo manual, False = modo automático
             }
         return None
     finally:
@@ -1135,6 +1178,13 @@ def error_sistema_page():
 # Rutas para salas
 @app.route('/crear-sala', methods=['GET', 'POST'])
 def crear_sala_route():
+    # Validar que solo los docentes pueden crear salas
+    if session.get('usuario_tipo') != 'docente':
+        if request.method == 'GET':
+            flash('Solo los docentes pueden crear salas de juego', 'error')
+            return redirect(url_for('maestra'))
+        return jsonify({'success': False, 'error': 'Solo los docentes pueden crear salas'}), 403
+    
     if request.method == 'GET':
         return render_template('CrearSala.html')
     
@@ -1382,12 +1432,16 @@ def juego_sala(sala_id):
             flash('Sala no encontrada', 'error')
             return redirect(url_for('error_sistema_page'))
         
+        # Obtener información completa de la sala incluyendo tiene_docente
+        sala_info = obtener_sala_por_id_simple(sala_id)
+        
         sala = {
             'id': sala_data[0],
             'pin_sala': sala_data[1],
             'id_cuestionario': sala_data[2],
             'estado': sala_data[3],
-            'modo_juego': sala_data[4]
+            'modo_juego': sala_data[4],
+            'tiene_docente': sala_info.get('tiene_docente', False)  # Agregar detección de modo
         }
         
         # Determinar qué vista mostrar según el tipo de usuario
@@ -1442,12 +1496,21 @@ def responder_pregunta_juego(sala_id):
         data = request.get_json()
         
         participante_id = session.get('participante_id')
+        print(f"\n📝 RESPONDER PREGUNTA:")
+        print(f"   Sala ID: {sala_id}")
+        print(f"   Participante ID: {participante_id}")
+        print(f"   Data recibida: {data}")
+        
         if not participante_id:
             return jsonify({'success': False, 'error': 'No hay sesión de participante'}), 401
         
         id_pregunta = int(data.get('id_pregunta'))
         id_opcion = int(data.get('id_opcion'))
         tiempo_respuesta = float(data.get('tiempo_respuesta'))
+        
+        print(f"   ID Pregunta: {id_pregunta}")
+        print(f"   ID Opción: {id_opcion}")
+        print(f"   Tiempo respuesta: {tiempo_respuesta}s")
         
         resultado = controlador_juego.registrar_respuesta_participante(
             participante_id=participante_id,
@@ -1456,6 +1519,8 @@ def responder_pregunta_juego(sala_id):
             id_opcion_seleccionada=id_opcion,
             tiempo_respuesta=tiempo_respuesta
         )
+        
+        print(f"   ✅ Resultado: es_correcta={resultado['es_correcta']}, puntaje={resultado['puntaje_obtenido']}")
         
         # CAMBIO: Ya no avanzar automáticamente en ningún modo
         # El estudiante siempre debe esperar a que el docente avance
@@ -1735,36 +1800,31 @@ def responder_pregunta():
     data = request.get_json(silent=True) or request.form.to_dict()
     try:
         pregunta_id = int(data.get('pregunta_id'))
-        participacion_id = int(data.get('participacion_id'))
-        respuesta_seleccionada = data.get('respuesta_seleccionada', '').strip()
+        participante_id = int(data.get('participante_id'))
+        sala_id = int(data.get('sala_id'))
+        id_opcion_seleccionada = int(data.get('id_opcion'))
         tiempo_respuesta = float(data.get('tiempo_respuesta', 0))
         
-        if not respuesta_seleccionada:
-            raise ValueError("Debe seleccionar una respuesta")
-        
-        # Crear la respuesta
-        respuesta_id = crear_respuesta_participante(
-            participacion_id=participacion_id,
-            pregunta_id=pregunta_id,
-            respuesta_seleccionada=respuesta_seleccionada,
+        # Registrar respuesta usando la función correcta del controlador
+        resultado = controlador_juego.registrar_respuesta_participante(
+            participante_id=participante_id,
+            sala_id=sala_id,
+            id_pregunta=pregunta_id,
+            id_opcion_seleccionada=id_opcion_seleccionada,
             tiempo_respuesta=tiempo_respuesta
         )
         
-        # Verificar si la respuesta es correcta y calcular puntaje
-        es_correcta, puntaje = verificar_respuesta_correcta(pregunta_id, respuesta_seleccionada, tiempo_respuesta)
-        
-        # Actualizar puntaje de la respuesta
-        if es_correcta:
-            actualizar_puntaje_respuesta(respuesta_id, puntaje)
-        
         return jsonify({
             'success': True,
-            'respuesta_id': respuesta_id,
-            'es_correcta': es_correcta,
-            'puntaje': puntaje,
+            'es_correcta': resultado['es_correcta'],
+            'puntaje_obtenido': resultado['puntaje_obtenido'],
+            'tiempo_respuesta': resultado['tiempo_respuesta'],
             'message': 'Respuesta registrada exitosamente'
         })
     except Exception as e:
+        print(f"❌ Error en responder_pregunta: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 400
 
 @app.route('/resultados-participacion/<int:participacion_id>')
@@ -5630,11 +5690,53 @@ def perfil():
     if request.method == 'POST' and request.form.get('form_type') == 'update':
         nombre = request.form.get('nombre', '').strip()
         apellidos = request.form.get('apellidos', '').strip()
-        email = request.form.get('email', '').strip()
+        email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '').strip()
 
-        # Validar contraseña única si se está cambiando
+        # ===== VALIDACIÓN DE CORREO INSTITUCIONAL =====
+        if email != usuario['email']:  # Solo validar si se está cambiando
+            dominios_permitidos = ['@usat.pe', '@usat.edu.pe']
+            email_valido = any(email.endswith(dominio) for dominio in dominios_permitidos)
+            
+            if not email_valido:
+                flash('❌ Solo se permiten correos institucionales con dominio @usat.pe o @usat.edu.pe', 'danger')
+                conexion.close()
+                return redirect(url_for('perfil'))
+            
+            # Verificar que el email no esté en uso por otro usuario
+            cursor.execute("SELECT id_usuario FROM usuarios WHERE email = %s AND id_usuario != %s", (email, usuario_id))
+            if cursor.fetchone():
+                flash('❌ Este correo ya está registrado por otro usuario', 'danger')
+                conexion.close()
+                return redirect(url_for('perfil'))
+
+        # ===== VALIDACIÓN DE CONTRASEÑA FUERTE =====
         if password:
+            # Validar longitud mínima
+            if len(password) < 8:
+                flash('❌ La contraseña debe tener al menos 8 caracteres', 'danger')
+                conexion.close()
+                return redirect(url_for('perfil'))
+            
+            # Validar que tenga mayúscula
+            if not any(c.isupper() for c in password):
+                flash('❌ La contraseña debe contener al menos una letra mayúscula', 'danger')
+                conexion.close()
+                return redirect(url_for('perfil'))
+            
+            # Validar que tenga minúscula
+            if not any(c.islower() for c in password):
+                flash('❌ La contraseña debe contener al menos una letra minúscula', 'danger')
+                conexion.close()
+                return redirect(url_for('perfil'))
+            
+            # Validar que tenga número
+            if not any(c.isdigit() for c in password):
+                flash('❌ La contraseña debe contener al menos un número', 'danger')
+                conexion.close()
+                return redirect(url_for('perfil'))
+            
+            # Validar contraseña única (no usada por otros)
             if not controlador_usuario.verificar_contrasena_unica(password, usuario_id):
                 flash('❌ Esta contraseña ya está siendo utilizada por otro usuario. Por favor, elige una diferente.', 'danger')
                 conexion.close()

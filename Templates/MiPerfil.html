@@ -52,10 +52,34 @@
                 <label for="password">Nueva contraseña (opcional)</label>
                 <input class="input-field" type="password" id="password" name="password" 
                        placeholder="Deja en blanco si no deseas cambiarla">
+                <small class="form-text" style="color: rgba(255,255,255,0.7); font-size: 0.85rem; margin-top: 5px; display: block;">
+                    Si cambias la contraseña, debe cumplir con los requisitos de seguridad
+                </small>
+            </div>
+
+            <!-- Requisitos de contraseña (solo se muestran si se está escribiendo una nueva) -->
+            <div id="password-requirements" style="display: none; margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 8px;">
+                <p style="color: white; font-weight: 600; margin-bottom: 10px;">📋 Requisitos de contraseña:</p>
+                <div class="requirement" id="req-length">
+                    <i class="fas fa-times"></i>
+                    <span>Mínimo 8 caracteres</span>
+                </div>
+                <div class="requirement" id="req-uppercase">
+                    <i class="fas fa-times"></i>
+                    <span>Al menos una letra mayúscula</span>
+                </div>
+                <div class="requirement" id="req-lowercase">
+                    <i class="fas fa-times"></i>
+                    <span>Al menos una letra minúscula</span>
+                </div>
+                <div class="requirement" id="req-number">
+                    <i class="fas fa-times"></i>
+                    <span>Al menos un número</span>
+                </div>
             </div>
 
             <div class="form-actions">
-                <button type="submit" class="btn btn-primary">💾 Actualizar cambios</button>
+                <button type="submit" class="btn btn-primary" id="btnActualizar">💾 Actualizar cambios</button>
                 <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">↩ Volver</a>
             </div>
         </form>
@@ -157,6 +181,26 @@
     transition: background 0.3s;
 }
 .btn-danger:hover { background-color: #c0392b; }
+
+/* Estilos para requisitos de contraseña */
+.requirement {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    color: rgba(255,255,255,0.7);
+    transition: all 0.3s ease;
+}
+.requirement i {
+    color: #e74c3c;
+    font-size: 14px;
+}
+.requirement.valid {
+    color: white;
+}
+.requirement.valid i {
+    color: #2ecc71;
+}
 </style>
 
 <!-- 🔹 Librería SweetAlert2 -->
@@ -165,27 +209,168 @@
 <!-- 🔹 Confirmaciones con SweetAlert -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Confirmación al actualizar perfil
+    const passwordInput = document.getElementById('password');
+    const emailInput = document.getElementById('email');
     const formActualizar = document.getElementById('formActualizar');
-    if (formActualizar) {
-        formActualizar.addEventListener('submit', function(e) {
-            e.preventDefault();
-            Swal.fire({
-                title: '¿Deseas guardar los cambios?',
-                text: "Se actualizará la información de tu perfil.",
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#FF6B35',
-                cancelButtonColor: '#aaa',
-                confirmButtonText: 'Sí, guardar',
-                cancelButtonText: 'Cancelar'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    formActualizar.submit();
-                }
-            });
-        });
+    const btnActualizar = document.getElementById('btnActualizar');
+    const requirementsContainer = document.getElementById('password-requirements');
+    
+    const requirements = {
+        length: document.getElementById('req-length'),
+        uppercase: document.getElementById('req-uppercase'),
+        lowercase: document.getElementById('req-lowercase'),
+        number: document.getElementById('req-number')
+    };
+
+    // Mostrar/ocultar requisitos de contraseña
+    passwordInput.addEventListener('focus', function() {
+        if (this.value.length > 0) {
+            requirementsContainer.style.display = 'block';
+        }
+    });
+
+    passwordInput.addEventListener('input', function() {
+        const password = this.value;
+        
+        if (password.length > 0) {
+            requirementsContainer.style.display = 'block';
+            
+            // Validar longitud
+            updateRequirement('length', password.length >= 8);
+            
+            // Validar mayúscula
+            updateRequirement('uppercase', /[A-Z]/.test(password));
+            
+            // Validar minúscula
+            updateRequirement('lowercase', /[a-z]/.test(password));
+            
+            // Validar número
+            updateRequirement('number', /\d/.test(password));
+        } else {
+            requirementsContainer.style.display = 'none';
+        }
+        
+        validateForm();
+    });
+
+    // Validar email en tiempo real
+    emailInput.addEventListener('input', function() {
+        const email = this.value.toLowerCase();
+        const dominiosPermitidos = ['@usat.pe', '@usat.edu.pe'];
+        const emailValido = dominiosPermitidos.some(dominio => email.endsWith(dominio));
+        
+        if (email.length > 0 && !emailValido) {
+            this.style.borderColor = '#e74c3c';
+            this.style.boxShadow = '0 0 0 3px rgba(231, 76, 60, 0.3)';
+        } else {
+            this.style.borderColor = '';
+            this.style.boxShadow = '';
+        }
+        
+        validateForm();
+    });
+
+    function updateRequirement(type, isValid) {
+        const req = requirements[type];
+        const icon = req.querySelector('i');
+        
+        if (isValid) {
+            req.classList.add('valid');
+            icon.className = 'fas fa-check';
+        } else {
+            req.classList.remove('valid');
+            icon.className = 'fas fa-times';
+        }
     }
+
+    function validateForm() {
+        const password = passwordInput.value;
+        const email = emailInput.value.toLowerCase();
+        
+        let isValid = true;
+        
+        // Si se está cambiando la contraseña, debe ser válida
+        if (password.length > 0) {
+            const passwordValid = password.length >= 8 && 
+                                /[A-Z]/.test(password) && 
+                                /[a-z]/.test(password) && 
+                                /\d/.test(password);
+            isValid = isValid && passwordValid;
+        }
+        
+        // Validar dominio del correo
+        const dominiosPermitidos = ['@usat.pe', '@usat.edu.pe'];
+        const emailValido = dominiosPermitidos.some(dominio => email.endsWith(dominio));
+        isValid = isValid && emailValido;
+        
+        // Habilitar/deshabilitar botón
+        if (isValid) {
+            btnActualizar.disabled = false;
+            btnActualizar.style.opacity = '1';
+        } else {
+            btnActualizar.disabled = true;
+            btnActualizar.style.opacity = '0.6';
+        }
+    }
+    
+    // Validación inicial
+    validateForm();
+    
+    // Confirmación al actualizar perfil con validación de correo y contraseña
+    formActualizar.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const password = passwordInput.value;
+        const email = emailInput.value.toLowerCase();
+        
+        // Validación del dominio de correo
+        const dominiosPermitidos = ['@usat.pe', '@usat.edu.pe'];
+        const emailValido = dominiosPermitidos.some(dominio => email.endsWith(dominio));
+        
+        if (!emailValido) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Correo no permitido',
+                text: 'Solo se permiten correos institucionales con dominio @usat.pe o @usat.edu.pe',
+                confirmButtonColor: '#FF6B35'
+            });
+            return false;
+        }
+        
+        // Validación de contraseña si se está cambiando
+        if (password.length > 0) {
+            const passwordValid = password.length >= 8 && 
+                                /[A-Z]/.test(password) && 
+                                /[a-z]/.test(password) && 
+                                /\d/.test(password);
+            
+            if (!passwordValid) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Contraseña inválida',
+                    text: 'La contraseña debe cumplir con todos los requisitos de seguridad',
+                    confirmButtonColor: '#FF6B35'
+                });
+                return false;
+            }
+        }
+        
+        // Si todo es válido, mostrar confirmación
+        Swal.fire({
+            title: '¿Deseas guardar los cambios?',
+            text: "Se actualizará la información de tu perfil.",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#FF6B35',
+            cancelButtonColor: '#aaa',
+            confirmButtonText: 'Sí, guardar',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                formActualizar.submit();
+            }
+        });
+    });
 
     // Confirmación al eliminar cuenta
     const formEliminar = document.getElementById('formEliminar');

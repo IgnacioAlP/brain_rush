@@ -820,10 +820,10 @@
           <div class="podium-place ${classes[index]}">
             <div class="podium-player">
               <div class="player-avatar">
-                ${player.nombre_participante ? player.nombre_participante.charAt(0).toUpperCase() : '?'}
+                ${(player.nombre_completo || player.nombre_participante || 'J').charAt(0).toUpperCase()}
               </div>
-              <div class="player-name">${player.nombre_participante || 'Jugador'}</div>
-              <div class="player-score">${player.puntaje_total || 0} pts</div>
+              <div class="player-name">${player.nombre_completo || player.nombre_participante || 'Jugador'}</div>
+              <div class="player-score">${player.puntos_totales || player.puntaje_total || 0} pts</div>
             </div>
             <div class="podium-base">
               ${positions[index]}
@@ -852,10 +852,12 @@
       const tablasHTML = ranking.map(player => {
         const precision = totalPreguntas > 0 ? Math.round((player.respuestas_correctas / totalPreguntas) * 100) : 0;
         const isTop3 = player.posicion <= 3;
+        const nombreJugador = player.nombre_completo || player.nombre_participante || 'Jugador';
+        const puntaje = player.puntos_totales || player.puntaje_total || 0;
         
-        console.log(`Jugador ${player.nombre_participante}:`, {
+        console.log(`Jugador ${nombreJugador}:`, {
           respuestas_correctas: player.respuestas_correctas,
-          puntaje_total: player.puntaje_total,
+          puntos_totales: puntaje,
           totalPreguntas,
           precision
         });
@@ -864,12 +866,12 @@
           <div class="table-row">
             <div class="rank-number ${isTop3 ? 'top3' : ''}">${player.posicion || '-'}</div>
             <div class="player-info">
-              <div class="avatar">${player.nombre_participante ? player.nombre_participante.charAt(0).toUpperCase() : '?'}</div>
-              <span>${player.nombre_participante || 'Jugador'}</span>
+              <div class="avatar">${nombreJugador.charAt(0).toUpperCase()}</div>
+              <span>${nombreJugador}</span>
             </div>
             <div class="stat-value correct-answers">${player.respuestas_correctas || 0}/${totalPreguntas}</div>
             <div class="stat-value accuracy">${precision}%</div>
-            <div class="stat-value final-score">${player.puntaje_total || 0}</div>
+            <div class="stat-value final-score">${puntaje}</div>
           </div>
         `;
       }).join('');
@@ -879,7 +881,7 @@
 
     function calcularEstadisticas() {
       const avgScore = totalJugadores > 0 ? Math.round(
-        ranking.reduce((sum, p) => sum + (p.puntaje_total || 0), 0) / totalJugadores
+        ranking.reduce((sum, p) => sum + (p.puntos_totales || p.puntaje_total || 0), 0) / totalJugadores
       ) : 0;
       
       // Calcular tiempo total aproximado (suma de tiempos / jugadores)
@@ -920,7 +922,9 @@
         'Posición,Nombre,Respuestas Correctas,Total Preguntas,Precisión,Puntuación,Tiempo Total',
         ...ranking.map(p => {
           const precision = totalPreguntas > 0 ? Math.round((p.respuestas_correctas / totalPreguntas) * 100) : 0;
-          return `${p.posicion},${p.nombre_participante},${p.respuestas_correctas},${totalPreguntas},${precision}%,${p.puntaje_total},${p.tiempo_total_respuestas}s`;
+          const nombreJugador = p.nombre_completo || p.nombre_participante || 'Jugador';
+          const puntaje = p.puntos_totales || p.puntaje_total || 0;
+          return `${p.posicion},${nombreJugador},${p.respuestas_correctas},${totalPreguntas},${precision}%,${puntaje},${p.tiempo_total_respuestas}s`;
         })
       ].join('\n');
 
