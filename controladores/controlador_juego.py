@@ -240,6 +240,7 @@ def registrar_respuesta_participante(participante_id, sala_id, id_pregunta, id_o
             ''', (participante_id, sala_id, id_pregunta, id_opcion_seleccionada, tiempo_respuesta, es_correcta, puntaje))
             
             # Actualizar o crear ranking del participante
+            print(f"🔄 Actualizando ranking: participante={participante_id}, sala={sala_id}, puntaje={puntaje}, es_correcta={es_correcta}")
             cursor.execute('''
                 INSERT INTO ranking_sala (id_participante, id_sala, puntaje_total, respuestas_correctas, tiempo_total_respuestas)
                 VALUES (%s, %s, %s, %s, %s)
@@ -248,6 +249,12 @@ def registrar_respuesta_participante(participante_id, sala_id, id_pregunta, id_o
                     respuestas_correctas = respuestas_correctas + VALUES(respuestas_correctas),
                     tiempo_total_respuestas = tiempo_total_respuestas + VALUES(tiempo_total_respuestas)
             ''', (participante_id, sala_id, puntaje, 1 if es_correcta else 0, tiempo_respuesta))
+            
+            # Verificar el ranking actualizado
+            cursor.execute('SELECT puntaje_total, respuestas_correctas FROM ranking_sala WHERE id_participante=%s AND id_sala=%s', 
+                          (participante_id, sala_id))
+            ranking_actual = cursor.fetchone()
+            print(f"✅ Ranking actualizado: puntaje_total={ranking_actual[0]}, respuestas_correctas={ranking_actual[1]}")
             
             conexion.commit()
             
@@ -362,6 +369,8 @@ def obtener_ranking_sala(sala_id):
     conexion = obtener_conexion()
     try:
         with conexion.cursor() as cursor:
+            print(f"\n📊 Obteniendo ranking para sala {sala_id}...")
+            
             cursor.execute('''
                 SELECT 
                     r.posicion,
@@ -381,6 +390,7 @@ def obtener_ranking_sala(sala_id):
             
             ranking = []
             for row in cursor.fetchall():
+                print(f"   👤 {row[1]}: {row[2]} puntos, {row[3]} correctas")
                 ranking.append({
                     'posicion': row[0],
                     'nombre_completo': row[1],
@@ -391,6 +401,7 @@ def obtener_ranking_sala(sala_id):
                     'id_participante': row[6]
                 })
             
+            print(f"✅ Total participantes en ranking: {len(ranking)}\n")
             return ranking
     finally:
         conexion.close()
