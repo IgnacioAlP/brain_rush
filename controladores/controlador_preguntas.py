@@ -78,7 +78,7 @@ def obtener_preguntas_por_cuestionario(cuestionario_id):
         return []
 
 def crear_pregunta(enunciado, tipo, cuestionario_id, puntaje_base=1, tiempo_limite=30):
-    """Crea una nueva pregunta y la asocia a un cuestionario"""
+    """Crea una nueva pregunta y la asocia a un cuestionario. Si ya existe una pregunta con el mismo enunciado, la actualiza."""
     try:
         conexion = obtener_conexion()
         cursor = conexion.cursor()
@@ -91,35 +91,56 @@ def crear_pregunta(enunciado, tipo, cuestionario_id, puntaje_base=1, tiempo_limi
             conexion.close()
             return None
         
-        # Insertar la pregunta (la tabla solo tiene: id_pregunta, enunciado, tipo, puntaje_base)
-        # NOTA: tiempo_limite no existe en la tabla actual, se ignora por ahora
+        # Buscar si ya existe una pregunta con el mismo enunciado en este cuestionario
         cursor.execute("""
-            INSERT INTO preguntas (enunciado, tipo, puntaje_base)
-            VALUES (%s, %s, %s)
-        """, (enunciado, tipo, puntaje_base))
+            SELECT p.id_pregunta 
+            FROM preguntas p
+            INNER JOIN cuestionario_preguntas cp ON p.id_pregunta = cp.id_pregunta
+            WHERE cp.id_cuestionario = %s AND p.enunciado = %s
+        """, (cuestionario_id, enunciado))
         
-        pregunta_id = cursor.lastrowid
+        pregunta_existente = cursor.fetchone()
         
-        # Obtener el siguiente orden para este cuestionario
-        cursor.execute("""
-            SELECT COALESCE(MAX(orden), 0) + 1 as siguiente_orden 
-            FROM cuestionario_preguntas 
-            WHERE id_cuestionario = %s
-        """, (cuestionario_id,))
-        
-        orden = cursor.fetchone()[0]
-        
-        # Asociar la pregunta al cuestionario
-        cursor.execute("""
-            INSERT INTO cuestionario_preguntas (id_cuestionario, id_pregunta, orden)
-            VALUES (%s, %s, %s)
-        """, (cuestionario_id, pregunta_id, orden))
+        if pregunta_existente:
+            # Si existe, actualizar y retornar el ID existente
+            pregunta_id = pregunta_existente[0]
+            cursor.execute("""
+                UPDATE preguntas 
+                SET tipo = %s, puntaje_base = %s
+                WHERE id_pregunta = %s
+            """, (tipo, puntaje_base, pregunta_id))
+            
+            print(f"DEBUG: Pregunta actualizada con ID {pregunta_id} (ya existía en cuestionario {cuestionario_id})")
+        else:
+            # Si no existe, insertar nueva pregunta
+            cursor.execute("""
+                INSERT INTO preguntas (enunciado, tipo, puntaje_base)
+                VALUES (%s, %s, %s)
+            """, (enunciado, tipo, puntaje_base))
+            
+            pregunta_id = cursor.lastrowid
+            
+            # Obtener el siguiente orden para este cuestionario
+            cursor.execute("""
+                SELECT COALESCE(MAX(orden), 0) + 1 as siguiente_orden 
+                FROM cuestionario_preguntas 
+                WHERE id_cuestionario = %s
+            """, (cuestionario_id,))
+            
+            orden = cursor.fetchone()[0]
+            
+            # Asociar la pregunta al cuestionario
+            cursor.execute("""
+                INSERT INTO cuestionario_preguntas (id_cuestionario, id_pregunta, orden)
+                VALUES (%s, %s, %s)
+            """, (cuestionario_id, pregunta_id, orden))
+            
+            print(f"DEBUG: Pregunta creada con ID {pregunta_id} para cuestionario {cuestionario_id}")
         
         conexion.commit()
         cursor.close()
         conexion.close()
         
-        print(f"DEBUG: Pregunta creada con ID {pregunta_id} para cuestionario {cuestionario_id}")
         return pregunta_id
         
     except Exception as e:

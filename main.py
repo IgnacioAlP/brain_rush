@@ -3184,7 +3184,17 @@ def importar_preguntas_excel(id_cuestionario):
                 opcion_c = str(row[3]).strip() if row[3] else ''
                 opcion_d = str(row[4]).strip() if row[4] else ''
                 respuesta_correcta = str(row[5]).strip().upper() if row[5] else ''
-                tiempo = int(row[6]) if row[6] else cuestionario.get('tiempo_limite_pregunta', 30)
+                
+                # Leer tiempo y asegurar que sea un entero en segundos
+                if row[6]:
+                    # Convertir a float primero por si acaso tiene decimales, luego a int
+                    tiempo_raw = float(row[6])
+                    # Si el valor es muy grande (> 600), probablemente está en minutos, convertir a segundos
+                    tiempo = int(tiempo_raw) if tiempo_raw <= 600 else int(tiempo_raw / 60)
+                    print(f"DEBUG: Tiempo leído del Excel: {row[6]} -> convertido a: {tiempo} segundos")
+                else:
+                    tiempo = cuestionario.get('tiempo_limite_pregunta', 30)
+                    print(f"DEBUG: Tiempo no especificado, usando default: {tiempo} segundos")
                 
                 # Validaciones
                 if not texto_pregunta:
@@ -3229,6 +3239,14 @@ def importar_preguntas_excel(id_cuestionario):
                 if not pregunta_id:
                     errores.append(f"Fila {row_num}: Error al crear la pregunta en la base de datos")
                     continue
+                
+                # Eliminar opciones antiguas si la pregunta ya existía (para actualizarlas)
+                conexion_temp = obtener_conexion()
+                with conexion_temp.cursor() as cursor_temp:
+                    cursor_temp.execute("DELETE FROM opciones_respuesta WHERE id_pregunta = %s", (pregunta_id,))
+                    conexion_temp.commit()
+                conexion_temp.close()
+                print(f"DEBUG: Opciones antiguas eliminadas para pregunta {pregunta_id}")
                 
                 # Crear las opciones
                 opciones_data = []
