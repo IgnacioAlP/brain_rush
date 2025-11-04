@@ -256,12 +256,54 @@ def registrar_respuesta_participante(participante_id, sala_id, id_pregunta, id_o
             ranking_actual = cursor.fetchone()
             print(f"✅ Ranking actualizado: puntaje_total={ranking_actual[0]}, respuestas_correctas={ranking_actual[1]}")
             
+            # ==================== SISTEMA DE XP E INSIGNIAS ====================
+            # Obtener id_usuario del participante
+            cursor.execute('SELECT id_usuario FROM participantes_sala WHERE id_participante = %s', (participante_id,))
+            usuario_data = cursor.fetchone()
+            
+            resultado_xp = None
+            if usuario_data:
+                id_usuario = usuario_data[0]
+                
+                # Verificar que sea estudiante
+                cursor.execute('SELECT tipo_usuario FROM usuarios WHERE id_usuario = %s', (id_usuario,))
+                tipo_usuario = cursor.fetchone()
+                
+                if tipo_usuario and tipo_usuario[0] == 'estudiante':
+                    # Importar controlador de XP
+                    try:
+                        from controladores import controlador_xp
+                        
+                        # Actualizar estadísticas
+                        racha_actual = controlador_xp.actualizar_estadisticas_respuesta(
+                            id_usuario, es_correcta, tiempo_respuesta
+                        )
+                        
+                        # Otorgar XP si la respuesta es correcta
+                        if es_correcta:
+                            xp_ganado = controlador_xp.calcular_xp_por_respuesta(
+                                tiempo_respuesta, es_correcta, racha_actual - 1
+                            )
+                            
+                            resultado_xp = controlador_xp.otorgar_xp(
+                                id_usuario, xp_ganado, 'respuesta_correcta', sala_id, id_pregunta
+                            )
+                            
+                            print(f"🎯 XP otorgado: {xp_ganado} XP a usuario {id_usuario}")
+                            if resultado_xp and resultado_xp['subio_nivel']:
+                                print(f"⬆️ ¡Subió de nivel {resultado_xp['nivel_anterior']} → {resultado_xp['nivel_nuevo']}!")
+                            if resultado_xp and resultado_xp['insignias_nuevas']:
+                                print(f"🏆 Insignias desbloqueadas: {len(resultado_xp['insignias_nuevas'])}")
+                    except Exception as e_xp:
+                        print(f"⚠️ Error al procesar XP (no crítico): {e_xp}")
+            
             conexion.commit()
             
             return {
                 'es_correcta': bool(es_correcta),
                 'puntaje_obtenido': puntaje,
-                'tiempo_respuesta': tiempo_respuesta
+                'tiempo_respuesta': tiempo_respuesta,
+                'xp_info': resultado_xp  # Información de XP ganado
             }
     finally:
         conexion.close()

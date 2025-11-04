@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏅 Mis Insignias - Brain Rush</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #667eea;
+            --secondary-color: #764ba2;
+            --legendario: linear-gradient(135deg, #FFD700, #FFA500);
+            --epico: linear-gradient(135deg, #9B59B6, #8E44AD);
+            --raro: linear-gradient(135deg, #3498DB, #2980B9);
+            --comun: linear-gradient(135deg, #95A5A6, #7F8C8D);
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .insignias-container {
+            max-width: 1400px;
+            margin: 30px auto;
+            padding: 20px;
+        }
+
+        .header-profile {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 30px;
+        }
+
+        .profile-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: var(--legendario);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            border: 5px solid rgba(255, 215, 0, 0.3);
+        }
+
+        .profile-info {
+            flex: 1;
+        }
+
+        .profile-name {
+            font-size: 32px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .profile-stats {
+            display: flex;
+            gap: 30px;
+            margin-top: 20px;
+        }
+
+        .stat-box {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 15px 25px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .progress-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 15px;
+            margin-top: 20px;
+        }
+
+        .xp-progress {
+            height: 30px;
+            background: #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .xp-progress-bar {
+            height: 100%;
+            background: var(--legendario);
+            border-radius: 15px;
+            transition: width 0.5s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .filter-tabs {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: 2px solid #e0e0e0;
+            padding: 12px 30px;
+            border-radius: 25px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            font-weight: bold;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .tab-btn:hover {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border-color: transparent;
+            color: white;
+        }
+
+        .insignias-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .insignia-card {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .insignia-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+        }
+
+        .insignia-card.locked {
+            opacity: 0.6;
+            filter: grayscale(100%);
+        }
+
+        .insignia-card.locked:hover {
+            transform: none;
+        }
+
+        .insignia-icon {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 60px;
+            position: relative;
+        }
+
+        .insignia-legendario .insignia-icon { background: var(--legendario); }
+        .insignia-epico .insignia-icon { background: var(--epico); }
+        .insignia-raro .insignia-icon { background: var(--raro); }
+        .insignia-comun .insignia-icon { background: var(--comun); }
+
+        .insignia-name {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .insignia-descripcion {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+        .insignia-rareza {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+            margin-bottom: 10px;
+        }
+
+        .rareza-legendario { background: linear-gradient(135deg, #FFD700, #FFA500); }
+        .rareza-epico { background: linear-gradient(135deg, #9B59B6, #8E44AD); }
+        .rareza-raro { background: linear-gradient(135deg, #3498DB, #2980B9); }
+        .rareza-comun { background: linear-gradient(135deg, #95A5A6, #7F8C8D); }
+
+        .insignia-xp-bonus {
+            background: #e8f4f8;
+            color: var(--primary-color);
+            padding: 8px 15px;
+            border-radius: 15px;
+            font-weight: bold;
+            font-size: 14px;
+            display: inline-block;
+            margin-top: 10px;
+        }
+
+        .insignia-fecha {
+            font-size: 12px;
+            color: #999;
+            margin-top: 10px;
+        }
+
+        .unlock-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #28a745;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .lock-icon {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 40px;
+            color: rgba(0,0,0,0.3);
+        }
+
+        .progress-badge {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .progress-badge .progress {
+            height: 20px;
+            margin-top: 5px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .empty-state i {
+            font-size: 80px;
+            color: #ddd;
+            margin-bottom: 20px;
+        }
+
+        .btn-back {
+            background: white;
+            color: var(--primary-color);
+            border: 2px solid var(--primary-color);
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .btn-back:hover {
+            background: var(--primary-color);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        @keyframes shine {
+            0% { background-position: -200% center; }
+            100% { background-position: 200% center; }
+        }
+
+        .insignia-card.desbloqueada::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent);
+            background-size: 200% 100%;
+            animation: shine 3s infinite;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="insignias-container">
+        <!-- Header con perfil -->
+        <div class="header-profile">
+            <div class="profile-avatar" id="profileAvatar">👤</div>
+            <div class="profile-info">
+                <div class="profile-name" id="profileName">Cargando...</div>
+                <div class="profile-stats">
+                    <div class="stat-box">
+                        <div class="stat-number" id="statNivel">-</div>
+                        <div class="stat-label">Nivel</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number" id="statXP">-</div>
+                        <div class="stat-label">XP Total</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number" id="statInsignias">-</div>
+                        <div class="stat-label">Insignias</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number" id="statRanking">-</div>
+                        <div class="stat-label">Ranking</div>
+                    </div>
+                </div>
+                <div class="progress-section">
+                    <div class="d-flex justify-content-between mb-2">
+                        <small><strong>Progreso al siguiente nivel</strong></small>
+                        <small id="xpProgress">0 / 0 XP</small>
+                    </div>
+                    <div class="xp-progress">
+                        <div class="xp-progress-bar" id="xpBar" style="width: 0%">0%</div>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <button class="btn-back" onclick="window.location.href='/dashboard'">
+                    <i class="fas fa-arrow-left"></i> Volver
+                </button>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="filter-tabs">
+            <button class="tab-btn active" onclick="filtrarInsignias('todas', event)">
+                <i class="fas fa-trophy"></i> Todas
+            </button>
+            <button class="tab-btn" onclick="filtrarInsignias('desbloqueadas', event)">
+                <i class="fas fa-unlock"></i> Desbloqueadas
+            </button>
+            <button class="tab-btn" onclick="filtrarInsignias('bloqueadas', event)">
+                <i class="fas fa-lock"></i> Bloqueadas
+            </button>
+            <button class="tab-btn" onclick="filtrarInsignias('legendario', event)">
+                <i class="fas fa-crown"></i> Legendarias
+            </button>
+            <button class="tab-btn" onclick="filtrarInsignias('epico', event)">
+                <i class="fas fa-gem"></i> Épicas
+            </button>
+            <button class="tab-btn" onclick="filtrarInsignias('raro', event)">
+                <i class="fas fa-star"></i> Raras
+            </button>
+            <button class="tab-btn" onclick="filtrarInsignias('comun', event)">
+                <i class="fas fa-certificate"></i> Comunes
+            </button>
+        </div>
+
+        <!-- Grid de insignias -->
+        <div id="insigniasGrid" class="insignias-grid"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const miIdUsuario = "{{ session.get('usuario_id') }}";
+        let todasLasInsignias = [];
+        let filtroActual = 'todas';
+
+        // Iconos por tipo de insignia
+        const iconosInsignias = {
+            'nivel': '🎯',
+            'partidas': '🎮',
+            'racha': '🔥',
+            'precision': '🎯',
+            'velocidad': '⚡',
+            'especial': '⭐'
+        };
+
+        async function cargarPerfil() {
+            try {
+                const response = await fetch(`/api/perfil-xp/${miIdUsuario}`);
+                const data = await response.json();
+                
+                console.log('Perfil XP recibido:', data);
+                
+                if (data.success && data.perfil) {
+                    mostrarPerfil(data.perfil);
+                } else {
+                    console.error('No se pudo cargar el perfil:', data);
+                    mostrarPerfilPorDefecto();
+                }
+            } catch (error) {
+                console.error('Error al cargar perfil:', error);
+                mostrarPerfilPorDefecto();
+            }
+        }
+
+        async function cargarInsignias() {
+            try {
+                const response = await fetch(`/api/insignias/${miIdUsuario}`);
+                const data = await response.json();
+                
+                console.log('Insignias recibidas:', data);
+                
+                if (data.success && data.insignias) {
+                    todasLasInsignias = data.insignias;
+                    mostrarTodasInsignias();
+                } else {
+                    console.error('No se pudieron cargar las insignias:', data);
+                    todasLasInsignias = [];
+                    mostrarTodasInsignias();
+                }
+            } catch (error) {
+                console.error('Error al cargar insignias:', error);
+                todasLasInsignias = [];
+                mostrarTodasInsignias();
+            }
+        }
+
+        function mostrarPerfilPorDefecto() {
+            document.getElementById('profileName').textContent = 'Estudiante';
+            document.getElementById('profileAvatar').textContent = '👤';
+            document.getElementById('statNivel').textContent = '1';
+            document.getElementById('statXP').textContent = '0';
+            document.getElementById('statInsignias').textContent = '0/50';
+            document.getElementById('statRanking').textContent = '#-';
+            document.getElementById('xpBar').style.width = '0%';
+            document.getElementById('xpBar').textContent = '0%';
+            document.getElementById('xpProgress').textContent = '0 / 100 XP';
+        }
+
+        function mostrarPerfil(perfil) {
+            if (!perfil) {
+                mostrarPerfilPorDefecto();
+                return;
+            }
+            
+            document.getElementById('profileName').textContent = perfil.nombre_completo || 'Estudiante';
+            document.getElementById('profileAvatar').textContent = 
+                (perfil.nombre_completo && perfil.nombre_completo.length > 0) 
+                    ? perfil.nombre_completo.charAt(0).toUpperCase() 
+                    : '👤';
+            document.getElementById('statNivel').textContent = perfil.nivel_actual || 1;
+            document.getElementById('statXP').textContent = formatearNumero(perfil.xp_total_acumulado || 0);
+            document.getElementById('statInsignias').textContent = 
+                `${perfil.insignias_desbloqueadas || 0}/${perfil.total_insignias || 50}`;
+            document.getElementById('statRanking').textContent = `#${perfil.posicion_ranking || '-'}`;
+            
+            // Barra de progreso
+            const porcentaje = perfil.porcentaje_nivel || 0;
+            document.getElementById('xpBar').style.width = `${porcentaje}%`;
+            document.getElementById('xpBar').textContent = `${porcentaje}%`;
+            document.getElementById('xpProgress').textContent = 
+                `${formatearNumero(perfil.xp_actual || 0)} / ${formatearNumero(perfil.xp_siguiente_nivel || 100)} XP`;
+        }
+
+        function mostrarTodasInsignias() {
+            // Llamar directamente sin depender de event
+            filtroActual = 'todas';
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector('.tab-btn').classList.add('active');
+            mostrarInsignias(todasLasInsignias);
+        }
+
+        function filtrarInsignias(filtro, evento) {
+            filtroActual = filtro;
+            
+            // Actualizar botones activos
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            if (evento && evento.target) {
+                evento.target.classList.add('active');
+            }
+            
+            let insigniasFiltradas = todasLasInsignias;
+            
+            if (filtro === 'desbloqueadas') {
+                insigniasFiltradas = todasLasInsignias.filter(i => i.desbloqueada);
+            } else if (filtro === 'bloqueadas') {
+                insigniasFiltradas = todasLasInsignias.filter(i => !i.desbloqueada);
+            } else if (filtro !== 'todas') {
+                insigniasFiltradas = todasLasInsignias.filter(i => i.rareza === filtro);
+            }
+            
+            mostrarInsignias(insigniasFiltradas);
+        }
+
+        function mostrarInsignias(insignias) {
+            const grid = document.getElementById('insigniasGrid');
+            
+            if (insignias.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty-state" style="grid-column: 1/-1;">
+                        <i class="fas fa-medal"></i>
+                        <h4>No hay insignias en esta categoría</h4>
+                        <p>¡Sigue jugando para desbloquear más insignias!</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            grid.innerHTML = insignias.map(insignia => {
+                // Usar el icono de la BD si existe, sino usar el del diccionario o un default
+                const icono = insignia.icono || iconosInsignias[insignia.tipo] || '🏅';
+                const claseRareza = `insignia-${insignia.rareza}`;
+                const claseDesbloqueada = insignia.desbloqueada ? 'desbloqueada' : 'locked';
+                
+                return `
+                    <div class="insignia-card ${claseRareza} ${claseDesbloqueada}">
+                        ${insignia.desbloqueada ? '<div class="unlock-badge"><i class="fas fa-check"></i> Desbloqueada</div>' : ''}
+                        
+                        <div class="insignia-icon">
+                            ${icono}
+                            ${!insignia.desbloqueada ? '<i class="fas fa-lock lock-icon"></i>' : ''}
+                        </div>
+                        
+                        <div class="insignia-rareza rareza-${insignia.rareza}">
+                            ${insignia.rareza.toUpperCase()}
+                        </div>
+                        
+                        <div class="insignia-name">${insignia.nombre}</div>
+                        <div class="insignia-descripcion">${insignia.descripcion}</div>
+                        
+                        ${insignia.xp_bonus > 0 ? `
+                            <div class="insignia-xp-bonus">
+                                <i class="fas fa-bolt"></i> +${insignia.xp_bonus}% XP
+                            </div>
+                        ` : ''}
+                        
+                        ${insignia.desbloqueada && insignia.fecha_obtencion ? `
+                            <div class="insignia-fecha">
+                                <i class="fas fa-calendar"></i> 
+                                Desbloqueada el ${formatearFecha(insignia.fecha_obtencion)}
+                            </div>
+                        ` : ''}
+                        
+                        ${!insignia.desbloqueada && insignia.progreso !== undefined ? `
+                            <div class="progress-badge">
+                                <small><strong>Progreso:</strong> ${insignia.progreso}%</small>
+                                <div class="progress">
+                                    <div class="progress-bar bg-primary" style="width: ${insignia.progreso}%"></div>
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function formatearNumero(num) {
+            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+
+        function formatearFecha(fecha) {
+            const date = new Date(fecha);
+            return date.toLocaleDateString('es-ES', { 
+                day: '2-digit', 
+                month: '2-digit', 
+                year: 'numeric' 
+            });
+        }
+
+        // Cargar datos al inicio
+        document.addEventListener('DOMContentLoaded', () => {
+            cargarPerfil();
+            cargarInsignias();
+        });
+    </script>
+</body>
+</html>

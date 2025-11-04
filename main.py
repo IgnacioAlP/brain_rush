@@ -67,6 +67,21 @@ from controladores import controlador_ranking
 from controladores import controlador_recompensas
 from controladores import controlador_respuestas
 from controladores import controlador_opciones
+from controladores import controlador_xp
+
+# ==================== FUNCIONES HELPER ====================
+
+def es_sala_automatica(pin_sala):
+    """
+    Verifica si un PIN corresponde a una sala en modo automático
+    Las salas automáticas tienen formato: AUTOXXXX (8 caracteres)
+    Las salas normales tienen formato: 6 dígitos numéricos
+    """
+    if not pin_sala:
+        return False
+    return pin_sala.startswith('AUTO') and len(pin_sala) == 8
+
+# ==================== FUNCIONES DE SALAS ====================
 
 # Funciones mínimas para hacer funcionar las salas
 def verificar_y_crear_tabla_salas():
@@ -237,19 +252,23 @@ def obtener_sala_por_id_simple(id_sala):
             elif estado == 'esperando':
                 tiene_docente = True
                 print(f"   ✅ REGLA 2: estado='esperando' → tiene_docente = True")
-            # REGLA 3: Si tiene PIN visible (6 dígitos), es sala de clase con docente
-            elif pin_sala and len(str(pin_sala)) == 6:
+            # REGLA 3: Verificar si es sala automática (PIN formato AUTOXXXX)
+            elif pin_sala and es_sala_automatica(pin_sala):
+                tiene_docente = False
+                print(f"   ✅ REGLA 3: PIN automático ({pin_sala}) → tiene_docente = False (modo automático)")
+            # REGLA 4: Si tiene PIN normal (6 dígitos), es sala de clase con docente
+            elif pin_sala and len(str(pin_sala)) == 6 and str(pin_sala).isdigit():
                 tiene_docente = True
-                print(f"   ✅ REGLA 3: PIN de 6 dígitos → tiene_docente = True")
+                print(f"   ✅ REGLA 4: PIN normal de 6 dígitos → tiene_docente = True")
             else:
-                # REGLA 4: Verificar si hay múltiples participantes (indica sala de clase)
+                # REGLA 5: Verificar si hay múltiples participantes (indica sala de clase)
                 cursor.execute("""
                     SELECT COUNT(*) FROM participantes_sala 
                     WHERE id_sala = %s AND estado != 'desconectado'
                 """, (id_sala,))
                 num_participantes = cursor.fetchone()[0]
                 tiene_docente = (num_participantes > 1)
-                print(f"   🔍 REGLA 4: {num_participantes} participantes → tiene_docente = {tiene_docente}")
+                print(f"   🔍 REGLA 5: {num_participantes} participantes → tiene_docente = {tiene_docente}")
             
             print(f"   🎯 RESULTADO FINAL: tiene_docente = {tiene_docente}\n")
             
@@ -1103,6 +1122,172 @@ def ranking_global():
         traceback.print_exc()
         return render_template('RankingGlobal.html', ranking=[], usuario_actual=None)
 
+# ==================== RUTAS DEL SISTEMA DE XP E INSIGNIAS ====================
+
+@app.route('/api/perfil-xp/<int:usuario_id>')
+def obtener_perfil_xp_api(usuario_id):
+    """API: Obtiene el perfil completo de XP de un usuario"""
+    try:
+        perfil = controlador_xp.obtener_perfil_xp(usuario_id)
+        if not perfil:
+            return jsonify({'success': False, 'error': 'Usuario no encontrado'}), 404
+        
+        return jsonify({'success': True, 'perfil': perfil})
+    except Exception as e:
+        print(f"Error en obtener_perfil_xp_api: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/insignias/<int:usuario_id>')
+def obtener_insignias_api(usuario_id):
+    """API: Obtiene TODAS las insignias (desbloqueadas y bloqueadas) de un usuario"""
+    try:
+        insignias = controlador_xp.obtener_todas_insignias_usuario(usuario_id)
+        return jsonify({'success': True, 'insignias': insignias})
+    except Exception as e:
+        print(f"Error en obtener_insignias_api: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/insignias-progreso/<int:usuario_id>')
+def obtener_progreso_insignias_api(usuario_id):
+    """API: Obtiene el progreso hacia insignias no desbloqueadas"""
+    try:
+        progreso = controlador_xp.obtener_progreso_insignias(usuario_id)
+        return jsonify({'success': True, 'insignias_bloqueadas': progreso})
+    except Exception as e:
+        print(f"Error en obtener_progreso_insignias_api: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/ranking-xp')
+def obtener_ranking_xp_api():
+    """API: Obtiene el ranking global de XP"""
+    try:
+        limite = request.args.get('limite', 100, type=int)
+        ranking = controlador_xp.obtener_ranking_global(limite)
+        return jsonify({'success': True, 'ranking': ranking})
+    except Exception as e:
+        print(f"Error en obtener_ranking_xp_api: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/ranking-xp')
+@login_required
+def pagina_ranking_xp():
+    """Página del ranking de XP"""
+    try:
+        ranking = controlador_xp.obtener_ranking_global(100)
+        
+        # Si es estudiante, encontrar su posición
+        usuario_actual = None
+        if session.get('usuario_tipo') == 'estudiante':
+            usuario_id = session.get('usuario_id')
+            for estudiante in ranking:
+                if estudiante['id_usuario'] == usuario_id:
+                    usuario_actual = estudiante
+                    break
+        
+        return render_template('RankingXP.html', 
+                             ranking=ranking, 
+                             usuario_actual=usuario_actual)
+    except Exception as e:
+        print(f"Error en pagina_ranking_xp: {e}")
+        import traceback
+        traceback.print_exc()
+        return render_template('RankingXP.html', ranking=[], usuario_actual=None)
+
+@app.route('/mis-insignias')
+@login_required
+def mis_insignias():
+    """Página de insignias del estudiante"""
+    if session.get('usuario_tipo') != 'estudiante':
+        flash('Solo los estudiantes tienen acceso a insignias', 'error')
+        return redirect(url_for('maestra'))
+    
+    try:
+        usuario_id = session.get('usuario_id')
+        
+        # Obtener perfil XP
+        perfil = controlador_xp.obtener_perfil_xp(usuario_id)
+        
+        # Obtener insignias desbloqueadas
+        insignias = controlador_xp.obtener_insignias_usuario(usuario_id)
+        
+        # Obtener progreso de insignias bloqueadas
+        insignias_bloqueadas = controlador_xp.obtener_progreso_insignias(usuario_id)
+        
+        return render_template('MisInsignias.html',
+                             perfil=perfil,
+                             insignias=insignias,
+                             insignias_bloqueadas=insignias_bloqueadas)
+    except Exception as e:
+        print(f"Error en mis_insignias: {e}")
+        import traceback
+        traceback.print_exc()
+        flash('Error al cargar insignias. Por favor, intenta de nuevo.', 'error')
+        return redirect(url_for('dashboard_estudiante'))
+
+@app.route('/tienda-insignias')
+@login_required
+def tienda_insignias():
+    """Página de tienda de insignias"""
+    if session.get('usuario_tipo') != 'estudiante':
+        flash('Solo los estudiantes tienen acceso a la tienda', 'error')
+        return redirect(url_for('maestra'))
+    
+    return render_template('TiendaInsignias.html')
+
+@app.route('/api/tienda-insignias')
+@login_required
+def obtener_tienda_insignias_api():
+    """API: Obtiene insignias disponibles para comprar"""
+    try:
+        insignias = controlador_xp.obtener_insignias_tienda()
+        usuario_id = session.get('usuario_id')
+        
+        # Obtener XP del usuario (usar XP total acumulado para la tienda)
+        perfil = controlador_xp.obtener_perfil_xp(usuario_id)
+        xp_total_acumulado = perfil['xp_total_acumulado'] if perfil else 0
+        
+        # Marcar cuáles ya tiene el usuario
+        insignias_usuario = controlador_xp.obtener_insignias_usuario(usuario_id)
+        ids_tenidas = [i['id'] for i in insignias_usuario]
+        
+        for insignia in insignias:
+            insignia['ya_comprada'] = insignia['id_insignia'] in ids_tenidas
+            insignia['puede_comprar'] = xp_total_acumulado >= insignia['precio_xp'] and not insignia['ya_comprada']
+        
+        return jsonify({
+            'success': True, 
+            'insignias': insignias,
+            'xp_actual': xp_total_acumulado  # Enviar XP total acumulado al frontend
+        })
+    except Exception as e:
+        print(f"Error en obtener_tienda_insignias_api: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/comprar-insignia', methods=['POST'])
+@login_required
+def comprar_insignia_api():
+    """API: Compra una insignia con XP"""
+    try:
+        data = request.get_json()
+        id_insignia = data.get('id_insignia')
+        usuario_id = session.get('usuario_id')
+        
+        if not id_insignia:
+            return jsonify({'success': False, 'error': 'ID de insignia requerido'}), 400
+        
+        resultado = controlador_xp.comprar_insignia(usuario_id, id_insignia)
+        
+        if resultado['success']:
+            return jsonify(resultado)
+        else:
+            return jsonify(resultado), 400
+            
+    except Exception as e:
+        print(f"Error en comprar_insignia_api: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/mis-recompensas')
 @login_required
 def mis_recompensas():
@@ -1919,7 +2104,14 @@ def juego_estudiante(sala_id):
             flash('Sala no encontrada', 'error')
             return redirect(url_for('maestra'))
         
-        return render_template('JuegoEstudiante.html', sala=sala, participante_id=participante_id)
+        # Verificar si es modo automático basándose en el PIN
+        pin_sala = sala.get('pin_sala', '')
+        modo_automatico = es_sala_automatica(pin_sala)
+        
+        return render_template('JuegoEstudiante.html', 
+                             sala=sala, 
+                             participante_id=participante_id,
+                             modo_automatico=modo_automatico)
     except Exception as e:
         flash(f'Error al cargar el juego: {str(e)}', 'error')
         return redirect(url_for('error_sistema_page'))
@@ -4096,9 +4288,11 @@ def jugar_individual(cuestionario_id):
             conexion.close()
             return jsonify({'success': False, 'error': 'El cuestionario no tiene preguntas'}), 400
         
-        # Generar PIN único de 6 dígitos
+        # Generar PIN único de 8 caracteres alfanuméricos (para modo automático/individual)
+        # Formato: AUTO-XXXX donde X son letras y números
         while True:
-            pin_sala = ''.join(random.choices(string.digits, k=6))
+            codigo_aleatorio = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
+            pin_sala = f'AUTO{codigo_aleatorio}'
             cursor.execute('SELECT id_sala FROM salas_juego WHERE pin_sala = %s', (pin_sala,))
             if not cursor.fetchone():
                 break

@@ -395,6 +395,160 @@
         grid-template-columns: 1fr 1fr;
       }
     }
+
+    /* Notificación de XP */
+    .xp-notification {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      background: linear-gradient(135deg, #FFD700, #FFA500);
+      color: white;
+      padding: 30px 50px;
+      border-radius: 25px;
+      box-shadow: 0 15px 50px rgba(255, 215, 0, 0.5);
+      z-index: 10000;
+      text-align: center;
+      animation: xpBounce 0.6s ease;
+      pointer-events: none;
+      border: 4px solid rgba(255, 255, 255, 0.5);
+    }
+
+    .xp-notification.show {
+      animation: xpBounce 0.6s ease forwards;
+    }
+
+    @keyframes xpBounce {
+      0% { transform: translate(-50%, -50%) scale(0); }
+      50% { transform: translate(-50%, -50%) scale(1.1); }
+      70% { transform: translate(-50%, -50%) scale(0.9); }
+      100% { transform: translate(-50%, -50%) scale(1); }
+    }
+
+    .xp-notification .xp-icon {
+      font-size: 60px;
+      margin-bottom: 15px;
+      animation: spin 0.8s ease;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .xp-notification .xp-amount {
+      font-size: 48px;
+      font-weight: bold;
+      font-family: var(--font-primary);
+      margin-bottom: 10px;
+      text-shadow: 2px 2px 10px rgba(0,0,0,0.3);
+    }
+
+    .xp-notification .xp-label {
+      font-size: 20px;
+      font-weight: 600;
+      opacity: 0.9;
+    }
+
+    .xp-notification .xp-bonus {
+      font-size: 14px;
+      margin-top: 10px;
+      background: rgba(255, 255, 255, 0.3);
+      padding: 5px 15px;
+      border-radius: 15px;
+      display: inline-block;
+    }
+
+    .level-up-notification {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      padding: 40px 60px;
+      border-radius: 30px;
+      box-shadow: 0 20px 60px rgba(102, 126, 234, 0.6);
+      z-index: 10001;
+      text-align: center;
+      pointer-events: none;
+      border: 5px solid rgba(255, 255, 255, 0.5);
+    }
+
+    .level-up-notification.show {
+      animation: levelUpBounce 0.8s ease forwards;
+    }
+
+    @keyframes levelUpBounce {
+      0% { transform: translate(-50%, -50%) scale(0) rotate(-10deg); }
+      60% { transform: translate(-50%, -50%) scale(1.15) rotate(5deg); }
+      80% { transform: translate(-50%, -50%) scale(0.95) rotate(-2deg); }
+      100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+    }
+
+    .level-up-notification .level-icon {
+      font-size: 80px;
+      margin-bottom: 20px;
+      animation: pulse 1s infinite;
+    }
+
+    .level-up-notification .level-text {
+      font-size: 32px;
+      font-weight: bold;
+      font-family: var(--font-primary);
+      margin-bottom: 10px;
+    }
+
+    .level-up-notification .level-number {
+      font-size: 64px;
+      font-weight: bold;
+      color: #FFD700;
+      text-shadow: 3px 3px 15px rgba(0,0,0,0.5);
+    }
+
+    .badge-unlock-notification {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      transform: translateX(400px);
+      background: white;
+      color: #333;
+      padding: 20px 25px;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      max-width: 350px;
+      transition: transform 0.5s ease;
+    }
+
+    .badge-unlock-notification.show {
+      transform: translateX(0);
+    }
+
+    .badge-unlock-notification .badge-icon {
+      font-size: 40px;
+      flex-shrink: 0;
+    }
+
+    .badge-unlock-notification .badge-content {
+      flex: 1;
+    }
+
+    .badge-unlock-notification .badge-title {
+      font-weight: bold;
+      font-size: 14px;
+      color: #667eea;
+      margin-bottom: 5px;
+    }
+
+    .badge-unlock-notification .badge-name {
+      font-weight: bold;
+      font-size: 16px;
+      color: #333;
+    }
   </style>
 </head>
 <body>
@@ -473,6 +627,28 @@
       <button class="btn-return" onclick="volverAlInicio()">
         🏠 Volver al inicio
       </button>
+    </div>
+  </div>
+
+  <!-- Notificaciones de XP -->
+  <div class="xp-notification" id="xpNotification">
+    <div class="xp-icon">⭐</div>
+    <div class="xp-amount" id="xpAmount">+0 XP</div>
+    <div class="xp-label">¡Experiencia Ganada!</div>
+    <div class="xp-bonus" id="xpBonus" style="display: none;"></div>
+  </div>
+
+  <div class="level-up-notification" id="levelUpNotification">
+    <div class="level-icon">🎉</div>
+    <div class="level-text">¡Subiste de Nivel!</div>
+    <div class="level-number" id="newLevel">2</div>
+  </div>
+
+  <div class="badge-unlock-notification" id="badgeNotification">
+    <div class="badge-icon">🏅</div>
+    <div class="badge-content">
+      <div class="badge-title">¡Insignia Desbloqueada!</div>
+      <div class="badge-name" id="badgeName">Nueva Insignia</div>
     </div>
   </div>
 
@@ -698,6 +874,11 @@
         gameState.score += resultado.puntaje_obtenido;
         console.log('   Score después:', gameState.score);
         document.getElementById('current-score').textContent = gameState.score;
+        
+        // Mostrar notificación de XP si existe
+        if (data.xp_info) {
+          mostrarNotificacionXP(data.xp_info);
+        }
       } else {
         selectedButton.classList.add('incorrect');
       }
@@ -948,6 +1129,83 @@ async function mostrarResultadosFinales() {
 
     function volverAlInicio() {
       window.location.href = '/estudiante';
+    }
+
+    // ========================================
+    // SISTEMA DE NOTIFICACIONES DE XP
+    // ========================================
+    
+    function mostrarNotificacionXP(xpInfo) {
+      console.log('🎮 Mostrando notificación de XP:', xpInfo);
+      
+      // Notificación de XP ganado
+      const xpNotification = document.getElementById('xpNotification');
+      const xpAmount = document.getElementById('xpAmount');
+      const xpBonus = document.getElementById('xpBonus');
+      
+      xpAmount.textContent = `+${xpInfo.xp_ganado} XP`;
+      
+      // Mostrar bonificaciones si existen
+      if (xpInfo.bonus_velocidad || xpInfo.bonus_racha) {
+        let bonusText = '';
+        if (xpInfo.bonus_velocidad) bonusText += '⚡ Velocidad ';
+        if (xpInfo.bonus_racha) bonusText += `🔥 Racha x${xpInfo.racha_actual}`;
+        xpBonus.textContent = bonusText;
+        xpBonus.style.display = 'block';
+      } else {
+        xpBonus.style.display = 'none';
+      }
+      
+      // Mostrar animación
+      xpNotification.classList.add('show');
+      
+      setTimeout(() => {
+        xpNotification.classList.remove('show');
+      }, 2000);
+      
+      // Si subió de nivel, mostrar notificación
+      if (xpInfo.subio_nivel) {
+        setTimeout(() => {
+          mostrarNotificacionNivel(xpInfo.nivel_actual);
+        }, 2200);
+      }
+      
+      // Si desbloqueó insignias, mostrarlas
+      if (xpInfo.insignias_nuevas && xpInfo.insignias_nuevas.length > 0) {
+        xpInfo.insignias_nuevas.forEach((insignia, index) => {
+          setTimeout(() => {
+            mostrarNotificacionInsignia(insignia);
+          }, 2500 + (index * 3000));
+        });
+      }
+    }
+    
+    function mostrarNotificacionNivel(nuevoNivel) {
+      console.log('🎉 ¡Subiste al nivel:', nuevoNivel);
+      
+      const levelNotification = document.getElementById('levelUpNotification');
+      const levelNumber = document.getElementById('newLevel');
+      
+      levelNumber.textContent = nuevoNivel;
+      levelNotification.classList.add('show');
+      
+      setTimeout(() => {
+        levelNotification.classList.remove('show');
+      }, 3000);
+    }
+    
+    function mostrarNotificacionInsignia(insignia) {
+      console.log('🏅 ¡Insignia desbloqueada:', insignia.nombre);
+      
+      const badgeNotification = document.getElementById('badgeNotification');
+      const badgeName = document.getElementById('badgeName');
+      
+      badgeName.textContent = insignia.nombre;
+      badgeNotification.classList.add('show');
+      
+      setTimeout(() => {
+        badgeNotification.classList.remove('show');
+      }, 3000);
     }
 
     // Inicializar juego cuando carga la página

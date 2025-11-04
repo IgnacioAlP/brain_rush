@@ -1,0 +1,42 @@
+# RESUMEN DE CORRECCIONES - SISTEMA DE INSIGNIAS
+
+## Problema
+Las insignias compradas u obtenidas no se mostraban en el HTML de "Mis Insignias"
+
+## Causa
+El endpoint `/api/insignias/<usuario_id>` solo devolvía las insignias **desbloqueadas**, 
+pero el HTML necesitaba **todas** las insignias (desbloqueadas y bloqueadas) para mostrarlas correctamente.
+
+## Solución Implementada
+
+### 1. Nueva función en controlador_xp.py
+Se creó `obtener_todas_insignias_usuario(id_usuario)` que:
+- Obtiene TODAS las insignias del catálogo (comprables y no comprables)
+- Marca cuáles están desbloqueadas y cuáles bloqueadas
+- Calcula el progreso hacia insignias bloqueadas
+- Devuelve una lista completa con toda la información necesaria
+
+### 2. Actualización del endpoint en main.py
+Se modificó `/api/insignias/<usuario_id>` para usar la nueva función
+
+### 3. Mejoras en el HTML
+- Ahora usa el icono de la base de datos si existe
+- Muestra correctamente todas las insignias
+- Indica el progreso hacia insignias bloqueadas
+
+## Resultado
+✅ Total: 33 insignias
+✅ Desbloqueadas: 8
+✅ Bloqueadas: 25
+✅ Progreso visible en insignias bloqueadas
+✅ Filtros funcionando (todas, desbloqueadas, bloqueadas, por rareza)
+
+## Archivos Modificados
+1. controladores/controlador_xp.py - Nueva función obtener_todas_insignias_usuario()
+2. main.py - Endpoint actualizado
+3. Templates/MisInsignias.html - Usa icono de BD
+
+## Pruebas
+- ✅ Script probar_visualizacion_insignias.py confirma que funciona
+- ✅ API devuelve todas las insignias correctamente
+- ✅ HTML renderiza todas las insignias con sus estados

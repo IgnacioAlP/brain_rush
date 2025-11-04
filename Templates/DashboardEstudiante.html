@@ -434,6 +434,57 @@
         </div>
     </div>
 
+    <!-- Widget de XP -->
+    <div class="xp-widget animate-fadeIn" style="animation-delay: 0.05s; margin-bottom: var(--space-xxl);">
+        <div style="background: white; border-radius: var(--radius-xl); padding: var(--space-xl); box-shadow: var(--shadow-lg); position: relative; overflow: hidden;">
+            <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #FFD700, #FFA500);"></div>
+            
+            <div style="display: grid; grid-template-columns: auto 1fr auto auto; gap: var(--space-xl); align-items: center;">
+                <!-- Avatar con nivel -->
+                <div style="text-align: center;">
+                    <div id="xpAvatar" style="width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); color: white; display: flex; align-items: center; justify-content: center; font-size: 36px; border: 4px solid rgba(255, 215, 0, 0.3); margin-bottom: var(--space-sm);">
+                        👤
+                    </div>
+                    <div style="background: linear-gradient(135deg, #FFD700, #FFA500); color: white; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 14px;">
+                        Nv. <span id="xpNivel">1</span>
+                    </div>
+                </div>
+
+                <!-- Barra de progreso -->
+                <div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: var(--space-sm);">
+                        <span style="font-weight: bold; color: var(--dark);">Progreso al siguiente nivel</span>
+                        <span style="color: var(--gray); font-weight: 600;" id="xpTexto">0 / 0 XP</span>
+                    </div>
+                    <div style="width: 100%; height: 25px; background: #e0e0e0; border-radius: 15px; overflow: hidden; position: relative;">
+                        <div id="xpBarraProgreso" style="height: 100%; background: linear-gradient(90deg, #FFD700, #FFA500); border-radius: 15px; width: 0%; transition: width 1s ease; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 12px;">
+                            0%
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stats -->
+                <div style="text-align: center; padding: 0 var(--space-lg); border-left: 2px solid #e0e0e0;">
+                    <div style="font-size: 28px; font-weight: bold; color: #667eea;" id="xpTotal">0</div>
+                    <div style="color: var(--gray); font-size: 14px; font-weight: 600;">XP Total</div>
+                </div>
+
+                <!-- Botones de acción -->
+                <div style="display: flex; gap: var(--space-sm);">
+                    <a href="/ranking-xp" class="btn" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 12px 20px; border-radius: 25px; text-decoration: none; font-weight: bold; display: flex; align-items: center; gap: var(--space-sm); transition: transform 0.3s; white-space: nowrap;">
+                        <i class="fas fa-trophy"></i> Ranking
+                    </a>
+                    <a href="/mis-insignias" class="btn" style="background: linear-gradient(135deg, #FFD700, #FFA500); color: white; padding: 12px 20px; border-radius: 25px; text-decoration: none; font-weight: bold; display: flex; align-items: center; gap: var(--space-sm); transition: transform 0.3s; white-space: nowrap;">
+                        <i class="fas fa-medal"></i> <span id="insigniasCount">0</span> Insignias
+                    </a>
+                    <a href="/tienda-insignias" class="btn" style="background: linear-gradient(135deg, #FF6B35, #F7931E); color: white; padding: 12px 20px; border-radius: 25px; text-decoration: none; font-weight: bold; display: flex; align-items: center; gap: var(--space-sm); transition: transform 0.3s; white-space: nowrap;">
+                        <i class="fas fa-store"></i> Tienda
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="action-cards">
         <a href="{{ url_for('unirse_a_sala') }}" class="action-card primary animate-fadeIn" style="animation-delay: 0.1s;">
             <div class="card-icon primary">
@@ -711,6 +762,81 @@ document.addEventListener('DOMContentLoaded', function() {
             this.style.boxShadow = 'var(--shadow-md)';
         });
     });
+
+    // Cargar datos de XP del estudiante
+    cargarDatosXP();
 });
+
+// Función para cargar y mostrar datos de XP
+async function cargarDatosXP() {
+    const usuarioId = "{{ session.get('usuario_id') }}";
+    if (!usuarioId || usuarioId === '') return;
+
+    try {
+        const response = await fetch(`/api/perfil-xp/${usuarioId}`);
+        const data = await response.json();
+        
+        console.log('Datos XP recibidos:', data);
+        
+        if (data.success && data.perfil) {
+            const perfil = data.perfil;
+            
+            // Actualizar avatar (primera letra del nombre)
+            const inicial = perfil.nombre_completo ? perfil.nombre_completo.charAt(0).toUpperCase() : '👤';
+            document.getElementById('xpAvatar').textContent = inicial;
+            
+            // Actualizar nivel (con valor por defecto)
+            document.getElementById('xpNivel').textContent = perfil.nivel_actual || 1;
+            
+            // Actualizar XP total (con valor por defecto)
+            document.getElementById('xpTotal').textContent = formatearNumeroXP(perfil.xp_total_acumulado || 0);
+            
+            // Actualizar texto de progreso
+            document.getElementById('xpTexto').textContent = 
+                `${formatearNumeroXP(perfil.xp_actual || 0)} / ${formatearNumeroXP(perfil.xp_siguiente_nivel || 100)} XP`;
+            
+            // Animar barra de progreso
+            const porcentaje = perfil.porcentaje_nivel || 0;
+            const barra = document.getElementById('xpBarraProgreso');
+            setTimeout(() => {
+                barra.style.width = `${porcentaje}%`;
+                barra.textContent = `${porcentaje}%`;
+            }, 500);
+            
+            // Actualizar contador de insignias
+            document.getElementById('insigniasCount').textContent = perfil.insignias_desbloqueadas || 0;
+        } else {
+            console.log('No se pudieron cargar los datos de XP');
+            // Valores por defecto si no hay datos
+            document.getElementById('xpNivel').textContent = '1';
+            document.getElementById('xpTotal').textContent = '0';
+            document.getElementById('xpTexto').textContent = '0 / 100 XP';
+            document.getElementById('insigniasCount').textContent = '0';
+        }
+    } catch (error) {
+        console.error('Error al cargar datos de XP:', error);
+        // Valores por defecto en caso de error
+        document.getElementById('xpNivel').textContent = '1';
+        document.getElementById('xpTotal').textContent = '0';
+        document.getElementById('xpTexto').textContent = '0 / 100 XP';
+        document.getElementById('insigniasCount').textContent = '0';
+    }
+}
+
+function formatearNumeroXP(num) {
+    // Validar que num sea un número válido
+    if (num === null || num === undefined || isNaN(num)) {
+        return '0';
+    }
+    
+    const numero = Number(num);
+    
+    if (numero >= 1000000) {
+        return (numero / 1000000).toFixed(1) + 'M';
+    } else if (numero >= 1000) {
+        return (numero / 1000).toFixed(1) + 'K';
+    }
+    return numero.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
 </script>
 {% endblock %}
