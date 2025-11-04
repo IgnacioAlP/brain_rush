@@ -351,28 +351,41 @@ def actualizar_usuario(usuario_id, nombre, apellidos, email, password=None):
 # --- Funci�n del C�DIGO NUEVO ---
 def eliminar_usuario_completo(usuario_id):
     """
-    Elimina un usuario y todos sus datos relacionados en cascada
+    Elimina un usuario y todos sus datos relacionados en cascada.
     
-    Para ESTUDIANTES elimina:
-    - Respuestas en respuestas_estudiantes
-    - Participaciones
-    - Ranking
-    - Recompensas otorgadas
-    - Usuario_roles
-    - Usuario
+    Gracias a ON DELETE CASCADE en las foreign keys, la eliminación del usuario
+    elimina automáticamente todos los datos relacionados:
     
-    Para DOCENTES elimina:
-    - Todas las preguntas de sus cuestionarios (opciones_respuesta, cuestionario_preguntas)
-    - Todos sus cuestionarios
-    - Usuario_roles
-    - Usuario
+    Para ESTUDIANTES se eliminan automáticamente:
+    - experiencia_usuarios (XP y nivel)
+    - insignias_usuarios (insignias desbloqueadas)
+    - compras_insignias (historial de compras)
+    - estadisticas_juego (estadísticas de partidas)
+    - historial_xp (historial de XP ganado)
+    - respuestas_estudiantes (respuestas a cuestionarios)
+    - respuestas_participantes (respuestas en salas)
+    - participaciones (participaciones en cuestionarios)
+    - participantes_sala (participaciones en salas de juego)
+    - ranking (posiciones en rankings)
+    - ranking_sala (rankings de salas)
+    - recompensas_otorgadas (recompensas ganadas)
+    - usuario_roles (roles asignados)
+    
+    Para DOCENTES:
+    - Los cuestionarios se mantienen con id_docente = NULL (ON DELETE SET NULL)
+    - Las salas de juego creadas se eliminan en cascada
+    - usuario_roles (roles asignados)
     """
     try:
         conexion = obtener_conexion()
         cursor = conexion.cursor()
         
-        # Obtener tipo de usuario
-        cursor.execute("SELECT tipo_usuario FROM usuarios WHERE id_usuario = %s", (usuario_id,))
+        # Verificar que el usuario existe y obtener su tipo
+        cursor.execute("""
+            SELECT tipo_usuario, nombre, apellidos 
+            FROM usuarios 
+            WHERE id_usuario = %s
+        """, (usuario_id,))
         resultado = cursor.fetchone()
         
         if not resultado:
@@ -380,297 +393,31 @@ def eliminar_usuario_completo(usuario_id):
             conexion.close()
             return False, "Usuario no encontrado"
         
-        tipo_usuario = resultado[0]
-        print(f"DEBUG: Eliminando usuario ID {usuario_id}, tipo: {tipo_usuario}")
+        tipo_usuario, nombre, apellidos = resultado
+        print(f"🗑️ Eliminando usuario ID {usuario_id}: {nombre} {apellidos} ({tipo_usuario})")
         
-        if tipo_usuario == 'estudiante':
-            # Eliminar respuestas del estudiante
-            cursor.execute("""
-                DELETE FROM respuestas_estudiantes 
-                WHERE id_estudiante = %s
-            """, (usuario_id,))
-            print(f"DEBUG: Eliminadas respuestas del estudiante")
-            
-            # Eliminar participaciones
-            cursor.execute("""
-                DELETE FROM participaciones 
-                WHERE id_estudiante = %s
-            """, (usuario_id,))
-            print(f"DEBUG: Eliminadas participaciones")
-            
-            # Eliminar del ranking
-            cursor.execute("""
-                DELETE FROM ranking 
-                WHERE id_estudiante = %s
-            """, (usuario_id,))
-            print(f"DEBUG: Eliminado del ranking")
-            
-            # Eliminar recompensas otorgadas
-            cursor.execute("""
-                DELETE FROM recompensas_otorgadas 
-                WHERE id_estudiante = %s
-            """, (usuario_id,))
-            print(f"DEBUG: Eliminadas recompensas otorgadas")
-            
-        elif tipo_usuario == 'docente':
-            # Obtener IDs de todos los cuestionarios del docente
-            cursor.execute("""
-                SELECT id_cuestionario 
-                FROM cuestionarios 
-                WHERE id_docente = %s
-            """, (usuario_id,))
-            cuestionarios = cursor.fetchall()
-            
-            for cuestionario in cuestionarios:
-                cuestionario_id = cuestionario[0]
-                print(f"DEBUG: Eliminando cuestionario ID {cuestionario_id}")
-                
-                # Obtener IDs de preguntas de este cuestionario
-                cursor.execute("""
-                    SELECT id_pregunta 
-                    FROM cuestionario_preguntas 
-                    WHERE id_cuestionario = %s
-                """, (cuestionario_id,))
-                preguntas = cursor.fetchall()
-                
-                for pregunta in preguntas:
-                    pregunta_id = pregunta[0]
-                    
-                    # Eliminar respuestas de estudiantes a esta pregunta
-                    cursor.execute("""
-                        DELETE FROM respuestas_estudiantes 
-                        WHERE id_cuestionario_pregunta IN (
-                            SELECT id_cuestionario_pregunta 
-                            FROM cuestionario_preguntas 
-                            WHERE id_pregunta = %s
-                        )
-                    """, (pregunta_id,))
-                    
-                    # Eliminar opciones de respuesta
-                    cursor.execute("""
-                        DELETE FROM opciones_respuesta 
-                        WHERE id_pregunta = %s
-                    """, (pregunta_id,))
-                
-                # Eliminar relaciones cuestionario_preguntas
-                cursor.execute("""
-                    DELETE FROM cuestionario_preguntas 
-                    WHERE id_cuestionario = %s
-                """, (cuestionario_id,))
-                
-                # Eliminar las preguntas (esto puede ser redundante si las preguntas no se comparten,
-                # pero es m�s seguro eliminar por si acaso)
-                # Esta consulta es compleja y podr�a fallar si las preguntas se reutilizan. 
-                # Es m�s seguro eliminar solo la relaci�n.
-                
-                # Eliminar participaciones del cuestionario
-                cursor.execute("""
-                    DELETE FROM participaciones 
-                    WHERE id_cuestionario = %s
-                """, (cuestionario_id,))
-                
-                # Eliminar ranking del cuestionario
-                cursor.execute("""
-                    DELETE FROM ranking 
-                    WHERE id_cuestionario = %s
-                """, (cuestionario_id,))
-            
-            # Eliminar todos los cuestionarios del docente
-            cursor.execute("""
-                DELETE FROM cuestionarios 
-                WHERE id_docente = %s
-            """, (usuario_id,))
-            print(f"DEBUG: Eliminados {len(cuestionarios)} cuestionarios del docente")
-        
-        # Eliminar roles de usuario (com�n para todos)
-        cursor.execute("""
-            DELETE FROM usuario_roles 
-            WHERE id_usuario = %s
-        """, (usuario_id,))
-        print(f"DEBUG: Eliminados roles de usuario")
-        
-        # Finalmente, eliminar el usuario
+        # Eliminar el usuario (CASCADE se encarga del resto automáticamente)
         cursor.execute("""
             DELETE FROM usuarios 
             WHERE id_usuario = %s
         """, (usuario_id,))
-        print(f"DEBUG: Usuario eliminado")
+        
+        filas_afectadas = cursor.rowcount
+        
+        if filas_afectadas == 0:
+            cursor.close()
+            conexion.close()
+            return False, "No se pudo eliminar el usuario"
         
         conexion.commit()
         cursor.close()
         conexion.close()
         
-        print(f"? Usuario ID {usuario_id} ({tipo_usuario}) eliminado completamente")
-        return True, "Usuario eliminado exitosamente"
+        print(f"✅ Usuario ID {usuario_id} ({tipo_usuario}) eliminado completamente con todos sus datos relacionados")
+        return True, f"Usuario {nombre} {apellidos} eliminado exitosamente"
         
     except Exception as e:
-        print(f"? Error eliminando usuario {usuario_id}: {e}")
-        import traceback
-        traceback.print_exc()
-        if 'conexion' in locals():
-            conexion.rollback()
-            cursor.close()
-            conexion.close()
-        return False, f"Error al eliminar usuario: {str(e)}"
-    """
-    Elimina un usuario y todos sus datos relacionados en cascada
-    
-    Para ESTUDIANTES elimina:
-    - Respuestas en respuestas_estudiantes
-    - Participaciones
-    - Ranking
-    - Recompensas otorgadas
-    - Usuario_roles
-    - Usuario
-    
-    Para DOCENTES elimina:
-    - Todas las preguntas de sus cuestionarios (opciones_respuesta, cuestionario_preguntas)
-    - Todos sus cuestionarios
-    - Usuario_roles
-    - Usuario
-    """
-    try:
-        conexion = obtener_conexion()
-        cursor = conexion.cursor()
-        
-        # Obtener tipo de usuario
-        cursor.execute("SELECT tipo_usuario FROM usuarios WHERE id_usuario = %s", (usuario_id,))
-        resultado = cursor.fetchone()
-        
-        if not resultado:
-            cursor.close()
-            conexion.close()
-            return False, "Usuario no encontrado"
-        
-        tipo_usuario = resultado[0]
-        print(f"DEBUG: Eliminando usuario ID {usuario_id}, tipo: {tipo_usuario}")
-        
-        if tipo_usuario == 'estudiante':
-            # Eliminar respuestas del estudiante
-            cursor.execute("""
-                DELETE FROM respuestas_estudiantes 
-                WHERE id_estudiante = %s
-            """, (usuario_id,))
-            print(f"DEBUG: Eliminadas respuestas del estudiante")
-            
-            # Eliminar participaciones
-            cursor.execute("""
-                DELETE FROM participaciones 
-                WHERE id_estudiante = %s
-            """, (usuario_id,))
-            print(f"DEBUG: Eliminadas participaciones")
-            
-            # Eliminar del ranking
-            cursor.execute("""
-                DELETE FROM ranking 
-                WHERE id_estudiante = %s
-            """, (usuario_id,))
-            print(f"DEBUG: Eliminado del ranking")
-            
-            # Eliminar recompensas otorgadas
-            cursor.execute("""
-                DELETE FROM recompensas_otorgadas 
-                WHERE id_estudiante = %s
-            """, (usuario_id,))
-            print(f"DEBUG: Eliminadas recompensas otorgadas")
-            
-        elif tipo_usuario == 'docente':
-            # Obtener IDs de todos los cuestionarios del docente
-            cursor.execute("""
-                SELECT id_cuestionario 
-                FROM cuestionarios 
-                WHERE id_docente = %s
-            """, (usuario_id,))
-            cuestionarios = cursor.fetchall()
-            
-            for cuestionario in cuestionarios:
-                cuestionario_id = cuestionario[0]
-                print(f"DEBUG: Eliminando cuestionario ID {cuestionario_id}")
-                
-                # Obtener IDs de preguntas de este cuestionario
-                cursor.execute("""
-                    SELECT id_pregunta 
-                    FROM cuestionario_preguntas 
-                    WHERE id_cuestionario = %s
-                """, (cuestionario_id,))
-                preguntas = cursor.fetchall()
-                
-                for pregunta in preguntas:
-                    pregunta_id = pregunta[0]
-                    
-                    # Eliminar respuestas de estudiantes a esta pregunta
-                    cursor.execute("""
-                        DELETE FROM respuestas_estudiantes 
-                        WHERE id_cuestionario_pregunta IN (
-                            SELECT id_cuestionario_pregunta 
-                            FROM cuestionario_preguntas 
-                            WHERE id_pregunta = %s
-                        )
-                    """, (pregunta_id,))
-                    
-                    # Eliminar opciones de respuesta
-                    cursor.execute("""
-                        DELETE FROM opciones_respuesta 
-                        WHERE id_pregunta = %s
-                    """, (pregunta_id,))
-                
-                # Eliminar relaciones cuestionario_preguntas
-                cursor.execute("""
-                    DELETE FROM cuestionario_preguntas 
-                    WHERE id_cuestionario = %s
-                """, (cuestionario_id,))
-                
-                # Eliminar las preguntas del cuestionario
-                cursor.execute("""
-                    DELETE FROM preguntas 
-                    WHERE id_pregunta IN (
-                        SELECT DISTINCT cp.id_pregunta 
-                        FROM (SELECT id_pregunta FROM cuestionario_preguntas WHERE id_cuestionario = %s) cp
-                    )
-                """, (cuestionario_id,))
-                
-                # Eliminar participaciones del cuestionario
-                cursor.execute("""
-                    DELETE FROM participaciones 
-                    WHERE id_cuestionario = %s
-                """, (cuestionario_id,))
-                
-                # Eliminar ranking del cuestionario
-                cursor.execute("""
-                    DELETE FROM ranking 
-                    WHERE id_cuestionario = %s
-                """, (cuestionario_id,))
-            
-            # Eliminar todos los cuestionarios del docente
-            cursor.execute("""
-                DELETE FROM cuestionarios 
-                WHERE id_docente = %s
-            """, (usuario_id,))
-            print(f"DEBUG: Eliminados {len(cuestionarios)} cuestionarios del docente")
-        
-        # Eliminar roles de usuario (com�n para todos)
-        cursor.execute("""
-            DELETE FROM usuario_roles 
-            WHERE id_usuario = %s
-        """, (usuario_id,))
-        print(f"DEBUG: Eliminados roles de usuario")
-        
-        # Finalmente, eliminar el usuario
-        cursor.execute("""
-            DELETE FROM usuarios 
-            WHERE id_usuario = %s
-        """, (usuario_id,))
-        print(f"DEBUG: Usuario eliminado")
-        
-        conexion.commit()
-        cursor.close()
-        conexion.close()
-        
-        print(f"? Usuario ID {usuario_id} ({tipo_usuario}) eliminado completamente")
-        return True, "Usuario eliminado exitosamente"
-        
-    except Exception as e:
-        print(f"? Error eliminando usuario {usuario_id}: {e}")
+        print(f"❌ Error eliminando usuario {usuario_id}: {e}")
         import traceback
         traceback.print_exc()
         if 'conexion' in locals():
