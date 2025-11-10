@@ -3,12 +3,31 @@ from werkzeug.exceptions import InternalServerError
 from config import config
 from bd import verificar_conexion, obtener_conexion, inicializar_usuarios_prueba
 import random
-from flask_wtf.csrf import CSRFProtect
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, verify_jwt_in_request
+# CSRF deshabilitado para usar JWT
+# from flask_wtf.csrf import CSRFProtect
 import os, json
 from io import BytesIO
 from datetime import datetime, timedelta
 import requests
+# Importar controladores
+from controladores import controlador_salas
+from controladores import controlador_usuario
+from controladores import controlador_cuestionarios
+from controladores import controlador_juego
+from controladores import controlador_preguntas
+from controladores import controlador_participaciones
+from controladores import controlador_ranking
+from controladores import controlador_recompensas
+from controladores import controlador_respuestas
+from controladores import controlador_opciones
+from controladores import controlador_xp
 
+
+# Ya no necesitamos User class, authenticate e identity con JWT-Extended
+# La autenticación se maneja con endpoints personalizados
+
+    
 # Importar msal solo si está disponible (necesario para OneDrive)
 try:
     import msal
@@ -37,16 +56,23 @@ app.secret_key = app_config.SECRET_KEY
 
 mail.init_app(app)
 
-serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
+app.debug = True
+app.config['SECRET_KEY'] = 'super-secret'
 
-# Configurar CSRF
-csrf = CSRFProtect(app)
+# ============================================
+# CONFIGURACIÓN JWT (CSRF DESHABILITADO)
+# ============================================
+# CSRF está completamente deshabilitado porque usaremos JWT para autenticación
+# JWT proporciona protección contra ataques CSRF de forma nativa
+app.config['WTF_CSRF_ENABLED'] = False
 
-# Configuración adicional de CSRF
-app.config['WTF_CSRF_TIME_LIMIT'] = None  # No expirar el token
-app.config['WTF_CSRF_SSL_STRICT'] = False  # No requerir HTTPS
-app.config['WTF_CSRF_CHECK_DEFAULT'] = True
-app.config['WTF_CSRF_ENABLED'] = False  # Deshabilitar CSRF globalmente para poder usar fetch() sin token
+# Configuración JWT-Extended
+app.config['JWT_SECRET_KEY'] = 'super-secret-jwt-key'  # En producción usar variable de entorno
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)  # Token válido por 24 horas
+
+jwt = JWTManager(app)
+
+
 
 # Agregar funciones al contexto de Jinja
 @app.context_processor
@@ -54,22 +80,44 @@ def utility_processor():
     """Agrega funciones útiles al contexto de Jinja"""
     def now():
         return datetime.now()
-    return dict(now=now)
+    def csrf_token():
+        # Función dummy para compatibilidad con templates
+        # CSRF está deshabilitado, JWT proporciona protección
+        return ''
+    return dict(now=now, csrf_token=csrf_token)
 
-# Importar controladores
-from controladores import controlador_salas
-from controladores import controlador_usuario
-from controladores import controlador_cuestionarios
-from controladores import controlador_juego
-from controladores import controlador_preguntas
-from controladores import controlador_participaciones
-from controladores import controlador_ranking
-from controladores import controlador_recompensas
-from controladores import controlador_respuestas
-from controladores import controlador_opciones
-from controladores import controlador_xp
 
 # ==================== FUNCIONES HELPER ====================
+
+from functools import wraps
+
+def jwt_or_session_required(f):
+    """
+    Decorador que acepta autenticación por JWT O por sesión de Flask
+    Útil para APIs que pueden ser accedidas desde el frontend web (sesión) o desde apps móviles (JWT)
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # Verificar si hay sesión activa (usuario logueado en web)
+        if 'usuario_id' in session and session.get('logged_in'):
+            return f(*args, **kwargs)
+        
+        # Si no hay sesión, verificar JWT
+        # Verificamos si hay header de Authorization
+        auth_header = request.headers.get('Authorization', '')
+        if auth_header and auth_header.startswith('Bearer '):
+            try:
+                # Verificar el token JWT
+                verify_jwt_in_request()
+                # Si llegamos aquí, el token es válido
+                return f(*args, **kwargs)
+            except Exception as e:
+                return jsonify({'error': 'Token JWT inválido', 'message': str(e)}), 401
+        
+        # Si no hay sesión ni JWT, rechazar
+        return jsonify({'error': 'Autenticación requerida (sesión o JWT)'}), 401
+    
+    return decorated_function
 
 def es_sala_automatica(pin_sala):
     """
@@ -645,6 +693,71 @@ def fix_session():
         # Copiar tipo_usuario -> usuario_tipo
         session['usuario_tipo'] = session['tipo_usuario']
         print(f"🔧 Sesión corregida: tipo_usuario -> usuario_tipo = {session['usuario_tipo']}")
+
+# ============================================
+# ENDPOINT DE AUTENTICACIÓN JWT
+# ============================================
+@app.route('/api/auth', methods=['POST'])
+def jwt_login():
+    """
+    Endpoint para autenticación JWT.
+    Recibe email y password, retorna access_token si las credenciales son válidas.
+    
+    Request JSON:
+    {
+        "email": "usuario@example.com",
+        "password": "contraseña"
+    }
+    
+    Response JSON (exitosa):
+    {
+        "success": true,
+        "access_token": "eyJ0eXAi...",
+        "usuario": {
+            "id_usuario": 1,
+            "email": "usuario@example.com",
+            "nombre": "Juan",
+            "tipo_usuario": "docente"
+        }
+    }
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'error': 'JSON requerido'}), 400
+        
+        email = (data.get('email') or '').strip().lower()
+        password = data.get('password') or ''
+        
+        if not email or not password:
+            return jsonify({'success': False, 'error': 'Email y contraseña son requeridos'}), 400
+        
+        # Autenticar usuario
+        ok, usuario = controlador_usuario.autenticar_usuario(email, password)
+        if not ok:
+            return jsonify({'success': False, 'error': 'Email o contraseña incorrectos'}), 401
+        
+        # Crear token JWT con el ID del usuario
+        access_token = create_access_token(identity=usuario['id_usuario'])
+        
+        # Retornar token y datos del usuario (sin contraseña)
+        return jsonify({
+            'success': True,
+            'access_token': access_token,
+            'usuario': {
+                'id_usuario': usuario['id_usuario'],
+                'email': usuario['email'],
+                'nombre': usuario['nombre'],
+                'apellidos': usuario.get('apellidos', ''),
+                'tipo_usuario': usuario['tipo_usuario']
+            }
+        }), 200
+        
+    except Exception as e:
+        print(f"❌ ERROR en jwt_login: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': 'Error del servidor'}), 500
 
 # Ruta de error de sistema divertida
 @app.route('/login', methods=['GET', 'POST'])
@@ -1267,8 +1380,9 @@ def obtener_tienda_insignias_api():
 
 @app.route('/api/comprar-insignia', methods=['POST'])
 @login_required
+@jwt_or_session_required
 def comprar_insignia_api():
-    """API: Compra una insignia con XP"""
+    """API: Compra una insignia con XP - Requiere autenticación"""
     try:
         data = request.get_json()
         id_insignia = data.get('id_insignia')
@@ -1558,7 +1672,9 @@ def api_obtener_grupos_sala(sala_id):
 
 
 @app.route('/api/participante/<int:participante_id>/asignar-grupo', methods=['POST'])
+@jwt_or_session_required
 def api_asignar_participante_grupo(participante_id):
+    """Asignar participante a grupo - Requiere autenticación"""
     try:
         data = request.get_json(silent=True) or request.form.to_dict()
         id_grupo = int(data.get('id_grupo'))
@@ -4371,8 +4487,9 @@ def jugar_individual(cuestionario_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/cuestionarios/<int:cuestionario_id>/publicar', methods=['POST'])
+@jwt_or_session_required
 def api_publicar_cuestionario(cuestionario_id):
-    """Publicar un cuestionario vía API"""
+    """Publicar un cuestionario vía API - Requiere autenticación"""
     try:
         conexion = obtener_conexion()
         cursor = conexion.cursor()
@@ -4393,8 +4510,9 @@ def api_publicar_cuestionario(cuestionario_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/cuestionarios/<int:cuestionario_id>/despublicar', methods=['POST'])
+@jwt_or_session_required
 def api_despublicar_cuestionario(cuestionario_id):
-    """Despublicar un cuestionario vía API"""
+    """Despublicar un cuestionario vía API - Requiere autenticación"""
     try:
         conexion = obtener_conexion()
         cursor = conexion.cursor()
@@ -4538,7 +4656,9 @@ def api_recompensas_disponibles(id_estudiante):
         return jsonify({'success': False, 'error': str(e)}), 400
 
 @app.route('/api/otorgar_recompensas_automaticas/<int:id_estudiante>', methods=['POST'])
+@jwt_or_session_required
 def api_otorgar_recompensas_automaticas(id_estudiante):
+    """Otorgar recompensas automáticas - Requiere autenticación"""
     try:
         recompensas_otorgadas = controlador_recompensas.otorgar_recompensas_automaticas(id_estudiante)
         return jsonify({'success': True, 'recompensas_otorgadas': recompensas_otorgadas})
@@ -4579,8 +4699,9 @@ def api_obtener_usuarios_sala(sala_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/sala/<int:sala_id>/iniciar', methods=['POST'])
+@jwt_or_session_required
 def api_iniciar_juego_sala(sala_id):
-    """Iniciar el juego en una sala"""
+    """Iniciar el juego en una sala - Requiere autenticación"""
     try:
         # Verificar que la sala existe
         sala = controlador_salas.obtener_sala_por_id(sala_id)
@@ -4608,8 +4729,9 @@ def api_iniciar_juego_sala(sala_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/sala/<int:sala_id>/cerrar', methods=['POST'])
+@jwt_or_session_required
 def api_cerrar_sala(sala_id):
-    """Cerrar una sala"""
+    """Cerrar una sala - Requiere autenticación"""
     try:
         # Verificar que la sala existe
         sala = controlador_salas.obtener_sala_por_id(sala_id)
@@ -4632,8 +4754,9 @@ def api_cerrar_sala(sala_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/exportar-resultados/<int:sala_id>/excel', methods=['POST'])
+@jwt_or_session_required
 def exportar_resultados_excel(sala_id):
-    """Exportar resultados a Excel"""
+    """Exportar resultados a Excel - Requiere autenticación"""
     try:
         # Verificar que openpyxl está instalado
         try:
@@ -4741,8 +4864,9 @@ def exportar_resultados_excel(sala_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/exportar-resultados/<int:sala_id>/onedrive', methods=['POST'])
+@jwt_or_session_required
 def exportar_resultados_onedrive(sala_id):
-    """Exportar resultados a OneDrive usando sistema centralizado y enviar email con link"""
+    """Exportar resultados a OneDrive usando sistema centralizado y enviar email con link - Requiere autenticación"""
     try:
         # Verificar autenticación
         if 'usuario_id' not in session:
@@ -5280,8 +5404,9 @@ Sistema BrainRush
 
 @app.route('/api/exportar-historial-estudiante/onedrive', methods=['POST'])
 @login_required
+@jwt_or_session_required
 def exportar_historial_estudiante_onedrive():
-    """Exportar historial completo del estudiante a OneDrive del sistema"""
+    """Exportar historial completo del estudiante a OneDrive del sistema - Requiere autenticación"""
     try:
         usuario_id = session.get('usuario_id')
         

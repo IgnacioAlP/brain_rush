@@ -584,3 +584,24 @@ def restablecer_contrasena(email, nueva_contrasena):
             conexion.close()
         return False, "Hubo un error al actualizar tu contraseÃ±a. Por favor intenta nuevamente."
 
+def obtener_usuario_por_id_JWT(id ):
+    conexion = obtener_conexion(True)
+    usuario = None
+    with conexion.cursor() as cursor:
+        cursor.execute(
+            "SELECT id, email, password FROM usuarios WHERE id = %s", (id,))
+        usuario = cursor.fetchone()
+    conexion.close()
+    return usuario
+
+
+def obtener_usuario_por_email_JWT(email):
+    conexion = obtener_conexion(True)
+    usuario = None
+    with conexion.cursor() as cursor:
+        cursor.execute(
+            "SELECT id, email, password FROM usuarios WHERE email = %s", (email,))
+        usuario = cursor.fetchone()
+    conexion.close()
+    return usuario
+
