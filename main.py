@@ -1,15 +1,26 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, Response, session, send_file, current_app
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, Response, session, send_file, current_app, make_response
 from werkzeug.exceptions import InternalServerError
 from config import config
 from bd import verificar_conexion, obtener_conexion, inicializar_usuarios_prueba
 import random
-from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, verify_jwt_in_request
 # CSRF deshabilitado para usar JWT
 # from flask_wtf.csrf import CSRFProtect
 import os, json
 from io import BytesIO
 from datetime import datetime, timedelta
 import requests
+# Importar utilidades de autenticación personalizadas
+from utils_auth import (
+    login_required, 
+    jwt_or_session_required,
+    docente_required,
+    estudiante_required,
+    crear_token_jwt,
+    verificar_token_jwt,
+    establecer_cookies_usuario,
+    limpiar_cookies_usuario,
+    obtener_usuario_cookies
+)
 # Importar controladores
 from controladores import controlador_salas
 from controladores import controlador_usuario
@@ -56,21 +67,23 @@ app.secret_key = app_config.SECRET_KEY
 
 mail.init_app(app)
 
+# Serializador para tokens de email
+serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
+
 app.debug = True
-app.config['SECRET_KEY'] = 'super-secret'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'super-secret-key-cambiar-en-produccion')
 
 # ============================================
-# CONFIGURACIÓN JWT (CSRF DESHABILITADO)
+# CONFIGURACIÓN (CSRF DESHABILITADO)
 # ============================================
-# CSRF está completamente deshabilitado porque usaremos JWT para autenticación
-# JWT proporciona protección contra ataques CSRF de forma nativa
+# CSRF está completamente deshabilitado porque usaremos JWT y cookies seguras para autenticación
 app.config['WTF_CSRF_ENABLED'] = False
 
-# Configuración JWT-Extended
-app.config['JWT_SECRET_KEY'] = 'super-secret-jwt-key'  # En producción usar variable de entorno
-app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)  # Token válido por 24 horas
-
-jwt = JWTManager(app)
+# Configuración de sesiones seguras
+app.config['SESSION_COOKIE_SECURE'] = app.config.get('ENV') == 'production'  # Solo HTTPS en producción
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
 
 
 
@@ -91,33 +104,7 @@ def utility_processor():
 
 from functools import wraps
 
-def jwt_or_session_required(f):
-    """
-    Decorador que acepta autenticación por JWT O por sesión de Flask
-    Útil para APIs que pueden ser accedidas desde el frontend web (sesión) o desde apps móviles (JWT)
-    """
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        # Verificar si hay sesión activa (usuario logueado en web)
-        if 'usuario_id' in session and session.get('logged_in'):
-            return f(*args, **kwargs)
-        
-        # Si no hay sesión, verificar JWT
-        # Verificamos si hay header de Authorization
-        auth_header = request.headers.get('Authorization', '')
-        if auth_header and auth_header.startswith('Bearer '):
-            try:
-                # Verificar el token JWT
-                verify_jwt_in_request()
-                # Si llegamos aquí, el token es válido
-                return f(*args, **kwargs)
-            except Exception as e:
-                return jsonify({'error': 'Token JWT inválido', 'message': str(e)}), 401
-        
-        # Si no hay sesión ni JWT, rechazar
-        return jsonify({'error': 'Autenticación requerida (sesión o JWT)'}), 401
-    
-    return decorated_function
+# jwt_or_session_required ahora se importa desde utils_auth
 
 def es_sala_automatica(pin_sala):
     """
@@ -478,17 +465,30 @@ def registrarse():
 
 @app.route('/confirmar/<token>')
 def confirmar_email(token):
+    """Confirmar email de usuario mediante token"""
     try:
+        # Intentar decodificar el token (válido por 1 hora)
         email = serializer.loads(token, salt='email-confirm-salt', max_age=3600)
-    except:
-        flash('El enlace de confirmación es inválido o ha expirado.', 'danger')
+        print(f"✅ Token válido para email: {email}")
+        
+        # Activar la cuenta
+        success, message = controlador_usuario.activar_cuenta_usuario(email)
+        
+        if success:
+            flash(message, 'success')
+            print(f"✅ Cuenta activada exitosamente: {email}")
+        else:
+            flash(message, 'danger')
+            print(f"⚠️ Error al activar cuenta: {message}")
+        
         return redirect(url_for('login'))
-    success, message = controlador_usuario.activar_cuenta_usuario(email)
-    if success:
-        flash(message, 'success')
-    else:
-        flash(message, 'danger')
-    return redirect(url_for('login'))
+        
+    except Exception as e:
+        print(f"❌ Error al confirmar email con token: {e}")
+        import traceback
+        traceback.print_exc()
+        flash('El enlace de confirmación es inválido o ha expirado. Por favor, solicita un nuevo correo de confirmación.', 'danger')
+        return redirect(url_for('login'))
 
 # ========== RECUPERACIÓN DE CONTRASEÑA ==========
 
@@ -733,12 +733,15 @@ def jwt_login():
             return jsonify({'success': False, 'error': 'Email y contraseña son requeridos'}), 400
         
         # Autenticar usuario
-        ok, usuario = controlador_usuario.autenticar_usuario(email, password)
+        ok, resultado = controlador_usuario.autenticar_usuario(email, password)
         if not ok:
-            return jsonify({'success': False, 'error': 'Email o contraseña incorrectos'}), 401
+            error_msg = resultado if isinstance(resultado, str) else 'Email o contraseña incorrectos'
+            return jsonify({'success': False, 'error': error_msg}), 401
         
-        # Crear token JWT con el ID del usuario
-        access_token = create_access_token(identity=usuario['id_usuario'])
+        usuario = resultado
+        
+        # Crear token JWT con el ID del usuario usando nuestra función personalizada
+        access_token = crear_token_jwt(usuario['id_usuario'], expiracion_horas=24)
         
         # Retornar token y datos del usuario (sin contraseña)
         return jsonify({
@@ -779,15 +782,17 @@ def login():
             flash(error_msg, 'error')
             return render_template('Login.html')
 
-        ok, usuario = controlador_usuario.autenticar_usuario(email, password)
+        ok, resultado = controlador_usuario.autenticar_usuario(email, password)
         if not ok:
-            error_msg = 'Email o contraseña incorrectos'
-            print(f"DEBUG: Login fallido para {email}")
+            error_msg = resultado if isinstance(resultado, str) else 'Email o contraseña incorrectos'
+            print(f"DEBUG: Login fallido para {email}: {error_msg}")
             if request.is_json:
                 return jsonify({ 'success': False, 'error': error_msg }), 400
             flash(error_msg, 'error')
             return render_template('Login.html')
 
+        usuario = resultado
+        
         # Guardar información del usuario en la sesión
         session['usuario_id'] = usuario['id_usuario']
         session['usuario_email'] = usuario['email']
@@ -795,22 +800,25 @@ def login():
         session['usuario_apellidos'] = usuario['apellidos']
         session['usuario_tipo'] = usuario['tipo_usuario']
         session['logged_in'] = True
+        session.permanent = True  # Hacer la sesión permanente (usa PERMANENT_SESSION_LIFETIME)
 
         print(f"DEBUG: Login exitoso para {email}, tipo: {usuario['tipo_usuario']}")
 
-        # Redirigir según el tipo de usuario
-        if usuario['tipo_usuario'] == 'estudiante':  # Estudiante
-            if request.is_json:
-                return jsonify({ 'success': True, 'redirect': url_for('dashboard_estudiante') })
-            return redirect(url_for('dashboard_estudiante'))
-        elif usuario['tipo_usuario'] == 'docente':  # Docente
-            if request.is_json:
-                return jsonify({ 'success': True, 'redirect': url_for('dashboard_docente') })
-            return redirect(url_for('dashboard_docente'))
-        else:  # Administrador u otros
-            if request.is_json:
-                return jsonify({ 'success': True, 'redirect': url_for('dashboard_admin') })
-            return redirect(url_for('dashboard_admin'))
+        # Determinar ruta de redirección
+        if usuario['tipo_usuario'] == 'estudiante':
+            redirect_url = url_for('dashboard_estudiante')
+        elif usuario['tipo_usuario'] == 'docente':
+            redirect_url = url_for('dashboard_docente')
+        else:
+            redirect_url = url_for('dashboard_admin')
+
+        # Para peticiones web (no API), establecer cookies encriptadas
+        if not request.is_json:
+            response = make_response(redirect(redirect_url))
+            establecer_cookies_usuario(response, usuario['id_usuario'], usuario['nombre'])
+            return response
+        else:
+            return jsonify({ 'success': True, 'redirect': redirect_url })
             
     except Exception as e:
         error_msg = f'Error del sistema: {str(e)}'
@@ -822,41 +830,20 @@ def login():
 
 @app.route('/logout')
 def logout():
-    """Cerrar sesión del usuario"""
+    """Cerrar sesión del usuario y limpiar cookies"""
     session.clear()
     flash('Has cerrado sesión correctamente', 'success')
-    return redirect(url_for('login'))
+    response = make_response(redirect(url_for('login')))
+    # Limpiar cookies encriptadas
+    limpiar_cookies_usuario(response)
+    return response
 
-def login_required(f):
-    """Decorador para requerir login"""
-    def decorated_function(*args, **kwargs):
-        if 'logged_in' not in session or not session['logged_in']:
-            # Si es una petición AJAX, devolver JSON
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return jsonify({'success': False, 'error': 'Sesión expirada', 'redirect': url_for('login')}), 401
-            # Si no es AJAX, redirigir normalmente
-            return redirect(url_for('login'))
-        return f(*args, **kwargs)
-    decorated_function.__name__ = f.__name__
-    return decorated_function
+# Los decoradores login_required, admin_required, docente_required y estudiante_required
+# ahora se importan desde utils_auth
 
 def admin_required(f):
-    """Decorador para requerir permisos de administrador"""
-    def decorated_function(*args, **kwargs):
-        if 'logged_in' not in session or not session['logged_in']:
-            # Si es una petición AJAX, devolver JSON
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return jsonify({'success': False, 'error': 'Sesión expirada', 'redirect': url_for('login')}), 401
-            return redirect(url_for('login'))
-        if session.get('usuario_tipo') == 'estudiante':
-            # Si es una petición AJAX, devolver JSON
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return jsonify({'success': False, 'error': 'No tienes permisos para acceder'}), 403
-            flash('No tienes permisos para acceder a esta sección', 'error')
-            return redirect(url_for('dashboard_estudiante'))
-        return f(*args, **kwargs)
-    decorated_function.__name__ = f.__name__
-    return decorated_function
+    """Decorador para requerir permisos de administrador (alias de docente_required)"""
+    return docente_required(f)
 
 def obtener_partidas_recientes_estudiante(usuario_id, limit=5):
     """Obtiene las partidas recientes de un estudiante (salas y juegos individuales)"""
@@ -985,10 +972,9 @@ def obtener_estadisticas_estudiante(usuario_id):
 
 @app.route('/estudiante')
 @login_required
+@estudiante_required
 def dashboard_estudiante():
-    """Dashboard para estudiantes"""
-    if session.get('usuario_tipo') != 'estudiante':
-        return redirect(url_for('dashboard_admin'))
+    """Dashboard para estudiantes - SOLO estudiantes pueden acceder"""
     
     usuario = {
         'id_usuario': session['usuario_id'],
@@ -1068,8 +1054,9 @@ def dashboard_admin():
 
 @app.route('/docente')
 @login_required
+@docente_required
 def dashboard_docente():
-    """Dashboard específico para docentes"""
+    """Dashboard específico para docentes - SOLO docentes y admin pueden acceder"""
     usuario = {
         'id_usuario': session['usuario_id'],
         'nombre': session['usuario_nombre'],
@@ -1476,6 +1463,8 @@ def error_sistema_page():
 
 # Rutas para salas
 @app.route('/crear-sala', methods=['GET', 'POST'])
+@login_required
+@docente_required
 def crear_sala_route():
     # Validar que solo los docentes pueden crear salas
     if session.get('usuario_tipo') != 'docente':
@@ -1525,6 +1514,8 @@ def crear_sala_route():
         return redirect(url_for('error_sistema_page'))
 
 @app.route('/mis-salas')
+@login_required
+@docente_required
 def mis_salas():
     try:
         # Por ahora mostrar todas las salas, luego filtrar por docente
@@ -1577,6 +1568,8 @@ def unirse_sala_route(codigo):
 
 @app.route('/sala/<int:sala_id>/monitorear')
 @app.route('/monitorear-sala/<int:sala_id>')
+@login_required
+@docente_required
 def monitorear_sala(sala_id):
     try:
         print(f"DEBUG: monitorear_sala - sala_id: {sala_id}")
@@ -1612,6 +1605,8 @@ def monitorear_sala(sala_id):
         return redirect(url_for('mis_cuestionarios'))
 
 @app.route('/sala/<int:sala_id>/iniciar', methods=['POST'])
+@login_required
+@docente_required
 def iniciar_sala(sala_id):
     try:
         resultado = controlador_juego.iniciar_juego_sala(sala_id)
@@ -1982,6 +1977,8 @@ def obtener_detalle_respuestas(sala_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/sala/<int:sala_id>/finalizar', methods=['POST'])
+@login_required
+@docente_required
 def finalizar_juego(sala_id):
     """Finaliza el juego y redirige a resultados"""
     try:
@@ -2536,6 +2533,8 @@ def sala_espera(sala_id):
 
 # Rutas para juegos
 @app.route('/crear-cuestionario', methods=['GET', 'POST'])
+@login_required
+@docente_required
 def crear_cuestionario_route():
     if request.method == 'POST':
         data = request.get_json(silent=True) or request.form.to_dict()
@@ -2867,6 +2866,8 @@ def despublicar_cuestionario_route(cuestionario_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/mis-cuestionarios')
+@login_required
+@docente_required
 def mis_cuestionarios():
     try:
         id_docente = session.get('usuario_id', 1)  # Usar usuario de sesión si está disponible
@@ -2897,6 +2898,8 @@ def ver_cuestionario(cuestionario_id):
         return redirect(url_for('error_sistema_page'))
 
 @app.route('/editar-cuestionario/<int:cuestionario_id>')
+@login_required
+@docente_required
 def editar_cuestionario(cuestionario_id):
     try:
         print(f"DEBUG: Editando cuestionario ID: {cuestionario_id}")

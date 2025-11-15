@@ -6,6 +6,7 @@ from flask import current_app, url_for, render_template
 from flask_mail import Message
 from extensions import mail
 from itsdangerous import URLSafeTimedSerializer
+from utils_auth import hash_password, verificar_password
 
 def obtener_usuario_por_id(usuario_id):
     """Obtener un usuario por su ID"""
@@ -46,9 +47,12 @@ def obtener_todos_usuarios():
 def autenticar_usuario(email, password):
     """
     Autenticar un usuario con email y contraseña.
-    (Versi�n ANTIGUA: Mantenida por sus mensajes de estado detallados)
+    Soporta bcrypt (nuevo) y MD5 (legacy para migración)
     """
     try:
+        if not email or not password:
+            return False, "Email y contraseña son requeridos"
+        
         email = email.strip().lower()
 
         conexion = obtener_conexion()
@@ -66,87 +70,57 @@ def autenticar_usuario(email, password):
             print(f"Usuario no encontrado: {email}")
             return False, "Email o contraseña incorrectos"
 
-        # LÓGICA AÑADIDA PARA VERIFICAR ESTADO (del c�digo ANTIGUO)
+        # Verificar estado de la cuenta
         if usuario['estado'] == 'inactivo':
             print(f"Intento de login para cuenta inactiva: {email}")
-            return False, "Tu cuenta no ha sido activada. Por favor, revisa tu correo electr�nico."
+            return False, "Tu cuenta no ha sido activada. Por favor, revisa tu correo electrónico."
 
         if usuario['estado'] != 'activo':
             print(f"Intento de login para cuenta no activa: {email} (estado: {usuario['estado']})")
             return False, "Tu cuenta está suspendida o inactiva."
 
-        # Verificar la contraseña
-        password_hash = hashlib.md5(password.encode()).hexdigest()
-
-        if usuario['contraseña_hash'] == password_hash:
-            # Contraseña correcta, remover el hash antes de devolver
-            del usuario['contraseña_hash']
-            print(f"Login exitoso para usuario: {email}")
-            return True, usuario
-        else:
-            # También intentar con la contraseña en texto plano por si no está hasheada
-            if usuario['contraseña_hash'] == password:
-                del usuario['contraseña_hash']
-                print(f"Login exitoso para usuario (texto plano): {email}")
-                return True, usuario
-            else:
-                print(f"Contraseña incorrecta para usuario: {email}")
-                return False, "Email o contraseña incorrectos"
-
-    except Exception as e:
-        print(f"Error en autenticación: {e}")
-        return False, "Error interno del sistema."
-    """Autenticar un usuario con email y contraseña"""
-    try:
-        if not email or not password:
-            return False, None
+        # Guardar el hash para verificar si es MD5 después
+        password_hash_original = usuario['contraseña_hash']
+        
+        # Verificar la contraseña usando el nuevo sistema (soporta bcrypt y MD5 legacy)
+        if verificar_password(password, password_hash_original):
+            # Contraseña correcta
+            print(f"✅ Login exitoso para usuario: {email}")
             
-        # Limpiar y normalizar el email
-        email = email.strip().lower()
-        
-        conexion = obtener_conexion()
-        with conexion.cursor(pymysql.cursors.DictCursor) as cursor:
-            # Buscar el usuario por email
-            cursor.execute("""
-                SELECT id_usuario, nombre, apellidos, email, `contraseña_hash`, tipo_usuario, estado
-                FROM usuarios 
-                WHERE email = %s AND estado = 'activo'
-            """, (email,))
-            usuario = cursor.fetchone()
-        conexion.close()
-        
-        if not usuario:
-            print(f"Usuario no encontrado: {email}")
-            return False, None
-        
-        # Verificar la contraseña
-        # Primero intentamos con hash MD5 (m�todo simple)
-        password_hash = hashlib.md5(password.encode()).hexdigest()
-        
-        if usuario['contraseña_hash'] == password_hash:
-            # Contraseña correcta, remover el hash antes de devolver
+            # Si la contraseña NO está en bcrypt (es MD5 legacy), actualizarla a bcrypt
+            if not password_hash_original.startswith('$2b$') and not password_hash_original.startswith('$2a$'):
+                try:
+                    nuevo_hash = hash_password(password)
+                    conexion = obtener_conexion()
+                    with conexion.cursor() as cursor:
+                        cursor.execute("""
+                            UPDATE usuarios 
+                            SET `contraseña_hash` = %s 
+                            WHERE id_usuario = %s
+                        """, (nuevo_hash, usuario['id_usuario']))
+                        conexion.commit()
+                    conexion.close()
+                    print(f"🔄 Contraseña actualizada de MD5 a bcrypt para: {email}")
+                except Exception as e:
+                    print(f"⚠️ No se pudo actualizar contraseña a bcrypt: {e}")
+            
+            # Remover el hash antes de devolver el usuario
             del usuario['contraseña_hash']
-            print(f"Login exitoso para usuario: {email}")
             return True, usuario
         else:
-            # También intentar con la contraseña en texto plano por si no está hasheada
-            if usuario['contraseña_hash'] == password:
-                del usuario['contraseña_hash']
-                print(f"Login exitoso para usuario (texto plano): {email}")
-                return True, usuario
-            else:
-                print(f"Contraseña incorrecta para usuario: {email}")
-                return False, None
-                
+            print(f"❌ Contraseña incorrecta para usuario: {email}")
+            return False, "Email o contraseña incorrectos"
+
     except Exception as e:
-        print(f"Error en autenticación: {e}")
-        return False, None
+        print(f"❌ Error en autenticación: {e}")
+        import traceback
+        traceback.print_exc()
+        return False, "Error interno del sistema."
 
 def crear_usuario(nombre, apellidos, email, password, tipo_usuario='estudiante'):
-
-    """Crear un nuevo usuario"""
+    """Crear un nuevo usuario con contraseña hasheada en bcrypt"""
     try:
-        print(f"DEBUG crear_usuario: nombre='{nombre}', apellidos='{apellidos}', email='{email}', password='{password}', tipo='{tipo_usuario}'")
+        print(f"DEBUG crear_usuario: nombre='{nombre}', apellidos='{apellidos}', email='{email}', tipo='{tipo_usuario}'")
         
         if not all([nombre, apellidos, email, password]):
             print(f"DEBUG: Campos faltantes - nombre: {bool(nombre)}, apellidos: {bool(apellidos)}, email: {bool(email)}, password: {bool(password)}")
@@ -157,12 +131,10 @@ def crear_usuario(nombre, apellidos, email, password, tipo_usuario='estudiante')
         nombre = nombre.strip()
         apellidos = apellidos.strip()
         
+        # Hash de la contraseña con bcrypt (SEGURO)
+        password_hash = hash_password(password)
         
-        
-        # Hash de la contraseña
-        password_hash = hashlib.md5(password.encode()).hexdigest()
-        
-        # Determinar el estado inicial seg�n si el correo está habilitado
+        # Determinar el estado inicial según si el correo está habilitado
         from flask import current_app
         mail_enabled = current_app.config.get('MAIL_ENABLED', False)
         estado_inicial = 'inactivo' if mail_enabled else 'activo'
@@ -185,11 +157,13 @@ def crear_usuario(nombre, apellidos, email, password, tipo_usuario='estudiante')
             usuario_id = cursor.lastrowid
         conexion.close()
         
-        print(f"Usuario creado exitosamente: {email}")
+        print(f"✅ Usuario creado exitosamente con bcrypt: {email}")
         return True, usuario_id
         
     except Exception as e:
-        print(f"Error al crear usuario: {e}")
+        print(f"❌ Error al crear usuario: {e}")
+        import traceback
+        traceback.print_exc()
         return False, str(e)
 
 
@@ -318,18 +292,14 @@ def verificar_contrasena_unica(password, excluir_usuario_id=None):
         print(f"Error al verificar contraseña: {e}")
         return True  # En caso de error, permitir la contraseña (comportamiento seguro)
 
-# --- Funci�n del C�DIGO ANTIGUO ---
 def actualizar_usuario(usuario_id, nombre, apellidos, email, password=None):
     """Actualizar datos personales del usuario (propio perfil)"""
     try:
         conexion = obtener_conexion()
         with conexion.cursor() as cursor:
             if password:
-                # (NOTA: Se podr�a a�adir la verificación de contraseña �nica aqu� tambi�n si se desea)
-                # if not verificar_contrasena_unica(password, excluir_usuario_id=usuario_id):
-                #     return False, "Esa contraseña ya está en uso."
-                
-                password_hash = hashlib.md5(password.encode()).hexdigest()
+                # Hashear la nueva contraseña con bcrypt
+                password_hash = hash_password(password)
                 cursor.execute("""
                     UPDATE usuarios
                     SET nombre = %s, apellidos = %s, email = %s, `contraseña_hash` = %s
@@ -343,9 +313,10 @@ def actualizar_usuario(usuario_id, nombre, apellidos, email, password=None):
                 """, (nombre, apellidos, email, usuario_id))
             conexion.commit()
         conexion.close()
+        print(f"✅ Perfil actualizado para usuario ID: {usuario_id}")
         return True, "Perfil actualizado correctamente"
     except Exception as e:
-        print(f"Error al actualizar usuario: {e}")
+        print(f"❌ Error al actualizar usuario: {e}")
         return False, str(e)
 
 # --- Funci�n del C�DIGO NUEVO ---
@@ -557,12 +528,12 @@ def restablecer_contrasena(email, nueva_contrasena):
             
             if usuario['estado'] != 'activo':
                 conexion.close()
-                return False, "Esta cuenta no estÃ¡ activa."
+                return False, "Esta cuenta no está activa."
             
-            # Hashear la nueva contraseña
-            password_hash = hashlib.md5(nueva_contrasena.encode()).hexdigest()
+            # Hashear la nueva contraseña con bcrypt (SEGURO)
+            password_hash = hash_password(nueva_contrasena)
             
-            # Actualizar la contraseña (usar backticks para evitar problemas de encoding)
+            # Actualizar la contraseña
             cursor.execute("""
                 UPDATE usuarios 
                 SET `contraseña_hash` = %s
