@@ -71,11 +71,8 @@ app.secret_key = app_config.SECRET_KEY
 
 mail.init_app(app)
 
-# Serializador para tokens de email
+# Serializador para tokens de email (DEBE usar la MISMA SECRET_KEY durante toda la ejecución)
 serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
-
-app.debug = True
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'super-secret-key-cambiar-en-produccion')
 
 # Configurar clave para Flask-JWT-Extended (usar la misma SECRET_KEY por compatibilidad)
 app.config['JWT_SECRET_KEY'] = app.config['SECRET_KEY']
@@ -480,6 +477,8 @@ def registrarse():
 def confirmar_email(token):
     """Confirmar email de usuario mediante token"""
     try:
+        print(f"🔐 Intentando confirmar con token: {token[:20]}...")
+        
         # Intentar decodificar el token (válido por 1 hora)
         email = serializer.loads(token, salt='email-confirm-salt', max_age=3600)
         print(f"✅ Token válido para email: {email}")
@@ -491,16 +490,25 @@ def confirmar_email(token):
             flash(message, 'success')
             print(f"✅ Cuenta activada exitosamente: {email}")
         else:
-            flash(message, 'danger')
+            flash(f"Error al activar la cuenta: {message}", 'error')
             print(f"⚠️ Error al activar cuenta: {message}")
         
         return redirect(url_for('login'))
         
     except Exception as e:
-        print(f"❌ Error al confirmar email con token: {e}")
+        error_type = type(e).__name__
+        print(f"❌ Error al confirmar email ({error_type}): {e}")
         import traceback
         traceback.print_exc()
-        flash('El enlace de confirmación es inválido o ha expirado. Por favor, solicita un nuevo correo de confirmación.', 'danger')
+        
+        # Mensajes de error más específicos
+        if 'expired' in str(e).lower() or 'Signature expired' in str(e):
+            flash('El enlace de confirmación ha expirado (válido por 1 hora). Por favor, solicita un nuevo correo de confirmación.', 'error')
+        elif 'bad' in str(e).lower() or 'invalid' in str(e).lower():
+            flash('El enlace de confirmación es inválido. Por favor, verifica que copiaste la URL completa o solicita un nuevo correo.', 'error')
+        else:
+            flash('Error al procesar la confirmación. Por favor, intenta nuevamente o solicita un nuevo correo de confirmación.', 'error')
+        
         return redirect(url_for('login'))
 
 # ========== RECUPERACIÓN DE CONTRASEÑA ==========
@@ -753,8 +761,8 @@ def jwt_login():
         
         usuario = resultado
         
-        # Crear token JWT con el ID del usuario usando nuestra función personalizada
-        access_token = crear_token_jwt(usuario['id_usuario'], expiracion_horas=24)
+        # Crear token JWT con el ID del usuario como STRING (Flask-JWT-Extended lo requiere)
+        access_token = crear_token_jwt(str(usuario['id_usuario']), expiracion_horas=24)
         
         # Retornar token y datos del usuario (sin contraseña)
         return jsonify({

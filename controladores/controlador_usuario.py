@@ -229,29 +229,58 @@ def enviar_correo_confirmacion(email):
 # --- Funci�n del C�DIGO ANTIGUO (necesaria para 'crear_usuario') ---
 def activar_cuenta_usuario(email):
     """Cambia el estado de un usuario de 'inactivo' a 'activo'."""
+    conexion = None
     try:
+        print(f"🔍 Activando cuenta para: {email}")
+        email = email.strip().lower()
+        
         conexion = obtener_conexion()
-        with conexion.cursor() as cursor:
-            # Primero, verificar que el usuario existe y está inactivo
-            cursor.execute("SELECT estado FROM usuarios WHERE email = %s", (email,))
-            resultado = cursor.fetchone()
+        cursor = conexion.cursor()
+        
+        # Primero, verificar que el usuario existe
+        cursor.execute("SELECT id_usuario, estado FROM usuarios WHERE email = %s", (email,))
+        resultado = cursor.fetchone()
+        
+        print(f"🔍 Resultado de búsqueda: {resultado}")
 
-            if not resultado:
-                return False, "El usuario no existe."
+        if not resultado:
+            print(f"❌ Usuario no encontrado: {email}")
+            cursor.close()
+            conexion.close()
+            return False, "El usuario no existe."
 
-            if resultado[0] == 'activo':
-                return True, "Tu cuenta ya ha sido activada previamente. Ya puedes iniciar sesion."
+        estado_actual = resultado[1]
+        print(f"🔍 Estado actual: {estado_actual}")
+        
+        if estado_actual == 'activo':
+            print(f"✅ Cuenta ya estaba activa: {email}")
+            cursor.close()
+            conexion.close()
+            return True, "Tu cuenta ya ha sido activada previamente. Ya puedes iniciar sesión."
 
-            # Actualizar el estado a 'activo'
-            cursor.execute("UPDATE usuarios SET estado = 'activo' WHERE email = %s", (email,))
-            conexion.commit()
-
+        # Actualizar el estado a 'activo'
+        print(f"📝 Actualizando estado a 'activo' para: {email}")
+        cursor.execute("UPDATE usuarios SET estado = 'activo' WHERE email = %s", (email,))
+        filas_afectadas = cursor.rowcount
+        print(f"📝 Filas afectadas: {filas_afectadas}")
+        
+        conexion.commit()
+        cursor.close()
         conexion.close()
-        return True, "Tu cuenta ha sido activada! Ahora puedes iniciar sesion."
+        
+        print(f"✅ Cuenta activada exitosamente: {email}")
+        return True, "¡Tu cuenta ha sido activada! Ahora puedes iniciar sesión."
 
     except Exception as e:
-        print(f"Error al activar la cuenta de {email}: {e}")
-        return False, "Ocurri� un error al activar tu cuenta."
+        print(f"❌ ERROR al activar la cuenta de {email}: {e}")
+        import traceback
+        traceback.print_exc()
+        if conexion:
+            try:
+                conexion.close()
+            except:
+                pass
+        return False, "Ocurrió un error al activar tu cuenta. Por favor, contacta a soporte."
 
 
 def verificar_email_disponible(email):
