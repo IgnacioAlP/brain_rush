@@ -44,21 +44,44 @@ def api_registrar_usuario():
     """Registrar nuevo usuario"""
     try:
         data = request.get_json()
+        
+        # Validar datos requeridos
+        if not data:
+            return respuesta_error('No se enviaron datos', 400)
+        
+        nombre = data.get('nombre')
+        apellidos = data.get('apellidos')
+        email = data.get('email')
+        contraseña = data.get('contraseña_hash')  # Recibir como contraseña_hash para compatibilidad
+        tipo_usuario = data.get('tipo_usuario', 'estudiante')
+        estado = data.get('estado', 'activo')
+        
+        # Validar campos requeridos
+        if not all([nombre, apellidos, email, contraseña]):
+            return respuesta_error('Faltan campos requeridos: nombre, apellidos, email, contraseña_hash', 400)
+        
+        # Hashear la contraseña si no está hasheada
+        import bcrypt
+        if len(contraseña) < 50:  # Si no es un hash bcrypt (que tiene ~60 caracteres)
+            contraseña_hash = bcrypt.hashpw(contraseña.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        else:
+            contraseña_hash = contraseña
+        
         conexion = obtener_conexion()
         cursor = conexion.cursor()
         
         cursor.execute("""
             INSERT INTO usuarios (nombre, apellidos, email, contraseña_hash, tipo_usuario, estado)
             VALUES (%s, %s, %s, %s, %s, %s)
-        """, (data.get('nombre'), data.get('apellidos'), data.get('email'), 
-              data.get('contraseña_hash'), data.get('tipo_usuario', 'estudiante'), 
-              data.get('estado', 'activo')))
+        """, (nombre, apellidos, email, contraseña_hash, tipo_usuario, estado))
         
         conexion.commit()
         usuario_id = cursor.lastrowid
         conexion.close()
         
         return respuesta_exito({'id_usuario': usuario_id}, 'Usuario registrado exitosamente', 201)
+    except pymysql.IntegrityError as e:
+        return respuesta_error(f'Email ya registrado: {str(e)}', 409)
     except Exception as e:
         return respuesta_error(f'Error al registrar usuario: {str(e)}', 500)
 
@@ -120,6 +143,10 @@ def api_obtener_usuario(usuario_id):
 def api_obtener_usuarios():
     """Obtener todos los usuarios"""
     try:
+        # Verificar autenticación
+        usuario_actual = obtener_usuario_actual()
+        print(f"✅ Usuario autenticado: {usuario_actual}")
+        
         conexion = obtener_conexion()
         cursor = conexion.cursor(pymysql.cursors.DictCursor)
         
@@ -131,8 +158,13 @@ def api_obtener_usuarios():
         usuarios = cursor.fetchall()
         conexion.close()
         
-        return respuesta_exito(usuarios if usuarios else [])
+        print(f"📊 Usuarios encontrados: {len(usuarios)}")
+        
+        return respuesta_exito(usuarios if usuarios else [], f'{len(usuarios)} usuarios encontrados')
     except Exception as e:
+        print(f"❌ Error en api_obtener_usuarios: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return respuesta_error(f'Error al obtener usuarios: {str(e)}', 500)
 
 @api_crud.route('/usuarios/<int:usuario_id>', methods=['DELETE'])

@@ -6,15 +6,25 @@
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"auth": {
-		"type": "bearer",
-		"bearer": [
-			{
-				"key": "token",
-				"value": "{{jwt_token}}",
-				"type": "string"
-			}
-		]
+		"type": "noauth"
 	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Agregar header JWT automáticamente si existe el token",
+					"if (pm.collectionVariables.get('jwt_token')) {",
+					"    pm.request.headers.add({",
+					"        key: 'Authorization',",
+					"        value: 'JWT ' + pm.collectionVariables.get('jwt_token')",
+					"    });",
+					"}"
+				]
+			}
+		}
+	],
 	"variable": [
 		{
 			"key": "base_url",
