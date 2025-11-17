@@ -1,0 +1,727 @@
+{
+	"info": {
+		"_postman_id": "brain-rush-api-complete-part4",
+		"name": "Brain Rush API Complete - Part 4 (Roles + Estado + Relaciones)",
+		"description": "Colección completa de APIs CRUD para Brain Rush - Parte 4 (Final)\nBase URL: https://proyectoweb20252.pythonanywhere.com",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{jwt_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "https://proyectoweb20252.pythonanywhere.com",
+			"type": "string"
+		},
+		{
+			"key": "jwt_token",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "Roles",
+			"item": [
+				{
+					"name": "Crear Rol",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"nombre_rol\": \"Moderador\",\n    \"descripcion\": \"Usuario con permisos de moderación\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/roles",
+							"host": ["{{base_url}}"],
+							"path": ["api", "roles"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Actualizar Rol",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"nombre_rol\": \"Super Moderador\",\n    \"descripcion\": \"Usuario con permisos avanzados de moderación\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/roles/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "roles", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener Rol por ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/roles/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "roles", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener Todos los Roles",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/roles",
+							"host": ["{{base_url}}"],
+							"path": ["api", "roles"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Eliminar Rol",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/roles/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "roles", "1"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Usuario Roles",
+			"item": [
+				{
+					"name": "Asignar Rol a Usuario",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id_usuario\": 1,\n    \"id_rol\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/usuario-roles",
+							"host": ["{{base_url}}"],
+							"path": ["api", "usuario-roles"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Actualizar Asignación de Rol",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id_rol\": 2\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/usuario-roles/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "usuario-roles", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener Asignación por ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/usuario-roles/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "usuario-roles", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener Todas las Asignaciones",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/usuario-roles",
+							"host": ["{{base_url}}"],
+							"path": ["api", "usuario-roles"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Eliminar Asignación de Rol",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/usuario-roles/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "usuario-roles", "1"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Cuestionario Preguntas",
+			"item": [
+				{
+					"name": "Asignar Pregunta a Cuestionario",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id_cuestionario\": 1,\n    \"id_pregunta\": 1,\n    \"orden\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/cuestionario-preguntas",
+							"host": ["{{base_url}}"],
+							"path": ["api", "cuestionario-preguntas"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Actualizar Orden de Pregunta",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"orden\": 5\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/cuestionario-preguntas/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "cuestionario-preguntas", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener Asignación por ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/cuestionario-preguntas/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "cuestionario-preguntas", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener Preguntas de Cuestionario",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/cuestionarios/1/preguntas",
+							"host": ["{{base_url}}"],
+							"path": ["api", "cuestionarios", "1", "preguntas"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Eliminar Pregunta de Cuestionario",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/cuestionario-preguntas/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "cuestionario-preguntas", "1"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Estado Juego Sala",
+			"item": [
+				{
+					"name": "Crear Estado",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id_sala\": 1,\n    \"estado\": \"esperando\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/estado-juego-sala",
+							"host": ["{{base_url}}"],
+							"path": ["api", "estado-juego-sala"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Actualizar Estado",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"estado\": \"en_curso\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/estado-juego-sala/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "estado-juego-sala", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener Estado por ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/estado-juego-sala/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "estado-juego-sala", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener Estados de Sala",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/salas-juego/1/estado",
+							"host": ["{{base_url}}"],
+							"path": ["api", "salas-juego", "1", "estado"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Eliminar Estado",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/estado-juego-sala/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "estado-juego-sala", "1"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Participaciones",
+			"item": [
+				{
+					"name": "Crear Participación",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id_estudiante\": 1,\n    \"id_cuestionario\": 1,\n    \"puntaje_total\": 0\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/participaciones",
+							"host": ["{{base_url}}"],
+							"path": ["api", "participaciones"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Actualizar Participación",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"puntaje_total\": 85\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/participaciones/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "participaciones", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener Participación por ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/participaciones/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "participaciones", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener Todas las Participaciones",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/participaciones",
+							"host": ["{{base_url}}"],
+							"path": ["api", "participaciones"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Eliminar Participación",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/participaciones/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "participaciones", "1"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Respuestas Estudiantes",
+			"item": [
+				{
+					"name": "Crear Respuesta",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id_estudiante\": 1,\n    \"id_cuestionario_pregunta\": 1,\n    \"respuesta_texto\": \"Respuesta del estudiante\",\n    \"id_opcion_seleccionada\": 1,\n    \"puntaje_obtenido\": 10\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/respuestas-estudiantes",
+							"host": ["{{base_url}}"],
+							"path": ["api", "respuestas-estudiantes"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Actualizar Respuesta",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"puntaje_obtenido\": 15\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/respuestas-estudiantes/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "respuestas-estudiantes", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener Respuesta por ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/respuestas-estudiantes/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "respuestas-estudiantes", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener Todas las Respuestas",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/respuestas-estudiantes",
+							"host": ["{{base_url}}"],
+							"path": ["api", "respuestas-estudiantes"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Eliminar Respuesta",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/respuestas-estudiantes/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "respuestas-estudiantes", "1"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Ranking",
+			"item": [
+				{
+					"name": "Crear Ranking",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id_usuario\": 1,\n    \"id_sala\": 1,\n    \"puntaje_total\": 100,\n    \"posicion\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/ranking",
+							"host": ["{{base_url}}"],
+							"path": ["api", "ranking"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Actualizar Ranking",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"puntaje_total\": 150,\n    \"posicion\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/ranking/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "ranking", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener Ranking por ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/ranking/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "ranking", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener Todos los Rankings",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/ranking",
+							"host": ["{{base_url}}"],
+							"path": ["api", "ranking"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Eliminar Ranking",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/ranking/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "ranking", "1"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Recompensas Otorgadas",
+			"item": [
+				{
+					"name": "Otorgar Recompensa",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id_estudiante\": 1,\n    \"id_recompensa\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/recompensas-otorgadas",
+							"host": ["{{base_url}}"],
+							"path": ["api", "recompensas-otorgadas"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener Recompensa Otorgada por ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/recompensas-otorgadas/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "recompensas-otorgadas", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener Recompensas de Estudiante",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/estudiantes/1/recompensas",
+							"host": ["{{base_url}}"],
+							"path": ["api", "estudiantes", "1", "recompensas"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener Todas las Recompensas Otorgadas",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/recompensas-otorgadas",
+							"host": ["{{base_url}}"],
+							"path": ["api", "recompensas-otorgadas"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Eliminar Recompensa Otorgada",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/recompensas-otorgadas/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "recompensas-otorgadas", "1"]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

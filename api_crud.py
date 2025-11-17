@@ -1993,7 +1993,7 @@ def api_eliminar_respuesta_participante(respuesta_id):
     try:
         conexion = obtener_conexion()
         cursor = conexion.cursor()
-        cursor.execute("DELETE FROM respuestas_participantes WHERE id_respuesta = %s", (respuesta_id,))
+        cursor.execute("DELETE FROM respuestas_participantes WHERE id_respuesta_participante = %s", (respuesta_id,))
         conexion.commit()
         conexion.close()
         return respuesta_exito(None, 'Respuesta eliminada exitosamente')
@@ -2054,3 +2054,39 @@ def api_obtener_ranking(ranking_id):
         return respuesta_exito(ranking)
     except Exception as e:
         return respuesta_error(f'Error al obtener ranking: {str(e)}', 500)
+
+@api_crud.route('/ranking', methods=['GET'])
+@jwt_required()
+def api_obtener_rankings():
+    """Obtener todos los rankings"""
+    try:
+        conexion = obtener_conexion()
+        cursor = conexion.cursor(pymysql.cursors.DictCursor)
+        cursor.execute("SELECT * FROM ranking ORDER BY puntaje_total DESC")
+        rankings = cursor.fetchall()
+        conexion.close()
+        return respuesta_exito(rankings if rankings else [])
+    except Exception as e:
+        return respuesta_error(f'Error al obtener rankings: {str(e)}', 500)
+
+@api_crud.route('/ranking/<int:ranking_id>', methods=['DELETE'])
+@jwt_required()
+def api_eliminar_ranking(ranking_id):
+    """Eliminar un ranking"""
+    try:
+        conexion = obtener_conexion()
+        cursor = conexion.cursor()
+        cursor.execute("DELETE FROM ranking WHERE id_ranking = %s", (ranking_id,))
+        conexion.commit()
+        conexion.close()
+        return respuesta_exito(None, 'Ranking eliminado exitosamente')
+    except Exception as e:
+        return respuesta_error(f'Error al eliminar ranking: {str(e)}', 500)
+
+# ================================================================================
+# FIN DEL MÓDULO API CRUD
+# ================================================================================
+# Total de tablas cubiertas: 24
+# Cada tabla tiene 5 endpoints: POST (crear), PUT (actualizar), GET uno, GET lista, DELETE
+# Todos los endpoints requieren autenticación JWT mediante @jwt_required()
+# ================================================================================

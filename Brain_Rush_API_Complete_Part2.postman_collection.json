@@ -1,0 +1,472 @@
+{
+	"info": {
+		"_postman_id": "brain-rush-api-complete-part2",
+		"name": "Brain Rush API Complete - Part 2 (Salas + Grupos + Participantes)",
+		"description": "Colección completa de APIs CRUD para Brain Rush - Parte 2\nBase URL: https://proyectoweb20252.pythonanywhere.com",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{jwt_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "https://proyectoweb20252.pythonanywhere.com",
+			"type": "string"
+		},
+		{
+			"key": "jwt_token",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "Salas de Juego",
+			"item": [
+				{
+					"name": "Crear Sala",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"pin_sala\": \"123456\",\n    \"id_cuestionario\": 1,\n    \"modo_juego\": \"individual\",\n    \"estado\": \"esperando\",\n    \"tiempo_por_pregunta\": 30\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/salas-juego",
+							"host": ["{{base_url}}"],
+							"path": ["api", "salas-juego"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Actualizar Sala",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"estado\": \"en_curso\",\n    \"tiempo_por_pregunta\": 45\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/salas-juego/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "salas-juego", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener Sala por ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/salas-juego/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "salas-juego", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener Todas las Salas",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/salas-juego",
+							"host": ["{{base_url}}"],
+							"path": ["api", "salas-juego"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Eliminar Sala",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/salas-juego/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "salas-juego", "1"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Grupos Sala",
+			"item": [
+				{
+					"name": "Crear Grupo",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id_sala\": 1,\n    \"numero_grupo\": 1,\n    \"nombre_grupo\": \"Grupo A\",\n    \"capacidad\": 5\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/grupos-sala",
+							"host": ["{{base_url}}"],
+							"path": ["api", "grupos-sala"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Actualizar Grupo",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"nombre_grupo\": \"Equipo Alpha\",\n    \"capacidad\": 6\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/grupos-sala/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "grupos-sala", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener Grupo por ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/grupos-sala/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "grupos-sala", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener Grupos de una Sala",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/salas-juego/1/grupos",
+							"host": ["{{base_url}}"],
+							"path": ["api", "salas-juego", "1", "grupos"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Eliminar Grupo",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/grupos-sala/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "grupos-sala", "1"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Participantes Sala",
+			"item": [
+				{
+					"name": "Crear Participante",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id_sala\": 1,\n    \"nombre_participante\": \"María García\",\n    \"id_grupo\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/participantes-sala",
+							"host": ["{{base_url}}"],
+							"path": ["api", "participantes-sala"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Actualizar Participante",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"nombre_participante\": \"María García López\",\n    \"estado\": \"jugando\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/participantes-sala/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "participantes-sala", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener Participante por ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/participantes-sala/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "participantes-sala", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener Participantes de una Sala",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/salas-juego/1/participantes",
+							"host": ["{{base_url}}"],
+							"path": ["api", "salas-juego", "1", "participantes"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Eliminar Participante",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/participantes-sala/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "participantes-sala", "1"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Ranking Sala",
+			"item": [
+				{
+					"name": "Crear Ranking",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id_participante\": 1,\n    \"id_sala\": 1,\n    \"puntaje_total\": 100,\n    \"respuestas_correctas\": 8,\n    \"tiempo_total_respuestas\": 120.5,\n    \"posicion\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/ranking-sala",
+							"host": ["{{base_url}}"],
+							"path": ["api", "ranking-sala"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Actualizar Ranking",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"puntaje_total\": 150,\n    \"respuestas_correctas\": 10,\n    \"posicion\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/ranking-sala/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "ranking-sala", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener Ranking por ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/ranking-sala/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "ranking-sala", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener Ranking de una Sala",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/salas-juego/1/ranking",
+							"host": ["{{base_url}}"],
+							"path": ["api", "salas-juego", "1", "ranking"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Eliminar Ranking",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/ranking-sala/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "ranking-sala", "1"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Respuestas Participantes",
+			"item": [
+				{
+					"name": "Crear Respuesta",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id_participante\": 1,\n    \"id_pregunta\": 1,\n    \"id_opcion\": 1,\n    \"correcta\": 1,\n    \"tiempo_respuesta\": 15.5\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/respuestas-participantes",
+							"host": ["{{base_url}}"],
+							"path": ["api", "respuestas-participantes"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Actualizar Respuesta",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id_opcion\": 2,\n    \"correcta\": 0,\n    \"tiempo_respuesta\": 20.0\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/respuestas-participantes/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "respuestas-participantes", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener Respuesta por ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/respuestas-participantes/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "respuestas-participantes", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Obtener Respuestas de Participante",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/participantes-sala/1/respuestas",
+							"host": ["{{base_url}}"],
+							"path": ["api", "participantes-sala", "1", "respuestas"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Eliminar Respuesta",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/respuestas-participantes/1",
+							"host": ["{{base_url}}"],
+							"path": ["api", "respuestas-participantes", "1"]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}
