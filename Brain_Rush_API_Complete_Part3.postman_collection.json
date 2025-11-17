@@ -1,8 +1,8 @@
-{
+﻿{
 	"info": {
 		"_postman_id": "brain-rush-api-complete-part3",
 		"name": "Brain Rush API Complete - Part 3 (XP + Insignias + Recompensas)",
-		"description": "Colección completa de APIs CRUD para Brain Rush - Parte 3\nBase URL: https://proyectoweb20252.pythonanywhere.com",
+		"description": "ColecciÃ³n completa de APIs CRUD para Brain Rush - Parte 3\nBase URL: https://proyectoweb20252.pythonanywhere.com",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"auth": {
@@ -117,7 +117,7 @@
 			]
 		},
 		{
-			"name": "Insignias Catálogo",
+			"name": "Insignias CatÃ¡logo",
 			"item": [
 				{
 					"name": "Crear Insignia",
@@ -131,7 +131,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"nombre\": \"Primer Paso\",\n    \"descripcion\": \"Completa tu primera partida\",\n    \"icono\": \"🏆\",\n    \"tipo\": \"bronce\",\n    \"requisito_tipo\": \"partidas\",\n    \"requisito_valor\": 1,\n    \"xp_bonus\": 50,\n    \"rareza\": \"comun\",\n    \"precio_xp\": 0\n}"
+							"raw": "{\n    \"nombre\": \"Primer Paso\",\n    \"descripcion\": \"Completa tu primera partida\",\n    \"icono\": \"ðŸ†\",\n    \"tipo\": \"bronce\",\n    \"requisito_tipo\": \"partidas\",\n    \"requisito_valor\": 1,\n    \"xp_bonus\": 50,\n    \"rareza\": \"comun\",\n    \"precio_xp\": 0\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/insignias-catalogo",
@@ -425,10 +425,10 @@
 			]
 		},
 		{
-			"name": "Estadísticas Juego",
+			"name": "EstadÃ­sticas Juego",
 			"item": [
 				{
-					"name": "Crear Estadísticas",
+					"name": "Crear EstadÃ­sticas",
 					"request": {
 						"method": "POST",
 						"header": [
@@ -450,7 +450,7 @@
 					"response": []
 				},
 				{
-					"name": "Actualizar Estadísticas",
+					"name": "Actualizar EstadÃ­sticas",
 					"request": {
 						"method": "PUT",
 						"header": [
@@ -472,7 +472,7 @@
 					"response": []
 				},
 				{
-					"name": "Obtener Estadísticas por Usuario",
+					"name": "Obtener EstadÃ­sticas por Usuario",
 					"request": {
 						"method": "GET",
 						"header": [],
@@ -485,7 +485,7 @@
 					"response": []
 				},
 				{
-					"name": "Obtener Todas las Estadísticas",
+					"name": "Obtener Todas las EstadÃ­sticas",
 					"request": {
 						"method": "GET",
 						"header": [],
@@ -498,7 +498,7 @@
 					"response": []
 				},
 				{
-					"name": "Eliminar Estadísticas",
+					"name": "Eliminar EstadÃ­sticas",
 					"request": {
 						"method": "DELETE",
 						"header": [],
@@ -602,3 +602,4 @@
 		}
 	]
 }
+

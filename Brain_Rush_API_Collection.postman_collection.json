@@ -1,8 +1,8 @@
-{
+﻿{
   "info": {
     "_postman_id": "brain-rush-api-collection",
     "name": "Brain Rush - API CRUD (JWT Secured)",
-    "description": "Colección completa de APIs CRUD para todas las tablas de Brain Rush con seguridad JWT",
+    "description": "ColecciÃ³n completa de APIs CRUD para todas las tablas de Brain Rush con seguridad JWT",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -17,7 +17,7 @@
   },
   "item": [
     {
-      "name": "📋 Autenticación",
+      "name": "ðŸ“‹ AutenticaciÃ³n",
       "item": [
         {
           "name": "Login - Obtener JWT Token",
@@ -38,7 +38,7 @@
               "host": ["{{base_url}}"],
               "path": ["jwt_login"]
             },
-            "description": "Obtener token JWT para autenticación"
+            "description": "Obtener token JWT para autenticaciÃ³n"
           },
           "response": [
             {
@@ -66,7 +66,7 @@
       ]
     },
     {
-      "name": "👥 Usuarios",
+      "name": "ðŸ‘¥ Usuarios",
       "item": [
         {
           "name": "Crear Usuario",
@@ -79,13 +79,13 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{jwt_token}}",
+                "value": "JWT {{jwt_token}}",
                 "type": "text"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Juan\",\n  \"apellidos\": \"Pérez García\",\n  \"email\": \"juan.perez@example.com\",\n  \"contraseña_hash\": \"$2b$12$hashedpassword...\",\n  \"tipo_usuario\": \"estudiante\",\n  \"estado\": \"activo\"\n}"
+              "raw": "{\n  \"nombre\": \"Juan\",\n  \"apellidos\": \"PÃ©rez GarcÃ­a\",\n  \"email\": \"juan.perez@example.com\",\n  \"contraseÃ±a_hash\": \"$2b$12$hashedpassword...\",\n  \"tipo_usuario\": \"estudiante\",\n  \"estado\": \"activo\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/usuarios",
@@ -101,7 +101,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{jwt_token}}",
+                "value": "JWT {{jwt_token}}",
                 "type": "text"
               }
             ],
@@ -119,7 +119,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{jwt_token}}",
+                "value": "JWT {{jwt_token}}",
                 "type": "text"
               }
             ],
@@ -141,7 +141,7 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{jwt_token}}",
+                "value": "JWT {{jwt_token}}",
                 "type": "text"
               }
             ],
@@ -163,7 +163,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{jwt_token}}",
+                "value": "JWT {{jwt_token}}",
                 "type": "text"
               }
             ],
@@ -177,7 +177,7 @@
       ]
     },
     {
-      "name": "❓ Cuestionarios",
+      "name": "â“ Cuestionarios",
       "item": [
         {
           "name": "Crear Cuestionario",
@@ -190,13 +190,13 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{jwt_token}}",
+                "value": "JWT {{jwt_token}}",
                 "type": "text"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"titulo\": \"Matemáticas Básicas\",\n  \"descripcion\": \"Cuestionario sobre operaciones matemáticas básicas\",\n  \"estado\": \"borrador\"\n}"
+              "raw": "{\n  \"titulo\": \"MatemÃ¡ticas BÃ¡sicas\",\n  \"descripcion\": \"Cuestionario sobre operaciones matemÃ¡ticas bÃ¡sicas\",\n  \"estado\": \"borrador\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/cuestionarios",
@@ -212,7 +212,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{jwt_token}}",
+                "value": "JWT {{jwt_token}}",
                 "type": "text"
               }
             ],
@@ -230,7 +230,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{jwt_token}}",
+                "value": "JWT {{jwt_token}}",
                 "type": "text"
               }
             ],
@@ -252,13 +252,13 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{jwt_token}}",
+                "value": "JWT {{jwt_token}}",
                 "type": "text"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"titulo\": \"Matemáticas Avanzadas\",\n  \"estado\": \"publicado\"\n}"
+              "raw": "{\n  \"titulo\": \"MatemÃ¡ticas Avanzadas\",\n  \"estado\": \"publicado\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/cuestionarios/1",
@@ -274,7 +274,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{jwt_token}}",
+                "value": "JWT {{jwt_token}}",
                 "type": "text"
               }
             ],
@@ -288,7 +288,7 @@
       ]
     },
     {
-      "name": "🎯 Preguntas",
+      "name": "ðŸŽ¯ Preguntas",
       "item": [
         {
           "name": "Crear Pregunta",
@@ -301,13 +301,13 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{jwt_token}}",
+                "value": "JWT {{jwt_token}}",
                 "type": "text"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"enunciado\": \"¿Cuál es la raíz cuadrada de 16?\",\n  \"tipo\": \"opcion_multiple\",\n  \"puntaje_base\": 10,\n  \"tiempo_sugerido\": 30\n}"
+              "raw": "{\n  \"enunciado\": \"Â¿CuÃ¡l es la raÃ­z cuadrada de 16?\",\n  \"tipo\": \"opcion_multiple\",\n  \"puntaje_base\": 10,\n  \"tiempo_sugerido\": 30\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/preguntas",
@@ -323,7 +323,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{jwt_token}}",
+                "value": "JWT {{jwt_token}}",
                 "type": "text"
               }
             ],
@@ -341,7 +341,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{jwt_token}}",
+                "value": "JWT {{jwt_token}}",
                 "type": "text"
               }
             ],
@@ -363,13 +363,13 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{jwt_token}}",
+                "value": "JWT {{jwt_token}}",
                 "type": "text"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"enunciado\": \"¿Cuál es la raíz cuadrada de 25?\",\n  \"puntaje_base\": 15\n}"
+              "raw": "{\n  \"enunciado\": \"Â¿CuÃ¡l es la raÃ­z cuadrada de 25?\",\n  \"puntaje_base\": 15\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/preguntas/1",
@@ -385,7 +385,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{jwt_token}}",
+                "value": "JWT {{jwt_token}}",
                 "type": "text"
               }
             ],
@@ -399,10 +399,10 @@
       ]
     },
     {
-      "name": "🔘 Opciones de Respuesta",
+      "name": "ðŸ”˜ Opciones de Respuesta",
       "item": [
         {
-          "name": "Crear Opción",
+          "name": "Crear OpciÃ³n",
           "request": {
             "method": "POST",
             "header": [
@@ -412,7 +412,7 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{jwt_token}}",
+                "value": "JWT {{jwt_token}}",
                 "type": "text"
               }
             ],
@@ -434,7 +434,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{jwt_token}}",
+                "value": "JWT {{jwt_token}}",
                 "type": "text"
               }
             ],
@@ -446,13 +446,13 @@
           }
         },
         {
-          "name": "Obtener Opción por ID",
+          "name": "Obtener OpciÃ³n por ID",
           "request": {
             "method": "GET",
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{jwt_token}}",
+                "value": "JWT {{jwt_token}}",
                 "type": "text"
               }
             ],
@@ -464,7 +464,7 @@
           }
         },
         {
-          "name": "Actualizar Opción",
+          "name": "Actualizar OpciÃ³n",
           "request": {
             "method": "PUT",
             "header": [
@@ -474,7 +474,7 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{jwt_token}}",
+                "value": "JWT {{jwt_token}}",
                 "type": "text"
               }
             ],
@@ -490,13 +490,13 @@
           }
         },
         {
-          "name": "Eliminar Opción",
+          "name": "Eliminar OpciÃ³n",
           "request": {
             "method": "DELETE",
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{jwt_token}}",
+                "value": "JWT {{jwt_token}}",
                 "type": "text"
               }
             ],
@@ -510,7 +510,7 @@
       ]
     },
     {
-      "name": "🎮 Salas de Juego",
+      "name": "ðŸŽ® Salas de Juego",
       "item": [
         {
           "name": "Crear Sala",
@@ -523,7 +523,7 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{jwt_token}}",
+                "value": "JWT {{jwt_token}}",
                 "type": "text"
               }
             ],
@@ -545,7 +545,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{jwt_token}}",
+                "value": "JWT {{jwt_token}}",
                 "type": "text"
               }
             ],
@@ -563,7 +563,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{jwt_token}}",
+                "value": "JWT {{jwt_token}}",
                 "type": "text"
               }
             ],
@@ -585,7 +585,7 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{jwt_token}}",
+                "value": "JWT {{jwt_token}}",
                 "type": "text"
               }
             ],
@@ -607,7 +607,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{jwt_token}}",
+                "value": "JWT {{jwt_token}}",
                 "type": "text"
               }
             ],
@@ -621,7 +621,7 @@
       ]
     },
     {
-      "name": "🏆 Insignias",
+      "name": "ðŸ† Insignias",
       "item": [
         {
           "name": "Crear Insignia",
@@ -634,13 +634,13 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{jwt_token}}",
+                "value": "JWT {{jwt_token}}",
                 "type": "text"
               }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Maestro\",\n  \"descripcion\": \"Alcanza el nivel 50\",\n  \"icono\": \"👑\",\n  \"tipo\": \"diamante\",\n  \"requisito_tipo\": \"nivel\",\n  \"requisito_valor\": 50,\n  \"xp_bonus\": 500,\n  \"rareza\": \"legendario\"\n}"
+              "raw": "{\n  \"nombre\": \"Maestro\",\n  \"descripcion\": \"Alcanza el nivel 50\",\n  \"icono\": \"ðŸ‘‘\",\n  \"tipo\": \"diamante\",\n  \"requisito_tipo\": \"nivel\",\n  \"requisito_valor\": 50,\n  \"xp_bonus\": 500,\n  \"rareza\": \"legendario\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/insignias-catalogo",
@@ -656,7 +656,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{jwt_token}}",
+                "value": "JWT {{jwt_token}}",
                 "type": "text"
               }
             ],
@@ -674,7 +674,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{jwt_token}}",
+                "value": "JWT {{jwt_token}}",
                 "type": "text"
               }
             ],
@@ -696,7 +696,7 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{jwt_token}}",
+                "value": "JWT {{jwt_token}}",
                 "type": "text"
               }
             ],
@@ -718,7 +718,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{jwt_token}}",
+                "value": "JWT {{jwt_token}}",
                 "type": "text"
               }
             ],
@@ -732,7 +732,7 @@
       ]
     },
     {
-      "name": "🎁 Recompensas",
+      "name": "ðŸŽ Recompensas",
       "item": [
         {
           "name": "Crear Recompensa",
@@ -745,7 +745,7 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{jwt_token}}",
+                "value": "JWT {{jwt_token}}",
                 "type": "text"
               }
             ],
@@ -767,7 +767,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{jwt_token}}",
+                "value": "JWT {{jwt_token}}",
                 "type": "text"
               }
             ],
@@ -785,7 +785,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{jwt_token}}",
+                "value": "JWT {{jwt_token}}",
                 "type": "text"
               }
             ],
@@ -807,7 +807,7 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{jwt_token}}",
+                "value": "JWT {{jwt_token}}",
                 "type": "text"
               }
             ],
@@ -829,7 +829,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{jwt_token}}",
+                "value": "JWT {{jwt_token}}",
                 "type": "text"
               }
             ],
@@ -853,7 +853,8 @@
       "key": "jwt_token",
       "value": "",
       "type": "string",
-      "description": "Token JWT obtenido después de hacer login"
+      "description": "Token JWT obtenido despuÃ©s de hacer login"
     }
   ]
 }
+

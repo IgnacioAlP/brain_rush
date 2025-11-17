@@ -1,8 +1,8 @@
-{
+﻿{
 	"info": {
 		"_postman_id": "brain-rush-api-complete-part2",
 		"name": "Brain Rush API Complete - Part 2 (Salas + Grupos + Participantes)",
-		"description": "Colección completa de APIs CRUD para Brain Rush - Parte 2\nBase URL: https://proyectoweb20252.pythonanywhere.com",
+		"description": "ColecciÃ³n completa de APIs CRUD para Brain Rush - Parte 2\nBase URL: https://proyectoweb20252.pythonanywhere.com",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"auth": {
@@ -219,7 +219,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"id_sala\": 1,\n    \"nombre_participante\": \"María García\",\n    \"id_grupo\": 1\n}"
+							"raw": "{\n    \"id_sala\": 1,\n    \"nombre_participante\": \"MarÃ­a GarcÃ­a\",\n    \"id_grupo\": 1\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/participantes-sala",
@@ -241,7 +241,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"nombre_participante\": \"María García López\",\n    \"estado\": \"jugando\"\n}"
+							"raw": "{\n    \"nombre_participante\": \"MarÃ­a GarcÃ­a LÃ³pez\",\n    \"estado\": \"jugando\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/participantes-sala/1",
@@ -470,3 +470,4 @@
 		}
 	]
 }
+

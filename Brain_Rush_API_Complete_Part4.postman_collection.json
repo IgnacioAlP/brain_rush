@@ -1,8 +1,8 @@
-{
+﻿{
 	"info": {
 		"_postman_id": "brain-rush-api-complete-part4",
 		"name": "Brain Rush API Complete - Part 4 (Roles + Estado + Relaciones)",
-		"description": "Colección completa de APIs CRUD para Brain Rush - Parte 4 (Final)\nBase URL: https://proyectoweb20252.pythonanywhere.com",
+		"description": "ColecciÃ³n completa de APIs CRUD para Brain Rush - Parte 4 (Final)\nBase URL: https://proyectoweb20252.pythonanywhere.com",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"auth": {
@@ -43,7 +43,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"nombre_rol\": \"Moderador\",\n    \"descripcion\": \"Usuario con permisos de moderación\"\n}"
+							"raw": "{\n    \"nombre_rol\": \"Moderador\",\n    \"descripcion\": \"Usuario con permisos de moderaciÃ³n\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/roles",
@@ -65,7 +65,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"nombre_rol\": \"Super Moderador\",\n    \"descripcion\": \"Usuario con permisos avanzados de moderación\"\n}"
+							"raw": "{\n    \"nombre_rol\": \"Super Moderador\",\n    \"descripcion\": \"Usuario con permisos avanzados de moderaciÃ³n\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/roles/1",
@@ -142,7 +142,7 @@
 					"response": []
 				},
 				{
-					"name": "Actualizar Asignación de Rol",
+					"name": "Actualizar AsignaciÃ³n de Rol",
 					"request": {
 						"method": "PUT",
 						"header": [
@@ -164,7 +164,7 @@
 					"response": []
 				},
 				{
-					"name": "Obtener Asignación por ID",
+					"name": "Obtener AsignaciÃ³n por ID",
 					"request": {
 						"method": "GET",
 						"header": [],
@@ -190,7 +190,7 @@
 					"response": []
 				},
 				{
-					"name": "Eliminar Asignación de Rol",
+					"name": "Eliminar AsignaciÃ³n de Rol",
 					"request": {
 						"method": "DELETE",
 						"header": [],
@@ -252,7 +252,7 @@
 					"response": []
 				},
 				{
-					"name": "Obtener Asignación por ID",
+					"name": "Obtener AsignaciÃ³n por ID",
 					"request": {
 						"method": "GET",
 						"header": [],
@@ -384,7 +384,7 @@
 			"name": "Participaciones",
 			"item": [
 				{
-					"name": "Crear Participación",
+					"name": "Crear ParticipaciÃ³n",
 					"request": {
 						"method": "POST",
 						"header": [
@@ -406,7 +406,7 @@
 					"response": []
 				},
 				{
-					"name": "Actualizar Participación",
+					"name": "Actualizar ParticipaciÃ³n",
 					"request": {
 						"method": "PUT",
 						"header": [
@@ -428,7 +428,7 @@
 					"response": []
 				},
 				{
-					"name": "Obtener Participación por ID",
+					"name": "Obtener ParticipaciÃ³n por ID",
 					"request": {
 						"method": "GET",
 						"header": [],
@@ -454,7 +454,7 @@
 					"response": []
 				},
 				{
-					"name": "Eliminar Participación",
+					"name": "Eliminar ParticipaciÃ³n",
 					"request": {
 						"method": "DELETE",
 						"header": [],
@@ -725,3 +725,4 @@
 		}
 	]
 }
+

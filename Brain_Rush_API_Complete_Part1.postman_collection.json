@@ -1,8 +1,8 @@
-{
+﻿{
 	"info": {
 		"_postman_id": "brain-rush-api-complete-part1",
 		"name": "Brain Rush API Complete - Part 1 (Auth + Usuarios + Cuestionarios)",
-		"description": "Colección completa de APIs CRUD para Brain Rush - Parte 1\nTodas las rutas requieren autenticación JWT excepto /api/auth\nBase URL: https://proyectoweb20252.pythonanywhere.com",
+		"description": "ColecciÃ³n completa de APIs CRUD para Brain Rush - Parte 1\nTodas las rutas requieren autenticaciÃ³n JWT excepto /api/auth\nBase URL: https://proyectoweb20252.pythonanywhere.com",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"auth": {
@@ -29,7 +29,7 @@
 	],
 	"item": [
 		{
-			"name": "Autenticación",
+			"name": "AutenticaciÃ³n",
 			"item": [
 				{
 					"name": "Login - Obtener JWT",
@@ -70,7 +70,7 @@
 							"host": ["{{base_url}}"],
 							"path": ["api", "auth"]
 						},
-						"description": "Autenticar usuario y obtener token JWT. El token se guarda automáticamente en la variable jwt_token."
+						"description": "Autenticar usuario y obtener token JWT. El token se guarda automÃ¡ticamente en la variable jwt_token."
 					},
 					"response": []
 				}
@@ -91,7 +91,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"nombre\": \"Juan\",\n    \"apellidos\": \"Pérez López\",\n    \"email\": \"juan.perez@usat.pe\",\n    \"contraseña_hash\": \"hashed_password\",\n    \"tipo_usuario\": \"estudiante\",\n    \"estado\": \"activo\"\n}"
+							"raw": "{\n    \"nombre\": \"Juan\",\n    \"apellidos\": \"PÃ©rez LÃ³pez\",\n    \"email\": \"juan.perez@usat.pe\",\n    \"contraseÃ±a_hash\": \"hashed_password\",\n    \"tipo_usuario\": \"estudiante\",\n    \"estado\": \"activo\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/usuarios",
@@ -113,7 +113,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"nombre\": \"Juan Carlos\",\n    \"apellidos\": \"Pérez López\",\n    \"tipo_usuario\": \"estudiante\",\n    \"estado\": \"activo\"\n}"
+							"raw": "{\n    \"nombre\": \"Juan Carlos\",\n    \"apellidos\": \"PÃ©rez LÃ³pez\",\n    \"tipo_usuario\": \"estudiante\",\n    \"estado\": \"activo\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/usuarios/1",
@@ -179,7 +179,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"titulo\": \"Cuestionario de Matemáticas\",\n    \"descripcion\": \"Evaluación de álgebra básica\",\n    \"estado\": \"borrador\"\n}"
+							"raw": "{\n    \"titulo\": \"Cuestionario de MatemÃ¡ticas\",\n    \"descripcion\": \"EvaluaciÃ³n de Ã¡lgebra bÃ¡sica\",\n    \"estado\": \"borrador\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/cuestionarios",
@@ -201,7 +201,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"titulo\": \"Cuestionario de Matemáticas Avanzadas\",\n    \"descripcion\": \"Evaluación de álgebra y geometría\",\n    \"estado\": \"publicado\"\n}"
+							"raw": "{\n    \"titulo\": \"Cuestionario de MatemÃ¡ticas Avanzadas\",\n    \"descripcion\": \"EvaluaciÃ³n de Ã¡lgebra y geometrÃ­a\",\n    \"estado\": \"publicado\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/cuestionarios/1",
@@ -267,7 +267,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"enunciado\": \"¿Cuál es el resultado de 2 + 2?\",\n    \"tipo\": \"opcion_multiple\",\n    \"puntaje_base\": 10,\n    \"tiempo_sugerido\": 30\n}"
+							"raw": "{\n    \"enunciado\": \"Â¿CuÃ¡l es el resultado de 2 + 2?\",\n    \"tipo\": \"opcion_multiple\",\n    \"puntaje_base\": 10,\n    \"tiempo_sugerido\": 30\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/preguntas",
@@ -289,7 +289,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"enunciado\": \"¿Cuál es el resultado de 2 + 2?\",\n    \"tipo\": \"opcion_multiple\",\n    \"puntaje_base\": 15,\n    \"tiempo_sugerido\": 45\n}"
+							"raw": "{\n    \"enunciado\": \"Â¿CuÃ¡l es el resultado de 2 + 2?\",\n    \"tipo\": \"opcion_multiple\",\n    \"puntaje_base\": 15,\n    \"tiempo_sugerido\": 45\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/preguntas/1",
@@ -344,7 +344,7 @@
 			"name": "Opciones Respuesta",
 			"item": [
 				{
-					"name": "Crear Opción",
+					"name": "Crear OpciÃ³n",
 					"request": {
 						"method": "POST",
 						"header": [
@@ -366,7 +366,7 @@
 					"response": []
 				},
 				{
-					"name": "Actualizar Opción",
+					"name": "Actualizar OpciÃ³n",
 					"request": {
 						"method": "PUT",
 						"header": [
@@ -388,7 +388,7 @@
 					"response": []
 				},
 				{
-					"name": "Obtener Opción por ID",
+					"name": "Obtener OpciÃ³n por ID",
 					"request": {
 						"method": "GET",
 						"header": [],
@@ -414,7 +414,7 @@
 					"response": []
 				},
 				{
-					"name": "Eliminar Opción",
+					"name": "Eliminar OpciÃ³n",
 					"request": {
 						"method": "DELETE",
 						"header": [],
@@ -430,3 +430,4 @@
 		}
 	]
 }
+

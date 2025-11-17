@@ -77,6 +77,9 @@ serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
 # Configurar clave para Flask-JWT-Extended (usar la misma SECRET_KEY por compatibilidad)
 app.config['JWT_SECRET_KEY'] = app.config['SECRET_KEY']
 
+# Configurar Flask-JWT-Extended para usar "JWT" en lugar de "Bearer"
+app.config['JWT_HEADER_TYPE'] = 'JWT'
+
 # Inicializar JWTManager
 jwt = JWTManager(app)
 
