@@ -45,7 +45,7 @@ def inicializar_usuarios_prueba():
 
 def obtener_conexion():
     return pymysql.connect(host='localhost',
-                                port=3307,
+                                port=3327,
                                 user='root',
                                 password='',
                                 db='brain_rush')

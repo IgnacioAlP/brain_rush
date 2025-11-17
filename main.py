@@ -34,6 +34,9 @@ from controladores import controlador_respuestas
 from controladores import controlador_opciones
 from controladores import controlador_xp
 
+# Importar APIs CRUD
+from api_crud import api_crud
+
 
 # Ya no necesitamos User class, authenticate e identity con JWT-Extended
 # La autenticación se maneja con endpoints personalizados
@@ -79,6 +82,9 @@ app.config['JWT_SECRET_KEY'] = app.config['SECRET_KEY']
 
 # Inicializar JWTManager
 jwt = JWTManager(app)
+
+# Registrar blueprints de APIs
+app.register_blueprint(api_crud)
 
 # ============================================
 # CONFIGURACIÓN (CSRF DESHABILITADO)
