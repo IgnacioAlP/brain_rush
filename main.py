@@ -54,6 +54,7 @@ load_dotenv()
 
 # Importa las extensiones y librerías necesarias
 from extensions import mail
+from flask_jwt_extended import JWTManager
 from itsdangerous import URLSafeTimedSerializer
 
 # Crea la aplicación Flask
@@ -72,6 +73,12 @@ serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
 
 app.debug = True
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'super-secret-key-cambiar-en-produccion')
+
+# Configurar clave para Flask-JWT-Extended (usar la misma SECRET_KEY por compatibilidad)
+app.config['JWT_SECRET_KEY'] = app.config['SECRET_KEY']
+
+# Inicializar JWTManager
+jwt = JWTManager(app)
 
 # ============================================
 # CONFIGURACIÓN (CSRF DESHABILITADO)

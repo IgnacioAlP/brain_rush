@@ -182,166 +182,136 @@ def obtener_usuario_cookies():
     return None
 
 
-# ==================== JWT (SIN flask-jwt-extended) ====================
+# ==================== JWT (USANDO flask-jwt-extended) ====================
+
+from flask_jwt_extended import (
+    create_access_token,
+    create_refresh_token,
+    verify_jwt_in_request,
+    get_jwt_identity,
+    decode_token,
+)
+
 
 def crear_token_jwt(usuario_id, expiracion_horas=24):
     """
-    Crea un token JWT personalizado
-    
-    Args:
-        usuario_id (int): ID del usuario
-        expiracion_horas (int): Horas hasta que expire el token
-    
-    Returns:
-        str: Token JWT
+    Crea un access token usando Flask-JWT-Extended
     """
-    payload = {
-        'usuario_id': usuario_id,
-        'exp': datetime.utcnow() + timedelta(hours=expiracion_horas),
-        'iat': datetime.utcnow()
-    }
-    
-    return jwt.encode(
-        payload,
-        current_app.config['SECRET_KEY'],
-        algorithm='HS256'
-    )
+    expires = timedelta(hours=expiracion_horas)
+    return create_access_token(identity=usuario_id, expires_delta=expires)
+
+
+def crear_refresh_token(usuario_id):
+    """
+    Crea un refresh token usando Flask-JWT-Extended
+    """
+    return create_refresh_token(identity=usuario_id)
 
 
 def verificar_token_jwt(token):
     """
-    Verifica y decodifica un token JWT
-    
-    Args:
-        token (str): Token JWT
-    
-    Returns:
-        dict: Payload decodificado o None si es inválido
+    Decodifica un token sin levantar excepción (usa decode_token)
     """
     try:
-        payload = jwt.decode(
-            token,
-            current_app.config['SECRET_KEY'],
-            algorithms=['HS256']
-        )
+        payload = decode_token(token)
         return payload
-    except jwt.ExpiredSignatureError:
-        print("Token JWT expirado")
-        return None
-    except jwt.InvalidTokenError as e:
-        print(f"Token JWT inválido: {e}")
+    except Exception as e:
+        print(f"Token JWT inválido o expirado: {e}")
         return None
 
 
 def extraer_token_jwt_request():
-    """
-    Extrae el token JWT del header Authorization
-    
-    Returns:
-        str: Token JWT o None
-    """
+    """Extrae el token JWT del header Authorization"""
     auth_header = request.headers.get('Authorization', '')
     if auth_header.startswith('Bearer '):
-        return auth_header[7:]  # Remover 'Bearer '
+        return auth_header[7:]
     return None
 
 
 # ==================== DECORADORES DE PROTECCIÓN ====================
 
+
 def login_required(f):
-    """
-    Decorador que requiere que el usuario esté autenticado
-    Verifica sesión de Flask O cookies encriptadas O token JWT
-    """
+    """Decorador que acepta sesión o JWT (mantiene compatibilidad con API actual)"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         from flask import session, jsonify, redirect, url_for
-        
-        # 1. Verificar sesión de Flask (método tradicional)
+
+        # 1. Sesión tradicional
         if 'usuario_id' in session and session.get('logged_in'):
             return f(*args, **kwargs)
-        
-        # 2. Verificar cookies encriptadas
+
+        # 2. Cookies encriptadas
         usuario_cookies = obtener_usuario_cookies()
         if usuario_cookies:
-            # Establecer sesión desde cookies para compatibilidad
             session['usuario_id'] = usuario_cookies['usuario_id']
             session['usuario_nombre'] = usuario_cookies['nombre_usuario']
             session['logged_in'] = True
             return f(*args, **kwargs)
-        
-        # 3. Verificar JWT (para APIs)
+
+        # 3. JWT en Authorization header
         token = extraer_token_jwt_request()
         if token:
-            payload = verificar_token_jwt(token)
-            if payload:
-                # Establecer sesión desde JWT para compatibilidad
-                session['usuario_id'] = payload['usuario_id']
-                session['logged_in'] = True
-                return f(*args, **kwargs)
-        
-        # No autenticado - redirigir o retornar error
+            try:
+                # verify_jwt_in_request lee el header y valida el token
+                verify_jwt_in_request()
+                identidad = get_jwt_identity()
+                if identidad:
+                    session['usuario_id'] = identidad
+                    session['logged_in'] = True
+                    return f(*args, **kwargs)
+            except Exception as e:
+                print(f"Verificación JWT fallida: {e}")
+
+        # No autenticado
         if request.is_json or request.headers.get('Accept') == 'application/json':
             return jsonify({'error': 'Autenticación requerida'}), 401
         else:
             return redirect(url_for('login'))
-    
+
     return decorated_function
 
 
 def jwt_or_session_required(f):
-    """
-    Decorador que acepta autenticación por JWT O por sesión
-    Alias de login_required para compatibilidad
-    """
+    """Alias para compatibilidad con el código existente"""
     return login_required(f)
 
 
 def docente_required(f):
-    """
-    Decorador que requiere que el usuario sea docente
-    """
     @wraps(f)
     def decorated_function(*args, **kwargs):
         from flask import session, jsonify, redirect, url_for
-        
-        # Primero verificar autenticación con login_required
+
         auth_check = login_required(lambda: None)()
-        if auth_check:  # Si hay redirección o error
+        if auth_check:
             return auth_check
-        
-        # Verificar tipo de usuario
+
         if session.get('usuario_tipo') != 'docente':
             if request.is_json:
                 return jsonify({'error': 'Acceso solo para docentes'}), 403
             else:
                 return redirect(url_for('dashboard_estudiante'))
-        
+
         return f(*args, **kwargs)
-    
+
     return decorated_function
 
 
 def estudiante_required(f):
-    """
-    Decorador que requiere que el usuario sea estudiante
-    """
     @wraps(f)
     def decorated_function(*args, **kwargs):
         from flask import session, jsonify, redirect, url_for
-        
-        # Primero verificar autenticación
+
         auth_check = login_required(lambda: None)()
         if auth_check:
             return auth_check
-        
-        # Verificar tipo de usuario
+
         if session.get('usuario_tipo') != 'estudiante':
             if request.is_json:
                 return jsonify({'error': 'Acceso solo para estudiantes'}), 403
             else:
                 return redirect(url_for('dashboard_admin'))
-        
+
         return f(*args, **kwargs)
-    
+
     return decorated_function
