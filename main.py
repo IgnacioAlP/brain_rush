@@ -1057,6 +1057,7 @@ def dashboard_docente():
             'cuestionarios_activos': len([c for c in cuestionarios if c.get('estado') == 'activo']),
             'total_estudiantes': len(ranking_global),  # Estudiantes únicos que han participado
             'total_participaciones': sum(e.get('total_participaciones', 0) for e in ranking_global),
+            'total_respuestas': sum(e.get('total_respuestas', 0) for e in ranking_global),
             'promedio_calificaciones': round(sum(e.get('promedio_puntaje', 0) for e in ranking_global) / len(ranking_global), 1) if ranking_global else 0
         }
 
@@ -1071,6 +1072,7 @@ def dashboard_docente():
             'cuestionarios_activos': 0,
             'total_estudiantes': 0,
             'total_participaciones': 0,
+            'total_respuestas': 0,
             'promedio_calificaciones': 0
         }
 
@@ -1278,7 +1280,7 @@ def exportar_dashboard_docente_onedrive():
                 estudiante['puntaje_acumulado'],
                 estudiante['total_participaciones'],
                 f"{estudiante['promedio_puntaje']:.1f}",
-                f"{estudiante['precision_promedio']:.1f}%"
+                f"{estudiante.get('precision_global', 0):.1f}%"
             ]
             
             for col, value in enumerate(row_data, start=1):
@@ -1475,7 +1477,7 @@ def exportar_dashboard_docente_pdf():
                     str(estudiante['puntaje_acumulado']),
                     str(estudiante['total_participaciones']),
                     f"{estudiante['promedio_puntaje']:.1f}",
-                    f"{estudiante['precision_promedio']:.1f}%"
+                    f"{estudiante.get('precision_global', 0):.1f}%"
                 ])
             
             ranking_table = Table(ranking_data, colWidths=[0.5*inch, 2*inch, 1*inch, 1*inch, 1*inch, 1*inch])
@@ -4703,13 +4705,18 @@ def insertar_recompensa_por_cuestionario():
         tipo = request.form.get('tipo')
         id_cuestionario = request.form.get('id_cuestionario')
 
+        print(f"📥 Recibiendo recompensa: nombre={nombre}, puntos={puntos}, tipo={tipo}, cuestionario={id_cuestionario}")
+
         if not all([nombre, puntos, tipo, id_cuestionario]):
+            print(f"❌ Datos incompletos: nombre={nombre}, puntos={puntos}, tipo={tipo}, cuestionario={id_cuestionario}")
             return jsonify({'success': False, 'error': 'Datos incompletos'}), 400
 
         controlador_recompensas.insertar_recompensa(
             nombre, descripcion, puntos, tipo, id_cuestionario
         )
-        return jsonify({'success': True}), 200
+        
+        print(f"✅ Recompensa insertada exitosamente: {nombre} - {tipo}")
+        return jsonify({'success': True, 'message': 'Recompensa creada exitosamente'}), 200
 
     except Exception as e:
         print(f"❌ Error al insertar recompensa: {e}")

@@ -199,35 +199,42 @@
 
     <div class="recompensas-card">
         <h2>➕ Nueva Recompensa</h2>
+        <div style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1)); 
+                    border-left: 4px solid var(--primary-color); 
+                    padding: var(--space-md); 
+                    border-radius: 0.5rem; 
+                    margin-bottom: var(--space-lg);">
+            <p style="margin: 0; color: var(--text-color);">
+                <i class="fas fa-info-circle" style="color: var(--primary-color);"></i> 
+                <strong>Sistema de Recompensas por Posición:</strong><br>
+                <small style="color: var(--gray);">
+                    Define las 3 recompensas que se otorgarán automáticamente a los primeros 3 lugares del ranking cuando finalice el juego.
+                    No es necesario definir puntos, las recompensas se asignan por posición final.
+                </small>
+            </p>
+        </div>
         
         <form id="form-recompensa">
             <input type="hidden" id="id_cuestionario" name="id_cuestionario" value="{{ id_cuestionario }}">
             
             <div class="form-grid">
                 <div class="form-group">
+                    <label for="posicion">
+                        <i class="fas fa-medal"></i> Posición *
+                    </label>
+                    <select id="posicion" name="posicion" required>
+                        <option value="">Selecciona la posición</option>
+                        <option value="1">🥇 1er Lugar (Trofeo)</option>
+                        <option value="2">🥈 2do Lugar (Medalla)</option>
+                        <option value="3">🥉 3er Lugar (Insignia)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
                     <label for="nombre">
                         <i class="fas fa-trophy"></i> Nombre *
                     </label>
-                    <input type="text" id="nombre" name="nombre" placeholder="Ej. Estrella Dorada" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="puntos">
-                        <i class="fas fa-star"></i> Puntos requeridos *
-                    </label>
-                    <input type="number" id="puntos" name="puntos" min="1" placeholder="Ej. 100" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="tipo">
-                        <i class="fas fa-tag"></i> Tipo *
-                    </label>
-                    <select id="tipo" name="tipo" required>
-                        <option value="">Selecciona un tipo</option>
-                        <option value="Trofeo">🏆 Trofeo (1er lugar)</option>
-                        <option value="Medalla">🥇 Medalla (2do lugar)</option>
-                        <option value="Insignia">🏅 Insignia (3er lugar)</option>
-                    </select>
+                    <input type="text" id="nombre" name="nombre" placeholder="Ej. Trofeo de Oro" required>
                 </div>
             </div>
 
@@ -235,7 +242,7 @@
                 <label for="descripcion">
                     <i class="fas fa-align-left"></i> Descripción
                 </label>
-                <textarea id="descripcion" name="descripcion" rows="3" placeholder="Breve descripción de la recompensa..."></textarea>
+                <textarea id="descripcion" name="descripcion" rows="3" placeholder="Descripción de la recompensa..."></textarea>
             </div>
 
             <div class="form-actions">
@@ -252,9 +259,9 @@
         <table class="recompensas-table">
             <thead>
                 <tr>
+                    <th><i class="fas fa-medal"></i> Posición</th>
                     <th><i class="fas fa-trophy"></i> Nombre</th>
                     <th><i class="fas fa-align-left"></i> Descripción</th>
-                    <th><i class="fas fa-star"></i> Puntos</th>
                     <th><i class="fas fa-tag"></i> Tipo</th>
                     <th><i class="fas fa-cog"></i> Acciones</th>
                 </tr>
@@ -283,69 +290,135 @@ document.addEventListener('DOMContentLoaded', cargarRecompensas);
 document.getElementById('form-recompensa').addEventListener('submit', async function(e) {
     e.preventDefault();
     
-    const formData = {
-        id_cuestionario: ID_CUESTIONARIO,
-        nombre: document.getElementById('nombre').value.trim(),
-        descripcion: document.getElementById('descripcion').value.trim(),
-        puntos: parseInt(document.getElementById('puntos').value),
-        tipo: document.getElementById('tipo').value
-    };
+    const posicion = document.getElementById('posicion').value;
+    const nombre = document.getElementById('nombre').value.trim();
+    const descripcion = document.getElementById('descripcion').value.trim();
 
-    if (!formData.nombre || !formData.puntos || !formData.tipo) {
-        showError('Por favor completa todos los campos obligatorios');
+    if (!posicion || !nombre) {
+        showError('Campos incompletos', 'Por favor completa todos los campos obligatorios');
         return;
     }
 
+    // Mapear posición a tipo
+    const tipoMap = {
+        '1': 'trofeo',
+        '2': 'medalla', 
+        '3': 'insignia'
+    };
+
+    const posicionLabels = {
+        '1': '1er Lugar',
+        '2': '2do Lugar',
+        '3': '3er Lugar'
+    };
+
     try {
+        console.log('📤 Enviando recompensa:', { posicion, nombre, descripcion });
+        
+        // Deshabilitar botón mientras se procesa
+        const submitBtn = document.querySelector('.btn-save');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+        
+        // Crear FormData para enviar al servidor
+        const formDataToSend = new FormData();
+        formDataToSend.append('nombre', nombre);
+        formDataToSend.append('descripcion', descripcion);
+        formDataToSend.append('puntos_requeridos', posicion); // Usar posición como puntos para ordenar
+        formDataToSend.append('tipo', tipoMap[posicion]);
+        formDataToSend.append('id_cuestionario', ID_CUESTIONARIO);
+
         const response = await fetch('/insertar_recompensa', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(formData)
+            body: formDataToSend
         });
 
         const data = await response.json();
+        console.log('📥 Respuesta del servidor:', data);
+
+        // Restaurar botón
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
 
         if (data.success) {
-            showSuccess('Recompensa guardada exitosamente');
+            showSuccess('¡Recompensa guardada!', `La recompensa para el ${posicionLabels[posicion]} ha sido creada exitosamente.`);
             document.getElementById('form-recompensa').reset();
-            cargarRecompensas();
+            
+            // Esperar un momento para que se vea la notificación antes de recargar
+            setTimeout(async () => {
+                await cargarRecompensas();
+            }, 500);
         } else {
-            showError('Error al guardar recompensa: ' + (data.error || 'Error desconocido'));
+            showError('Error al guardar', data.error || 'Error desconocido al guardar la recompensa');
         }
     } catch (error) {
-        console.error('Error:', error);
-        showError('Error al guardar recompensa');
+        console.error('❌ Error:', error);
+        
+        // Restaurar botón
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+        
+        showError('Error de conexión', 'No se pudo guardar la recompensa. Verifica tu conexión.');
     }
 });
 
 async function cargarRecompensas() {
     try {
+        console.log('🔄 Cargando recompensas para cuestionario:', ID_CUESTIONARIO);
+        
         const response = await fetch(`/api/recompensas/${ID_CUESTIONARIO}`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
         const data = await response.json();
+        console.log('📊 Recompensas recibidas:', data);
 
         const tbody = document.getElementById('tabla-recompensas');
 
         if (!data.success || !data.recompensas || data.recompensas.length === 0) {
+            console.log('ℹ️ No hay recompensas registradas');
             tbody.innerHTML = `
                 <tr>
                     <td colspan="5" class="empty-state">
                         <i class="fas fa-trophy"></i>
                         <p>No hay recompensas registradas</p>
-                        <small>Agrega la primera recompensa usando el formulario arriba</small>
+                        <small>Agrega las recompensas para los 3 primeros lugares</small>
                     </td>
                 </tr>
             `;
+            actualizarOpcionesPosicion([]);
             return;
         }
 
-        tbody.innerHTML = data.recompensas.map(r => `
+        console.log(`✅ Cargadas ${data.recompensas.length} recompensas`);
+
+        // Ordenar por posición (puntos_requeridos ahora guarda la posición 1, 2, 3)
+        data.recompensas.sort((a, b) => a.puntos_requeridos - b.puntos_requeridos);
+
+        // Actualizar opciones disponibles del select
+        actualizarOpcionesPosicion(data.recompensas);
+
+        tbody.innerHTML = data.recompensas.map(r => {
+            const posicionLabels = {
+                1: '🥇 1er Lugar',
+                2: '🥈 2do Lugar',
+                3: '🥉 3er Lugar'
+            };
+            const tipoLabels = {
+                'trofeo': '🏆 Trofeo',
+                'medalla': '🥇 Medalla',
+                'insignia': '🏅 Insignia'
+            };
+            
+            return `
             <tr>
+                <td><strong style="color: var(--primary-color)">${posicionLabels[r.puntos_requeridos] || r.puntos_requeridos}</strong></td>
                 <td><strong>${r.nombre}</strong></td>
                 <td>${r.descripcion || '<em style="color: var(--gray)">Sin descripción</em>'}</td>
-                <td><span style="color: var(--warning-color); font-weight: 600;">${r.puntos_requeridos}</span></td>
-                <td><span class="tipo-badge tipo-${r.tipo.toLowerCase()}">${getTipoIcon(r.tipo)} ${r.tipo}</span></td>
+                <td><span class="tipo-badge tipo-${r.tipo}">${tipoLabels[r.tipo] || r.tipo}</span></td>
                 <td>
                     <div class="action-btns">
                         <button class="btn-action btn-delete" onclick="eliminarRecompensa(${r.id_recompensa})">
@@ -368,6 +441,40 @@ async function cargarRecompensas() {
     }
 }
 
+function actualizarOpcionesPosicion(recompensas) {
+    const select = document.getElementById('posicion');
+    const posicionesOcupadas = recompensas.map(r => parseInt(r.puntos_requeridos));
+    
+    // Habilitar todas las opciones primero
+    Array.from(select.options).forEach(option => {
+        if (option.value) {
+            const posicion = parseInt(option.value);
+            if (posicionesOcupadas.includes(posicion)) {
+                option.disabled = true;
+                option.textContent = option.textContent.replace(')', ' - Ya asignada)');
+            } else {
+                option.disabled = false;
+                option.textContent = option.textContent.split(' - ')[0] + ')';
+            }
+        }
+    });
+
+    // Si todas las posiciones están ocupadas, deshabilitar el formulario
+    if (posicionesOcupadas.length >= 3) {
+        select.disabled = true;
+        document.getElementById('nombre').disabled = true;
+        document.getElementById('descripcion').disabled = true;
+        document.querySelector('.btn-save').disabled = true;
+        document.querySelector('.btn-save').innerHTML = '<i class="fas fa-check"></i> Las 3 recompensas ya están configuradas';
+    } else {
+        select.disabled = false;
+        document.getElementById('nombre').disabled = false;
+        document.getElementById('descripcion').disabled = false;
+        document.querySelector('.btn-save').disabled = false;
+        document.querySelector('.btn-save').innerHTML = '<i class="fas fa-save"></i> Guardar Recompensa';
+    }
+}
+
 function getTipoIcon(tipo) {
     const icons = {
         'Trofeo': '🏆',
@@ -382,29 +489,30 @@ function getTipoIcon(tipo) {
 async function eliminarRecompensa(id) {
     const confirmado = await confirmAction(
         '¿Estás seguro de que quieres eliminar esta recompensa?',
-        'Confirmar eliminación',
-        'Sí, eliminar',
-        'Cancelar'
+        'Confirmar eliminación'
     );
 
     if (!confirmado) return;
 
     try {
+        console.log('🗑️ Eliminando recompensa ID:', id);
+        
         const response = await fetch(`/eliminar_recompensa/${id}`, {
             method: 'DELETE'
         });
 
         const data = await response.json();
+        console.log('📥 Respuesta eliminar:', data);
 
         if (data.success) {
-            showSuccess('Recompensa eliminada exitosamente');
-            cargarRecompensas();
+            showSuccess('¡Recompensa eliminada!', 'La recompensa ha sido eliminada exitosamente.');
+            await cargarRecompensas();
         } else {
-            showError('Error al eliminar recompensa');
+            showError('Error al eliminar', data.error || 'No se pudo eliminar la recompensa');
         }
     } catch (error) {
-        console.error('Error:', error);
-        showError('Error al eliminar recompensa');
+        console.error('❌ Error:', error);
+        showError('Error de conexión', 'No se pudo eliminar la recompensa.');
     }
 }
 </script>

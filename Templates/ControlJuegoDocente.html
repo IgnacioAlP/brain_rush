@@ -936,12 +936,21 @@ async function actualizarRanking() {
                                      index === 1 ? 'posicion-2' :
                                      index === 2 ? 'posicion-3' : 'posicion-other';
 
+                // Nombre: usar nombre_completo (valor principal de la API)
+                const nombre = participante.nombre_completo || participante.nombre_participante || participante.nombre || 'Participante';
+                
+                // Grupo: usar numero_grupo (valor principal de la API)
+                const grupo = participante.numero_grupo ? `Grupo ${participante.numero_grupo}` : (participante.nombre_grupo || '-');
+                
+                // Puntaje: usar puntos_totales (valor principal de la API)
+                const puntaje = participante.puntos_totales || participante.puntaje_total || participante.puntaje || 0;
+
                 return `
                     <tr>
                         <td><span class="posicion-badge ${posicionClass}">${participante.posicion || (index + 1)}</span></td>
-                        <td>${participante.nombre_participante || participante.nombre || 'Participante'}</td>
-                        <td>${participante.nombre_grupo || participante.grupo || '-'}</td>
-                        <td><strong>${participante.puntaje_total || participante.puntaje || 0}</strong></td>
+                        <td>${nombre}</td>
+                        <td>${grupo}</td>
+                        <td><strong>${puntaje}</strong></td>
                         <td>${participante.respuestas_correctas || participante.correctas || 0}</td>
                         <td>${(participante.tiempo_total_respuestas || participante.tiempo_total || 0).toFixed(1)}s</td>
                     </tr>
