@@ -111,7 +111,7 @@
     .form-group-full {
         grid-column: 1 / -1;
     }
-    
+
     .form-group {
         margin-bottom: var(--space-md);
     }
@@ -195,20 +195,20 @@
         min-height: 120px;
         resize: vertical;
     }
-    
+
     /* Checkbox styles */
     .checkbox-label {
-        display: flex; 
-        align-items: center; 
-        gap: var(--space-sm); 
-        color: var(--dark); 
+        display: flex;
+        align-items: center;
+        gap: var(--space-sm);
+        color: var(--dark);
         cursor: pointer;
         font-weight: 600;
     }
     .checkbox-input {
-        width: 18px; 
-        height: 18px; 
-        cursor: pointer; 
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
         accent-color: var(--secondary-color);
     }
 
@@ -237,7 +237,7 @@
         box-shadow: var(--shadow-md);
         text-decoration: none;
     }
-    
+
     .btn-small {
         padding: var(--space-sm) var(--space-md);
         font-size: 0.9rem;
@@ -268,7 +268,7 @@
         background: rgba(0,0,0,0.05);
         color: var(--dark);
     }
-    
+
     /* Botón azul (para Editar) */
     .btn-blue {
         background: linear-gradient(135deg, #0d6efd, #0a58ca);
@@ -286,7 +286,7 @@
     .btn-danger:hover {
         color: white;
     }
-    
+
     .btn-warning {
         background: linear-gradient(135deg, #ffc107, #ff8c00);
         color: #212529;
@@ -294,7 +294,7 @@
     .btn-warning:hover {
         color: #212529;
     }
-    
+
     .btn-success {
         background: linear-gradient(135deg, #28a745, #20c997);
         color: white;
@@ -442,7 +442,7 @@
         border-style: solid;
         transform: translateY(-2px);
     }
-    
+
     .add-option-btn {
         background: rgba(78, 205, 196, 0.1);
         color: var(--secondary-color);
@@ -544,7 +544,7 @@
         font-size: 0.9rem;
         color: var(--gray);
     }
-    
+
     .add-option-btn:hover {
         background: rgba(78, 205, 196, 0.2);
     }
@@ -585,11 +585,11 @@
     }
 
     @keyframes slideUp {
-        from { 
+        from {
             opacity: 0;
             transform: translateY(-20px);
         }
-        to { 
+        to {
             opacity: 1;
             transform: translateY(0);
         }
@@ -667,7 +667,7 @@
         cursor: pointer;
         accent-color: var(--secondary-color);
     }
-    
+
     .option-input {
         /* Ya está estilizado por .form-input */
     }
@@ -685,7 +685,7 @@
         .modal-content {
             padding: var(--space-xl);
         }
-        
+
         .form-tabs {
             flex-direction: column;
         }
@@ -728,7 +728,7 @@
             grid-template-columns: auto 1fr;
             gap: var(--space-sm);
         }
-        
+
         .option-remove {
             grid-column: 1 / -1;
             justify-self: end;
@@ -756,7 +756,7 @@
 
     <form id="edit-form" method="POST" action="/editar-cuestionario/{{ cuestionario.id_cuestionario }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        
+
         <div id="tab-info" class="tab-content active animate-fadeIn" style="animation-delay: 0.2s;">
             <div class="form-section">
                 <h3 class="section-title"><i class="fas fa-info-circle"></i> Información del Cuestionario</h3>
@@ -766,17 +766,17 @@
                             <i class="fas fa-heading"></i>
                             Título del cuestionario *
                         </label>
-                        <input type="text" 
-                                id="titulo" 
-                                name="titulo" 
-                                class="form-input" 
-                                value="{{ cuestionario.titulo }}" 
+                        <input type="text"
+                                id="titulo"
+                                name="titulo"
+                                class="form-input"
+                                value="{{ cuestionario.titulo }}"
                                 required
                                 minlength="3"
                                 maxlength="100"
                                 placeholder="Ingresa un título descriptivo">
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="categoria" class="form-label">
                             <i class="fas fa-tag"></i>
@@ -826,10 +826,10 @@
                             <i class="fas fa-align-left"></i>
                             Descripción
                         </label>
-                        <textarea id="descripcion" 
-                                    name="descripcion" 
-                                    class="form-textarea" 
-                                    rows="3" 
+                        <textarea id="descripcion"
+                                    name="descripcion"
+                                    class="form-textarea"
+                                    rows="3"
                                     placeholder="Describe brevemente el contenido del cuestionario...">{{ cuestionario.descripcion }}</textarea>
                     </div>
                 </div>
@@ -839,7 +839,7 @@
         <div id="tab-questions" class="tab-content animate-fadeIn" style="animation-delay: 0.2s;">
             <div class="form-section">
                 <h3 class="section-title"><i class="fas fa-question-circle"></i> Gestión de Preguntas</h3>
-                
+
                 <!-- Botones de importación -->
                 <div class="import-actions">
                     <button type="button" class="template-btn" onclick="descargarPlantillaExcel()">
@@ -850,12 +850,12 @@
                         <i class="fas fa-file-upload"></i>
                         Importar desde Excel
                     </button>
-                    <input type="file" 
-                           id="import-file-input" 
-                           accept=".xlsx,.xls" 
+                    <input type="file"
+                           id="import-file-input"
+                           accept=".xlsx,.xls"
                            onchange="importarPreguntasExcel(event)">
                 </div>
-                
+
                 <div class="questions-list" id="questions-list">
                     </div>
             </div>
@@ -882,35 +882,35 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="tiempo_limite" class="form-label">
                             <i class="fas fa-clock"></i>
                             Tiempo por pregunta (segundos)
                         </label>
-                        <input type="number" 
-                                id="tiempo_limite" 
-                                name="tiempo_limite" 
+                        <input type="number"
+                                id="tiempo_limite"
+                                name="tiempo_limite"
                                 class="form-input"
-                                value="30" 
-                                min="10" 
+                                value="30"
+                                min="10"
                                 max="120">
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="max_participantes" class="form-label">
                             <i class="fas fa-users"></i>
                             Máximo de participantes
                         </label>
-                        <input type="number" 
-                                id="max_participantes" 
-                                name="max_participantes" 
+                        <input type="number"
+                                id="max_participantes"
+                                name="max_participantes"
                                 class="form-input"
-                                value="50" 
-                                min="1" 
+                                value="50"
+                                min="1"
                                 max="200">
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="orden_preguntas" class="form-label">
                             <i class="fas fa-random"></i>
@@ -971,18 +971,18 @@
             <h3 id="modal-title"><i class="fas fa-question-circle"></i> Editar Pregunta</h3>
             <button type="button" class="close-modal" onclick="closeQuestionModal()">&times;</button>
         </div>
-        
+
         <form id="question-form" class="question-form">
             <div class="form-group">
                 <label for="modal-question-text" class="form-label">
                     <i class="fas fa-edit"></i>
                     Texto de la pregunta *
                 </label>
-                <textarea id="modal-question-text" 
-                            name="question_text" 
-                            class="form-textarea" 
-                            rows="3" 
-                            required 
+                <textarea id="modal-question-text"
+                            name="question_text"
+                            class="form-textarea"
+                            rows="3"
+                            required
                             placeholder="Escribe tu pregunta aquí..."></textarea>
             </div>
 
@@ -991,12 +991,12 @@
                     <i class="fas fa-clock"></i>
                     Tiempo límite (segundos)
                 </label>
-                <input type="number" 
-                        id="modal-question-time" 
-                        name="time_limit" 
+                <input type="number"
+                        id="modal-question-time"
+                        name="time_limit"
                         class="form-input"
-                        value="30" 
-                        min="5" 
+                        value="30"
+                        min="5"
                         max="120">
             </div>
 
@@ -1030,7 +1030,7 @@
 <script>
     let currentQuestionId = null;
     let cuestionarioId = {{ cuestionario.id_cuestionario }};
-    
+
     // Inicializar datos desde el servidor
     let questionsData = {{ preguntas | tojson | safe }};
 
@@ -1053,12 +1053,12 @@
 
     function editQuestion(questionId) {
         console.log('Editando pregunta ID:', questionId);
-        
+
         // Obtener los datos de la pregunta del servidor
         fetch(`/pregunta/${questionId}/obtener`)
         .then(response => {
             console.log('Response status:', response.status);
-            
+
             const contentType = response.headers.get('content-type');
             if (!contentType || !contentType.includes('application/json')) {
                 return response.text().then(text => {
@@ -1066,12 +1066,12 @@
                 throw new Error('El servidor devolvió HTML. Verifica que la ruta /pregunta/' + questionId + '/obtener exista.');
                 });
             }
-            
+
             return response.json();
         })
         .then(data => {
             console.log('Datos recibidos:', data);
-            
+
             if (data.success) {
                 currentQuestionId = questionId;
                 const pregunta = data.pregunta;
@@ -1079,13 +1079,13 @@
                 document.getElementById('modal-title').innerHTML = '<i class="fas fa-edit"></i> Editar Pregunta';
                 document.getElementById('modal-question-text').value = pregunta.enunciado;
                 document.getElementById('modal-question-time').value = pregunta.tiempo || 30;
-                
+
                 const opcionesFormateadas = pregunta.opciones.map((opcion, index) => ({
                     letra: String.fromCharCode(65 + index),
                     texto: opcion.texto_opcion,
                     correcta: opcion.es_correcta
                 }));
-                
+
                 renderOptionsEditor(opcionesFormateadas);
                 document.getElementById('question-modal').style.display = 'block';
             } else {
@@ -1103,14 +1103,14 @@
         document.getElementById('modal-title').innerHTML = '<i class="fas fa-plus-circle"></i> Nueva Pregunta';
         document.getElementById('modal-question-text').value = '';
         document.getElementById('modal-question-time').value = 30;
-        
+
         const defaultOptions = [
             { letra: 'A', texto: '', correcta: false },
             { letra: 'B', texto: '', correcta: false },
             { letra: 'C', texto: '', correcta: false },
             { letra: 'D', texto: '', correcta: false }
         ];
-        
+
         renderOptionsEditor(defaultOptions);
         document.getElementById('question-modal').style.display = 'block';
     }
@@ -1121,16 +1121,16 @@
         const letters = ['A', 'B', 'C', 'D'];
         editor.innerHTML = options.map((option, index) => `
             <div class="option-editor" data-index="${index}">
-                <input type="radio" 
-                        name="correct-option" 
-                        value="${index}" 
-                        ${option.correcta ? 'checked' : ''} 
+                <input type="radio"
+                        name="correct-option"
+                        value="${index}"
+                        ${option.correcta ? 'checked' : ''}
                         class="option-radio"
                         title="Marcar como respuesta correcta">
-                <input type="text" 
-                        value="${option.texto.replace(/"/g, '&quot;')}" 
-                        placeholder="Opción ${letters[index]}" 
-                        class="form-input option-input" 
+                <input type="text"
+                        value="${option.texto.replace(/"/g, '&quot;')}"
+                        placeholder="Opción ${letters[index]}"
+                        class="form-input option-input"
                         data-letter="${letters[index]}">
                 ${options.length > 2 ? `
                     <button type="button" class="btn btn-danger btn-small option-remove" onclick="removeOption(${index})" title="Eliminar opción">
@@ -1146,7 +1146,7 @@
         const editor = document.getElementById('options-editor');
         const currentOptions = editor.querySelectorAll('.option-editor').length;
         const letters = ['A', 'B', 'C', 'D'];
-        
+
         if (currentOptions >= 4) {
             Swal.fire({
                 icon: 'warning',
@@ -1159,38 +1159,38 @@
 
         const newOptionHTML = `
             <div class="option-editor" data-index="${currentOptions}">
-                <input type="radio" 
-                        name="correct-option" 
-                        value="${currentOptions}" 
+                <input type="radio"
+                        name="correct-option"
+                        value="${currentOptions}"
                         class="option-radio"
                         title="Marcar como respuesta correcta">
-                <input type="text" 
-                        placeholder="Opción ${letters[currentOptions]}" 
-                        class="form-input option-input" 
+                <input type="text"
+                        placeholder="Opción ${letters[currentOptions]}"
+                        class="form-input option-input"
                         data-letter="${letters[currentOptions]}">
                 <button type="button" class="btn btn-danger btn-small option-remove" onclick="removeOption(${currentOptions})" title="Eliminar opción">
                     <i class="fas fa-trash"></i>
                 </button>
             </div>
         `;
-        
+
         editor.insertAdjacentHTML('beforeend', newOptionHTML);
         // Habilitar el botón de eliminar en las opciones anteriores si ahora hay más de 2
         updateRemoveButtons();
     }
-    
+
     function updateRemoveButtons() {
         const editor = document.getElementById('options-editor');
         const options = editor.querySelectorAll('.option-editor');
         const letters = ['A', 'B', 'C', 'D'];
-        
+
         options.forEach((option, index) => {
             option.dataset.index = index;
             option.querySelector('.option-radio').value = index;
             const input = option.querySelector('.option-input');
             input.dataset.letter = letters[index];
             input.placeholder = `Opción ${letters[index]}`;
-            
+
             let removeBtn = option.querySelector('.option-remove');
             if (options.length > 2) {
                 if (!removeBtn) {
@@ -1218,7 +1218,7 @@
     function removeOption(index) {
         const editor = document.getElementById('options-editor');
         const options = editor.querySelectorAll('.option-editor');
-        
+
         if (options.length <= 2) {
             Swal.fire({
                 icon: 'warning',
@@ -1230,7 +1230,7 @@
         }
 
         options[index].remove();
-        
+
         // Reindexar opciones restantes y actualizar botones
         updateRemoveButtons();
     }
@@ -1300,12 +1300,12 @@
     // Manejar envío del formulario de pregunta
     document.getElementById('question-form').addEventListener('submit', function(e) {
         e.preventDefault();
-        
+
         const questionText = document.getElementById('modal-question-text').value.trim();
         const timeLimit = document.getElementById('modal-question-time').value;
         const optionInputs = document.querySelectorAll('.option-input');
         const correctRadio = document.querySelector('input[name="correct-option"]:checked');
-        
+
         // Validaciones
         if (!questionText) {
             Swal.fire({
@@ -1369,9 +1369,9 @@
         formData.append('tiempo', timeLimit);
         formData.append('opciones', JSON.stringify(options));
         formData.append('csrf_token', document.querySelector('input[name="csrf_token"]').value);
-        
+
         // Determinar URL según si es edición o creación
-        const url = currentQuestionId 
+        const url = currentQuestionId
             ? `/pregunta/${currentQuestionId}/editar`
             : `/cuestionario/{{ cuestionario.id_cuestionario }}/agregar-pregunta`;
 
@@ -1392,7 +1392,7 @@
         .then(response => {
             console.log('Response status:', response.status);
             console.log('Response headers:', response.headers.get('content-type'));
-            
+
             const contentType = response.headers.get('content-type');
             if (!contentType || !contentType.includes('application/json')) {
                 return response.text().then(text => {
@@ -1400,7 +1400,7 @@
                     throw new Error('El servidor devolvió HTML en lugar de JSON. Verifica la ruta del backend.');
                 });
             }
-            
+
             // Parsear JSON (tanto para éxito como para error)
             return response.json().then(data => {
                 // Si la respuesta HTTP no es OK (200-299), lanzar error
@@ -1412,7 +1412,7 @@
         })
         .then(data => {
             console.log('Respuesta del servidor:', data);
-            
+
             if (data.success) {
                 // Actualizar o agregar pregunta en la lista local
                 if (currentQuestionId) {
@@ -1425,13 +1425,13 @@
                     // Agregar nueva pregunta
                     questionsData.push(data.pregunta);
                 }
-                
+
                 // Recargar la lista de preguntas
                 renderQuestionsList();
-                
+
                 // Cerrar modal
                 closeQuestionModal();
-                
+
                 // Mostrar mensaje de éxito
                 Swal.fire({
                     icon: 'success',
@@ -1447,7 +1447,7 @@
         })
         .catch(error => {
             console.error('Error completo:', error);
-            
+
             // Verificar si es un error de respuesta HTTP
             if (error.message && error.message.includes('Sesión expirada')) {
                 Swal.fire({
@@ -1460,7 +1460,7 @@
                 });
                 return;
             }
-            
+
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
@@ -1473,10 +1473,10 @@
     // *** JAVASCRIPT MODIFICADO ***
     function renderQuestionsList() {
         const questionsList = document.getElementById('questions-list');
-        
+
         // Limpiar lista
         questionsList.innerHTML = '';
-        
+
         if (questionsData.length === 0) {
             questionsList.innerHTML = `
                 <div style="text-align: center; padding: 40px; color: var(--gray);">
@@ -1517,7 +1517,7 @@
                 questionsList.insertAdjacentHTML('beforeend', questionHTML);
             });
         }
-        
+
         // Agregar botón de nueva pregunta
         const addButtonHTML = `
             <button type="button" class="add-question-btn" onclick="addNewQuestion()">
@@ -1542,9 +1542,9 @@
     // Manejar envío del formulario principal
     document.getElementById('edit-form').addEventListener('submit', function(e) {
         e.preventDefault();
-        
+
         const form = this;
-        
+
         // Confirmar antes de guardar
         Swal.fire({
             title: '¿Guardar cambios?',
@@ -1558,13 +1558,13 @@
         }).then((result) => {
             if (result.isConfirmed) {
                 const formData = new FormData(form);
-                
+
                 // Mostrar indicador de carga
                 const submitBtn = form.querySelector('button[type="submit"]');
                 const originalText = submitBtn.innerHTML;
                 submitBtn.disabled = true;
                 submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
-                
+
                 fetch(form.action, {
                     method: 'POST',
                     headers: {
@@ -1624,7 +1624,7 @@
     });
 
     // ==================== IMPORTACIÓN DE PREGUNTAS DESDE EXCEL ====================
-    
+
     function descargarPlantillaExcel() {
         // Mostrar mensaje de descarga
         Swal.fire({
@@ -1635,7 +1635,7 @@
             timerProgressBar: true,
             showConfirmButton: false
         });
-        
+
         // Descargar plantilla desde el servidor
         const link = document.createElement('a');
         link.href = `/cuestionario/{{ cuestionario.id_cuestionario }}/descargar-plantilla`;
@@ -1648,11 +1648,11 @@
     function importarPreguntasExcel(event) {
         const file = event.target.files[0];
         if (!file) return;
-        
+
         // Validar que sea un archivo Excel
         const validExtensions = ['.xlsx', '.xls'];
         const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
-        
+
         if (!validExtensions.includes(fileExtension)) {
             Swal.fire({
                 title: 'Archivo inválido',
@@ -1663,7 +1663,7 @@
             event.target.value = '';
             return;
         }
-        
+
         // Confirmar importación
         Swal.fire({
             title: '¿Importar preguntas?',
@@ -1693,7 +1693,7 @@
         // Crear FormData
         const formData = new FormData();
         formData.append('excel_file', file);
-        
+
         // Mostrar modal de progreso
         Swal.fire({
             title: 'Importando preguntas...',
@@ -1707,7 +1707,7 @@
             allowOutsideClick: false,
             allowEscapeKey: false
         });
-        
+
         // Enviar al servidor
         fetch(`/cuestionario/{{ cuestionario.id_cuestionario }}/importar-preguntas`, {
             method: 'POST',
@@ -1748,7 +1748,7 @@
                     // Recargar la página para mostrar las preguntas nuevas
                     window.location.reload();
                 });
-                
+
                 // Limpiar input
                 document.getElementById('import-file-input').value = '';
             } else {
@@ -1772,7 +1772,7 @@
             document.getElementById('import-file-input').value = '';
         });
     }
-    
+
     // Version: 2025-10-27-20:15 - Fix botón guardando en bucle
 </script>
 

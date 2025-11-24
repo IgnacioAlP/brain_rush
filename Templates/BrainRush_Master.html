@@ -4,16 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Brain RUSH - ¡Aprende Jugando!{% endblock %}</title>
-    
+
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Fredoka+One:wght@400&family=Nunito:wght@300;400;600;700;800&display=swap" rel="stylesheet">
-    
+
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/brain_rush_v3.css') }}">
-    
+
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -38,7 +38,7 @@
                     <span class="tagline">¡Aprende Jugando!</span>
                 </a>
             </div>
-            
+
             <div class="nav-actions">
                 {% if session.logged_in %}
                     <div class="user-info">
@@ -237,16 +237,16 @@
         // Dropdown functionality
         document.addEventListener('DOMContentLoaded', function() {
             const dropdowns = document.querySelectorAll('.dropdown');
-            
+
             dropdowns.forEach(dropdown => {
                 const btn = dropdown.querySelector('.dropdown-btn');
                 const menu = dropdown.querySelector('.dropdown-menu');
-                
+
                 btn.addEventListener('click', function(e) {
                     e.stopPropagation();
                     dropdown.classList.toggle('active');
                 });
-                
+
                 document.addEventListener('click', function() {
                     dropdown.classList.remove('active');
                 });
@@ -255,7 +255,7 @@
             // Quick access panel
             const quickAccessToggle = document.getElementById('quickAccessToggle');
             const quickAccessMenu = document.getElementById('quickAccessMenu');
-            
+
             if (quickAccessToggle) {
                 quickAccessToggle.addEventListener('click', function() {
                     quickAccessMenu.classList.toggle('active');

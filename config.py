@@ -1,11 +1,13 @@
 import os
 
+
 class Config:
     """Configuración base"""
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'clave-temporal-desarrollo'
     DEBUG = False
     TESTING = False
-    
+
+    # ==========================================================================
     # Configuración de correo (Flask-Mail)
     # NOTA: Correo desactivado temporalmente - usuarios se crean directamente como 'activo'
     MAIL_ENABLED = False  # Cambiar a True cuando se configure un servidor SMTP
@@ -15,14 +17,14 @@ class Config:
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
     MAIL_DEFAULT_SENDER = os.environ.get('MAIL_DEFAULT_SENDER') or 'noreply@brainrush.com'
-    
+
     # Configuración de OneDrive Azure AD
     AZURE_CLIENT_ID = os.environ.get('AZURE_CLIENT_ID')
     AZURE_CLIENT_SECRET = os.environ.get('AZURE_CLIENT_SECRET')
     AZURE_TENANT_ID = os.environ.get('AZURE_TENANT_ID')
     ONEDRIVE_REDIRECT_URI = os.environ.get('ONEDRIVE_REDIRECT_URI') or 'http://localhost:5000/callback/onedrive'
     ONEDRIVE_SCOPES = ['Files.ReadWrite', 'User.Read']
-    
+
     # Tokens del sistema OneDrive (cuenta centralizada)
     ONEDRIVE_ACCESS_TOKEN = os.environ.get('ONEDRIVE_ACCESS_TOKEN')
     ONEDRIVE_REFRESH_TOKEN = os.environ.get('ONEDRIVE_REFRESH_TOKEN')
@@ -32,7 +34,7 @@ class DevelopmentConfig(Config):
     """Configuración para desarrollo"""
     DEBUG = True
     SECRET_KEY = 'clave-temporal-desarrollo'
-    
+
     # Configuración de correo Gmail para desarrollo
     # Los correos se envían a direcciones reales vía Gmail SMTP
     MAIL_ENABLED = True
@@ -43,7 +45,7 @@ class DevelopmentConfig(Config):
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
     MAIL_DEFAULT_SENDER = os.environ.get('MAIL_USERNAME')
-    
+
     # Para usar servidor SMTP local (solo consola), descomentar estas líneas y comentar las de arriba:
     # MAIL_SERVER = 'localhost'
     # MAIL_PORT = 1025

@@ -302,32 +302,32 @@
         grid-template-columns: 1fr;
         gap: var(--space-md);
     }
-    
+
     .podium-place {
         order: initial !important;
         min-height: auto !important;
     }
-    
+
     .ranking-item {
         flex-direction: column;
         text-align: center;
         gap: var(--space-md);
     }
-    
+
     .ranking-info {
         flex-direction: column;
         gap: var(--space-sm);
         width: 100%;
     }
-    
+
     .user-stats {
         justify-content: center;
     }
-    
+
     .score-display {
         align-items: center;
     }
-    
+
     .ranking-stats {
         grid-template-columns: 1fr 1fr;
     }
@@ -339,12 +339,12 @@
         flex-direction: column;
         gap: var(--space-sm);
     }
-    
+
     .ranking-container {
         margin: var(--space-md);
         padding: var(--space-xl);
     }
-    
+
     .ranking-stats {
         grid-template-columns: 1fr;
     }
@@ -397,19 +397,19 @@
                 </div>
             </div>
             {% endif %}
-            
+
             <!-- Estadísticas globales -->
             <div class="ranking-stats">
                 <div class="stat-card">
                     <div class="stat-number">{{ ranking|length }}</div>
                     <div class="stat-label">Estudiantes activos</div>
                 </div>
-                
+
                 <div class="stat-card">
                     <div class="stat-number">{{ ranking[0].puntaje_acumulado or 0 }}</div>
                     <div class="stat-label">Puntaje más alto</div>
                 </div>
-                
+
                 <div class="stat-card">
                     <div class="stat-number">{{ ((ranking|sum(attribute='puntaje_acumulado') or 0) / ranking|length)|round|int }}</div>
                     <div class="stat-label">Promedio general</div>
@@ -467,11 +467,11 @@
                     <i class="fas fa-list-ol"></i>
                     Ranking Completo
                 </h3>
-                
+
                 {% for usuario in ranking %}
                 <div class="ranking-item animate-fadeIn {% if usuario_actual and usuario.id_usuario == usuario_actual.id_usuario %}user-actual{% endif %}" style="animation-delay: {{ (loop.index * 0.1) + 0.3 }}s;">
                     <div class="ranking-position">{{ usuario.posicion }}</div>
-                    
+
                     <div class="ranking-info">
                         <div class="user-details">
                             <div class="user-name">
@@ -488,7 +488,7 @@
                                 <span><i class="fas fa-chart-line"></i> Promedio: {{ usuario.promedio_puntaje }} pts</span>
                             </div>
                         </div>
-                        
+
                         <div class="score-display">
                             <div class="main-score">
                                 <i class="fas fa-star"></i>
@@ -523,44 +523,44 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Animación de números del ranking
     const statNumbers = document.querySelectorAll('.stat-number');
-    
+
     statNumbers.forEach(number => {
         const finalValue = parseInt(number.textContent);
         if (finalValue > 0) {
             animateNumber(number, 0, finalValue, 1000);
         }
     });
-    
+
     function animateNumber(element, start, end, duration) {
         const startTime = performance.now();
-        
+
         function update(currentTime) {
             const elapsed = currentTime - startTime;
             const progress = Math.min(elapsed / duration, 1);
-            
+
             const current = Math.floor(start + (end - start) * easeOutCubic(progress));
             element.textContent = current.toLocaleString();
-            
+
             if (progress < 1) {
                 requestAnimationFrame(update);
             }
         }
-        
+
         requestAnimationFrame(update);
     }
-    
+
     function easeOutCubic(t) {
         return 1 - Math.pow(1 - t, 3);
     }
-    
+
     // Efecto de hover mejorado para las tarjetas del ranking
     const rankingItems = document.querySelectorAll('.ranking-item');
-    
+
     rankingItems.forEach(item => {
         item.addEventListener('mouseenter', function() {
             this.style.transform = 'translateY(-4px) scale(1.02)';
         });
-        
+
         item.addEventListener('mouseleave', function() {
             this.style.transform = 'translateY(0) scale(1)';
         });

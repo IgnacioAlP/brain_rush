@@ -1,4 +1,4 @@
-﻿from bd import obtener_conexion
+from bd import obtener_conexion
 
 # Insertar nueva recompensa asociada a un cuestionario
 def insertar_recompensa(nombre, descripcion, puntos_requeridos, tipo, id_cuestionario):

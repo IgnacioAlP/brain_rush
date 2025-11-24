@@ -314,20 +314,20 @@
     .unirse-card {
         padding: var(--space-xl);
     }
-    
+
     .unirse-title {
         font-size: 2rem;
     }
-    
+
     .form-group input {
         padding: var(--space-md);
         font-size: 1.2rem;
     }
-    
+
     .pin-input {
         font-size: 1.5rem !important;
     }
-    
+
     .step {
         width: 35px;
         height: 35px;
@@ -461,11 +461,11 @@
         const contentId = `content-step-${s}`;
         const contentElement = document.getElementById(contentId);
         const stepElement = document.getElementById(stepId);
-        
+
         if (contentElement) contentElement.style.display = 'none';
         if (stepElement) {
           stepElement.classList.remove('active', 'completed');
-          
+
           if ((typeof s === 'number' && s < step) || (s === 2.5 && step === 3)) {
             stepElement.classList.add('completed');
           } else if (s === step) {
@@ -501,9 +501,9 @@
         console.log(`🔍 Intentando cargar grupos para sala ID: ${salaId}`);
         const response = await fetch(`/api/sala/${salaId}/grupos`);
         const data = await response.json();
-        
+
         console.log('📦 Respuesta de grupos:', data);
-        
+
         if (data.success && data.grupos && data.grupos.length > 0) {
           gruposDisponibles = data.grupos;
           console.log(`✅ Se encontraron ${data.grupos.length} grupos`);
@@ -520,7 +520,7 @@
     function mostrarGrupos() {
       const container = document.getElementById('grupos-grid');
       container.innerHTML = '';
-      
+
       gruposDisponibles.forEach(grupo => {
         const card = document.createElement('div');
         card.className = 'grupo-card';
@@ -529,7 +529,7 @@
           <div class="grupo-nombre">👥 ${grupo.nombre_grupo}</div>
           <div class="grupo-info">Haz clic para seleccionar</div>
         `;
-        
+
         card.addEventListener('click', () => seleccionarGrupo(grupo.id_grupo));
         container.appendChild(card);
       });
@@ -537,7 +537,7 @@
 
     function seleccionarGrupo(grupoId) {
       grupoSeleccionado = grupoId;
-      
+
       // Actualizar visualización
       document.querySelectorAll('.grupo-card').forEach(card => {
         card.classList.remove('selected');
@@ -545,7 +545,7 @@
           card.classList.add('selected');
         }
       });
-      
+
       // Habilitar botón de unirse
       joinGameBtn.disabled = false;
     }
@@ -557,7 +557,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id_grupo: grupoId })
         });
-        
+
         const data = await response.json();
         return data.success;
       } catch (error) {
@@ -584,7 +584,7 @@
         }
 
         const data = await response.json();
-        
+
         if (data.success) {
           return { success: true, sala: data.sala };
         } else {
@@ -603,32 +603,32 @@
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ 
-            pin_sala: pin, 
-            nombre_estudiante: nombre 
+          body: JSON.stringify({
+            pin_sala: pin,
+            nombre_estudiante: nombre
           })
         });
 
         const data = await response.json();
-        
+
         if (response.ok && data.success) {
-          return { 
-            success: true, 
+          return {
+            success: true,
             participante_id: data.participante_id,
             sala_id: data.sala_id,
             redirect_url: data.redirect_url,
             message: data.message
           };
         } else {
-          return { 
-            success: false, 
+          return {
+            success: false,
             error: data.error || 'No se pudo unir a la sala'
           };
         }
       } catch (error) {
         console.error('Error al unirse a sala:', error);
-        return { 
-          success: false, 
+        return {
+          success: false,
           error: 'Error de conexión. Verifica tu conexión a internet.'
         };
       }
@@ -639,10 +639,10 @@
       // Solo permitir dígitos, máximo 6
       const pin = this.value.replace(/\D/g, '').slice(0, 6);
       this.value = pin;
-      
+
       // Habilitar botón solo si tiene exactamente 6 dígitos
       verifyPinBtn.disabled = pin.length !== 6;
-      
+
       // Auto-avanzar cuando tenga 6 dígitos
       if (pin.length === 6) {
         verifyPinBtn.focus();
@@ -668,7 +668,7 @@
 
     nextToGroupBtn.addEventListener('click', async function() {
       const name = nameInput.value.trim();
-      
+
       if (!validateName(name)) {
         showError('El nombre debe tener entre 2 y 100 caracteres');
         nameInput.focus();
@@ -681,7 +681,7 @@
       // Verificar si hay grupos habilitados en esta sala
       const salaId = salaData.id_sala || salaData.id;
       const hayGrupos = await cargarGrupos(salaId);
-      
+
       if (hayGrupos) {
         // Ir al paso de selección de grupo
         console.log('👥 Mostrando selección de grupos');
@@ -696,7 +696,7 @@
 
     verifyPinBtn.addEventListener('click', async function() {
       const pin = pinInput.value;
-      
+
       if (!validatePin(pin)) {
         showError('Debes ingresar un PIN válido de 6 dígitos');
         pinInput.focus();
@@ -708,11 +708,11 @@
       hideMessages();
 
       const result = await verificarSala(pin);
-      
+
       if (result.success) {
         gamePin = pin;
         salaData = result.sala;
-        
+
         // Verificar que la sala esté en estado esperando
         if (salaData.estado !== 'esperando') {
           if (salaData.estado === 'en_curso') {
@@ -726,9 +726,9 @@
           this.textContent = 'Verificar PIN';
           return;
         }
-        
+
         showSuccess(`¡Sala encontrada! Ahora ingresa tu nombre.`);
-        
+
         setTimeout(() => {
           updateStep(2);
           nameInput.focus();
@@ -753,21 +753,21 @@
 
       const name = nameInput.value.trim();
       const result = await unirseASala(gamePin, name);
-      
+
       if (result.success) {
         console.log('✅ Unido exitosamente a la sala:', result);
-        
+
         // Asignar el grupo al participante
         const grupoAsignado = await asignarGrupoAParticipante(result.participante_id, grupoSeleccionado);
-        
+
         if (grupoAsignado) {
           console.log('✅ Grupo asignado correctamente');
         } else {
           console.warn('⚠️ No se pudo asignar el grupo, pero el estudiante se unió a la sala');
         }
-        
+
         showSuccess(result.message || '¡Te uniste exitosamente!');
-        
+
         // Redirigir a la sala de espera
         setTimeout(() => {
           window.location.href = result.redirect_url;
@@ -785,11 +785,11 @@
 
       const name = nameInput.value.trim();
       const result = await unirseASala(gamePin, name);
-      
+
       if (result.success) {
         console.log('✅ Unido exitosamente a la sala:', result);
         showSuccess(result.message || '¡Te uniste exitosamente!');
-        
+
         setTimeout(() => {
           window.location.href = result.redirect_url;
         }, 500);

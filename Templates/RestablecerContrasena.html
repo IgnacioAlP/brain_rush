@@ -225,7 +225,7 @@
             </a>
         </div>
         {% else %}
-        
+
         <div class="password-requirements">
             <h4>📋 Requisitos de Contraseña:</h4>
             <ul class="requirements-list" id="requirements">
@@ -239,15 +239,15 @@
 
         <form method="POST" id="resetForm" action="{{ url_for('restablecer_contrasena', token=token) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            
+
             <div class="form-group">
                 <label for="password" class="form-label">
                     🔒 Nueva Contraseña
                 </label>
-                <input 
-                    type="password" 
-                    id="password" 
-                    name="password" 
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
                     class="form-input"
                     placeholder="Ingresa tu nueva contraseña"
                     required
@@ -259,10 +259,10 @@
                 <label for="confirm_password" class="form-label">
                     🔒 Confirmar Contraseña
                 </label>
-                <input 
-                    type="password" 
-                    id="confirm_password" 
-                    name="confirm_password" 
+                <input
+                    type="password"
+                    id="confirm_password"
+                    name="confirm_password"
                     class="form-input"
                     placeholder="Confirma tu nueva contraseña"
                     required
@@ -328,7 +328,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (password && confirm) {
             requirements.match = password === confirm;
             updateReqUI('req-match', requirements.match);
-            
+
             // Cambiar color del input de confirmación
             if (confirm) {
                 confirmInput.classList.toggle('valid', requirements.match);
@@ -340,7 +340,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Validar contraseña principal
-        const passwordValid = requirements.length && requirements.upper && 
+        const passwordValid = requirements.length && requirements.upper &&
                             requirements.lower && requirements.number;
         passwordInput.classList.toggle('valid', passwordValid);
         passwordInput.classList.toggle('invalid', password.length > 0 && !passwordValid);
@@ -369,7 +369,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Validación al enviar
     form.addEventListener('submit', function(e) {
         const allValid = Object.values(requirements).every(v => v === true);
-        
+
         if (!allValid) {
             e.preventDefault();
             Swal.fire({

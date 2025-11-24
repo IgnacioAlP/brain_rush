@@ -263,15 +263,15 @@
         gap: var(--space-md);
         align-items: flex-start;
     }
-    
+
     .score-badge {
         align-self: flex-start;
     }
-    
+
     .history-details {
         grid-template-columns: 1fr;
     }
-    
+
     .history-stats {
         grid-template-columns: 1fr 1fr;
     }
@@ -283,12 +283,12 @@
         flex-direction: column;
         gap: var(--space-sm);
     }
-    
+
     .history-container {
         margin: var(--space-md);
         padding: var(--space-xl);
     }
-    
+
     .history-stats {
         grid-template-columns: 1fr;
     }
@@ -317,7 +317,7 @@
                     <div class="stat-number">{{ participaciones|length }}</div>
                     <div class="stat-label">Juegos completados</div>
                 </div>
-                
+
                 <div class="stat-card">
                     <div class="stat-icon">
                         <i class="fas fa-star"></i>
@@ -325,7 +325,7 @@
                     <div class="stat-number">{{ participaciones|sum(attribute='puntaje_total') or 0 }}</div>
                     <div class="stat-label">Puntos totales</div>
                 </div>
-                
+
                 <div class="stat-card">
                     <div class="stat-icon">
                         <i class="fas fa-chart-line"></i>
@@ -333,7 +333,7 @@
                     <div class="stat-number">{{ ((participaciones|sum(attribute='puntaje_total') or 0) / participaciones|length)|round|int }}</div>
                     <div class="stat-label">Promedio por juego</div>
                 </div>
-                
+
                 <div class="stat-card">
                     <div class="stat-icon">
                         <i class="fas fa-trophy"></i>
@@ -357,7 +357,7 @@
                     <i class="fas fa-list"></i>
                     Historial de Participaciones
                 </h3>
-                
+
                 {% for participacion in participaciones %}
                 <div class="history-item animate-fadeIn" style="animation-delay: {{ loop.index * 0.1 }}s;">
                     <div class="history-header">
@@ -368,29 +368,29 @@
                                 {{ participacion.fecha_inicio.strftime('%d de %B, %Y a las %H:%M') if participacion.fecha_inicio else 'Fecha no disponible' }}
                             </div>
                         </div>
-                        
+
                         <div class="score-badge">
                             <i class="fas fa-star"></i>
                             {{ participacion.puntaje_total or 0 }} pts
                         </div>
                     </div>
-                    
+
                     <div class="history-details">
                         <div class="detail-item">
                             <i class="fas fa-clock detail-icon"></i>
                             <span>Duración: {{ participacion.duracion or 'N/A' }}</span>
                         </div>
-                        
+
                         <div class="detail-item">
                             <i class="fas fa-percentage detail-icon"></i>
                             <span>Precisión: {{ participacion.precision or 'N/A' }}%</span>
                         </div>
-                        
+
                         <div class="detail-item">
                             <i class="fas fa-users detail-icon"></i>
                             <span>Posición: {{ participacion.posicion or 'N/A' }}</span>
                         </div>
-                        
+
                         <div class="detail-item">
                             <i class="fas fa-medal detail-icon"></i>
                             <span>
@@ -427,7 +427,7 @@
                 </a>
             </div>
         {% endif %}
-        
+
         <!-- Botón para volver -->
         <div style="text-align: center;">
             <a href="{{ url_for('dashboard_estudiante') }}" class="back-btn">
@@ -444,54 +444,54 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Animación de números de estadísticas
     const statNumbers = document.querySelectorAll('.stat-number');
-    
+
     statNumbers.forEach(number => {
         const finalValue = parseInt(number.textContent);
         if (finalValue > 0) {
             animateNumber(number, 0, finalValue, 1000);
         }
     });
-    
+
     function animateNumber(element, start, end, duration) {
         const startTime = performance.now();
-        
+
         function update(currentTime) {
             const elapsed = currentTime - startTime;
             const progress = Math.min(elapsed / duration, 1);
-            
+
             const current = Math.floor(start + (end - start) * easeOutCubic(progress));
             element.textContent = current.toLocaleString();
-            
+
             if (progress < 1) {
                 requestAnimationFrame(update);
             }
         }
-        
+
         requestAnimationFrame(update);
     }
-    
+
     function easeOutCubic(t) {
         return 1 - Math.pow(1 - t, 3);
     }
-    
+
     // Efecto de hover mejorado para los elementos del historial
     const historyItems = document.querySelectorAll('.history-item');
-    
+
     historyItems.forEach(item => {
         item.addEventListener('mouseenter', function() {
             this.style.transform = 'translateY(-4px) scale(1.02)';
         });
-        
+
         item.addEventListener('mouseleave', function() {
             this.style.transform = 'translateY(0) scale(1)';
         });
     });
-    
+
     // Agregar badges de rendimiento dinámicos
     const scoreBadges = document.querySelectorAll('.score-badge');
     scoreBadges.forEach(badge => {
         const score = parseInt(badge.textContent);
-        
+
         if (score >= 900) {
             badge.style.background = 'linear-gradient(135deg, #ffd700, #ffed4e)';
             badge.style.color = '#333';
@@ -508,21 +508,21 @@ document.addEventListener('DOMContentLoaded', function() {
 async function exportarHistorialOneDrive() {
     const btn = event.target.closest('button');
     const originalHTML = btn.innerHTML;
-    
+
     try {
         // Mostrar loading
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Exportando...';
-        
+
         const response = await fetch('/api/exportar-historial-estudiante/onedrive', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             }
         });
-        
+
         const data = await response.json();
-        
+
         if (data.success) {
             if (data.email_sent) {
                 // Email enviado con link
@@ -530,7 +530,7 @@ async function exportarHistorialOneDrive() {
                 mensaje += `📄 Archivo: ${data.file_name}\n`;
                 mensaje += `📧 Hemos enviado el link a tu correo.\n\n`;
                 mensaje += `¿Deseas abrir el archivo ahora?`;
-                
+
                 if (confirm(mensaje)) {
                     window.open(data.share_link || data.web_url, '_blank');
                 }
@@ -541,7 +541,7 @@ async function exportarHistorialOneDrive() {
                 // Éxito sin email
                 let mensaje = `✅ ${data.message}\n\n📄 Archivo: ${data.file_name}`;
                 alert(mensaje);
-                
+
                 if (data.share_link && confirm('¿Deseas abrir el archivo en OneDrive?')) {
                     window.open(data.share_link, '_blank');
                 }

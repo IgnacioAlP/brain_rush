@@ -168,7 +168,7 @@
         margin: var(--space-md);
         padding: var(--space-xl);
     }
-    
+
     .login-title {
         font-size: 2rem;
     }
@@ -226,7 +226,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Configurar el token CSRF para todas las peticiones AJAX
     const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-    
+
     // Agregar el token CSRF a todas las peticiones fetch
     const originalFetch = window.fetch;
     window.fetch = function() {
@@ -245,38 +245,38 @@ document.addEventListener('DOMContentLoaded', function() {
     const emailInput = document.getElementById('email');
     const passwordInput = document.getElementById('password');
     const loginBtn = document.getElementById('loginBtn');
-    
+
     // Validación en tiempo real
     function validateForm() {
         const email = emailInput.value.trim();
         const password = passwordInput.value.trim();
-        
+
         // Validar email
         const emailValid = email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
         // Validar contraseña
         const passwordValid = password.length > 0;
-        
+
         // Cambiar estilos según validación
         emailInput.style.borderColor = email ? (emailValid ? 'var(--success-color)' : 'var(--error-color)') : 'rgba(0,0,0,0.1)';
         passwordInput.style.borderColor = password ? 'var(--success-color)' : 'rgba(0,0,0,0.1)';
-        
+
         // Habilitar/deshabilitar botón
         const isValid = emailValid && passwordValid;
         loginBtn.disabled = !isValid;
         loginBtn.style.opacity = isValid ? '1' : '0.6';
-        
+
         return isValid;
     }
-    
+
     // Validar al escribir
     emailInput.addEventListener('input', validateForm);
     passwordInput.addEventListener('input', validateForm);
-    
+
     // Manejar envío del formulario
     form.addEventListener('submit', function(e) {
         if (!validateForm()) {
             e.preventDefault();
-            
+
             // Mostrar mensaje de error
             if (!emailInput.value.trim()) {
                 emailInput.focus();
@@ -290,18 +290,18 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             return false;
         }
-        
+
         // Mostrar indicador de carga
         loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Iniciando sesión...';
         loginBtn.disabled = true;
     });
-    
+
     // Función para mostrar errores
     function showError(message) {
         // Remover error anterior
         const existingError = document.querySelector('.login-error');
         if (existingError) existingError.remove();
-        
+
         // Crear nuevo error
         const errorDiv = document.createElement('div');
         errorDiv.className = 'login-error';
@@ -316,15 +316,15 @@ document.addEventListener('DOMContentLoaded', function() {
             font-size: 0.9rem;
         `;
         errorDiv.textContent = message;
-        
+
         form.insertBefore(errorDiv, form.firstChild);
-        
+
         // Remover después de 5 segundos
         setTimeout(() => {
             if (errorDiv.parentNode) errorDiv.remove();
         }, 5000);
     }
-    
+
     // Validación inicial
     validateForm();
 });
@@ -332,11 +332,11 @@ document.addEventListener('DOMContentLoaded', function() {
 function fillLogin(email, password) {
     document.getElementById('email').value = email;
     document.getElementById('password').value = password;
-    
+
     // Trigger validation
     document.getElementById('email').dispatchEvent(new Event('input'));
     document.getElementById('password').dispatchEvent(new Event('input'));
-    
+
     // Añadir efecto visual
     const form = document.getElementById('loginForm');
     form.style.transform = 'scale(1.02)';

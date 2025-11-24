@@ -218,15 +218,15 @@
 
         <form method="POST" action="{{ url_for('recuperar_contrasena') }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            
+
             <div class="form-group">
                 <label for="email" class="form-label">
                     📧 Correo Electrónico
                 </label>
-                <input 
-                    type="email" 
-                    id="email" 
-                    name="email" 
+                <input
+                    type="email"
+                    id="email"
+                    name="email"
                     class="form-input"
                     placeholder="tu@email.com"
                     required

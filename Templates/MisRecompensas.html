@@ -6,12 +6,12 @@
 <div class="login-container" style="width: 90%; max-width: 800px; padding: 30px;">
     <h2 style="color: #222; text-align: center; margin-bottom: 20px;">🎁 Mis Recompensas</h2>
     <p style="color: #666; text-align: center; margin-bottom: 30px;">Recompensas que has ganado por tu excelente desempeño</p>
-    
+
     {% if recompensas %}
         <div>
             {% for recompensa in recompensas %}
-                <div style="padding: 20px; border: 1px solid #ccc; margin: 15px 0; border-radius: 8px; 
-                           background: rgba(249, 249, 249, 0.9); 
+                <div style="padding: 20px; border: 1px solid #ccc; margin: 15px 0; border-radius: 8px;
+                           background: rgba(249, 249, 249, 0.9);
                            transition: transform 0.2s, box-shadow 0.2s;"
                      onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)'"
                      onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
@@ -33,7 +33,7 @@
             <p style="margin: 10px 0;">Las recompensas se otorgan automáticamente cuando alcanzas ciertos logros.</p>
         </div>
     {% endif %}
-    
+
     <div class="btn-group" style="text-align: center; margin-top: 30px;">
         <a href="{{ url_for('dashboard_estudiante') }}" class="btn btn-login">Volver al Dashboard</a>
     </div>

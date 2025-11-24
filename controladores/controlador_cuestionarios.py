@@ -1,4 +1,4 @@
-﻿from bd import obtener_conexion
+from bd import obtener_conexion
 from datetime import datetime
 
 def obtener_cuestionarios_por_docente(docente_id):

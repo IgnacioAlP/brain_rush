@@ -1,4 +1,4 @@
-﻿from bd import obtener_conexion
+from bd import obtener_conexion
 
 def crear_sala(nombre, cuestionario_id, docente_id, **kwargs):
     import random

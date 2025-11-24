@@ -249,7 +249,7 @@
     <!-- Header de la Página -->
     <div class="sala-header animate-fadeIn">
         <h1 class="page-title">🎯 Crear Sala de Juego</h1>
-        
+
         <div class="cuestionario-info">
             <h2 class="cuestionario-title">{{ cuestionario.titulo }}</h2>
             {% if cuestionario.descripcion %}
@@ -282,9 +282,9 @@
                     <i class="fas fa-tag"></i>
                     Nombre de la Sala
                 </label>
-                <input type="text" 
-                       id="nombre_sala" 
-                       name="nombre_sala" 
+                <input type="text"
+                       id="nombre_sala"
+                       name="nombre_sala"
                        class="form-input"
                        value="Sala - {{ cuestionario.titulo }}"
                        placeholder="Ej: Examen Final - Matemáticas"
@@ -397,7 +397,7 @@
                     <i class="fas fa-arrow-left"></i>
                     Cancelar
                 </a>
-                
+
                 <button type="submit" class="action-btn btn-primary" id="create-btn">
                     <i class="fas fa-plus" id="create-icon"></i>
                     <div class="loading-spinner" id="loading-spinner"></div>
@@ -416,42 +416,42 @@ document.addEventListener('DOMContentLoaded', function() {
     const capacidadOptions = document.querySelectorAll('.capacidad-option:not(.modo-option):not(.grupos-option)');
     const capacidadInput = document.getElementById('capacidad_maxima');
     const previewCapacity = document.getElementById('preview-capacity');
-    
+
     capacidadOptions.forEach(option => {
         option.addEventListener('click', function() {
             // Remover selección anterior
             capacidadOptions.forEach(opt => opt.classList.remove('selected'));
-            
+
             // Agregar selección actual
             this.classList.add('selected');
-            
+
             // Actualizar valor
             const value = this.dataset.value;
             capacidadInput.value = value;
             previewCapacity.textContent = value;
         });
     });
-    
+
     // Manejo de selección de modo de juego
     const modoOptions = document.querySelectorAll('.modo-option');
     const modoInput = document.getElementById('modo_juego');
     const gruposConfig = document.getElementById('grupos-config');
     const previewMode = document.getElementById('preview-mode');
     const previewGrupos = document.getElementById('preview-grupos');
-    
+
     modoOptions.forEach(option => {
         option.addEventListener('click', function() {
             // Remover selección anterior
             modoOptions.forEach(opt => opt.classList.remove('selected'));
-            
+
             // Agregar selección actual
             this.classList.add('selected');
-            
+
             // Actualizar valor
             const mode = this.dataset.mode;
             modoInput.value = mode;
             previewMode.textContent = mode === 'individual' ? 'Individual' : 'Por Grupos';
-            
+
             // Mostrar/ocultar configuración de grupos
             if (mode === 'grupo') {
                 gruposConfig.style.display = 'block';
@@ -462,54 +462,54 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
-    
+
     // Manejo de selección de número de grupos
     const gruposOptions = document.querySelectorAll('.grupos-option');
     const gruposInput = document.getElementById('num_grupos');
     const previewGruposNum = document.getElementById('preview-grupos-num');
-    
+
     gruposOptions.forEach(option => {
         option.addEventListener('click', function() {
             // Remover selección anterior
             gruposOptions.forEach(opt => opt.classList.remove('selected'));
-            
+
             // Agregar selección actual
             this.classList.add('selected');
-            
+
             // Actualizar valor
             const value = this.dataset.value;
             gruposInput.value = value;
             previewGruposNum.textContent = value;
         });
     });
-    
+
     // Actualización del preview del nombre
     const nombreInput = document.getElementById('nombre_sala');
     const previewName = document.getElementById('preview-name');
-    
+
     nombreInput.addEventListener('input', function() {
         previewName.textContent = this.value || 'Sala sin nombre';
     });
-    
+
     // Manejo del formulario
     const form = document.getElementById('create-room-form');
     const createBtn = document.getElementById('create-btn');
     const createIcon = document.getElementById('create-icon');
     const loadingSpinner = document.getElementById('loading-spinner');
     const createText = document.getElementById('create-text');
-    
+
     form.addEventListener('submit', function(e) {
         e.preventDefault();
-        
+
         // Deshabilitar botón y mostrar loading
         createBtn.disabled = true;
         createIcon.style.display = 'none';
         loadingSpinner.style.display = 'block';
         createText.textContent = 'Creando Sala...';
-        
+
         // Enviar datos
         const formData = new FormData(form);
-        
+
         fetch(form.action || window.location.href, {
             method: 'POST',
             body: formData
@@ -517,7 +517,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => {
             console.log('Response status:', response.status);
             console.log('Response headers:', response.headers);
-            
+
             if (response.ok) {
                 return response.json();
             } else {
@@ -526,13 +526,13 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(data => {
             console.log('Response data:', data);
-            
+
             if (data && data.success) {
                 // Éxito - mostrar mensaje y redirigir
                 createText.textContent = '¡Sala Creada!';
                 createIcon.style.display = 'block';
                 loadingSpinner.style.display = 'none';
-                
+
                 setTimeout(() => {
                     if (data.sala_id) {
                         window.location.href = `/monitorear-sala/${data.sala_id}`;
@@ -546,18 +546,18 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(error => {
             console.error('Error:', error);
-            
+
             // Restaurar botón
             createBtn.disabled = false;
             createIcon.style.display = 'block';
             loadingSpinner.style.display = 'none';
             createText.textContent = 'Crear Sala';
-            
+
             // Mostrar error
             alert('Error al crear la sala: ' + error.message);
         });
     });
-    
+
     // Animaciones
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
@@ -567,7 +567,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
-    
+
     document.querySelectorAll('.animate-fadeIn').forEach(el => {
         observer.observe(el);
     });

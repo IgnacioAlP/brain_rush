@@ -1,4 +1,4 @@
-﻿from bd import obtener_conexion
+from bd import obtener_conexion
 import pymysql.cursors
 
 def obtener_ranking_global():

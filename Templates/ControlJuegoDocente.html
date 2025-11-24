@@ -65,14 +65,6 @@
     border-radius: 1rem;
     border-left: 4px solid #cbd5e0;
     position: relative;
-    word-wrap: break-word;
-    word-break: break-word;
-    overflow-wrap: break-word;
-    white-space: normal;
-    min-height: 60px;
-    display: flex;
-    flex-direction: column;
-    line-height: 1.5;
 }
 
 .opcion-card.correcta {
@@ -518,11 +510,11 @@
         flex-direction: column;
         gap: 1rem;
     }
-    
+
     .control-buttons {
         flex-direction: column;
     }
-    
+
     .opciones-preview {
         grid-template-columns: 1fr;
     }
@@ -594,7 +586,7 @@
         <div class="pregunta-enunciado" id="pregunta-enunciado">
             Cargando pregunta...
         </div>
-        
+
         <div class="opciones-preview" id="opciones-preview">
             <!-- Las opciones se cargarán dinámicamente -->
         </div>
@@ -670,7 +662,7 @@ async function cargarPreguntaActual() {
     try {
         const response = await fetch(`/api/sala/${SALA_ID}/pregunta-actual`);
         const data = await response.json();
-        
+
         if (data.success && data.pregunta) {
             mostrarPregunta(data.pregunta);
             document.getElementById('waiting-message').style.display = 'none';
@@ -679,7 +671,7 @@ async function cargarPreguntaActual() {
             document.getElementById('estudiantes-container').style.display = 'block';
             document.getElementById('control-buttons').style.display = 'flex';
             document.getElementById('ranking-container').style.display = 'block';
-            
+
             // Iniciar polling de estadísticas
             iniciarPollingEstadisticas();
         } else {
@@ -698,10 +690,10 @@ function mostrarPregunta(pregunta) {
     // Actualizar barra de estado
     document.getElementById('pregunta-numero').textContent = pregunta.numero_pregunta;
     document.getElementById('total-preguntas').textContent = pregunta.total_preguntas;
-    
+
     // Mostrar enunciado
     document.getElementById('pregunta-enunciado').textContent = pregunta.enunciado;
-    
+
     // Mostrar opciones
     const opcionesContainer = document.getElementById('opciones-preview');
     opcionesContainer.innerHTML = pregunta.opciones.map((opcion, index) => {
@@ -712,17 +704,17 @@ function mostrarPregunta(pregunta) {
             </div>
         `;
     }).join('');
-    
+
     // Controlar botones según si es la última pregunta
     const btnSiguiente = document.getElementById('btn-siguiente');
     const btnFinalizar = document.getElementById('btn-finalizar');
-    
+
     if (pregunta.numero_pregunta >= pregunta.total_preguntas) {
         // Última pregunta: desactivar "Siguiente" y activar "Finalizar"
         btnSiguiente.disabled = true;
         btnSiguiente.style.opacity = '0.5';
         btnSiguiente.style.cursor = 'not-allowed';
-        
+
         if (btnFinalizar) {
             btnFinalizar.disabled = false;
             btnFinalizar.style.opacity = '1';
@@ -741,14 +733,14 @@ async function iniciarPollingEstadisticas() {
     if (estadisticasInterval) {
         clearInterval(estadisticasInterval);
     }
-    
+
     // Actualizar cada 2 segundos
     estadisticasInterval = setInterval(async () => {
         await actualizarEstadisticas();
         await actualizarDetalleEstudiantes();
         await actualizarRanking();
     }, 2000);
-    
+
     // Actualizar inmediatamente (el timer se iniciará automáticamente al detectar la pregunta)
     await actualizarEstadisticas();
     await actualizarDetalleEstudiantes();
@@ -765,10 +757,10 @@ function iniciarTimer() {
     if (timerInterval) {
         clearInterval(timerInterval);
     }
-    
+
     // Actualizar inmediatamente
     actualizarTimer();
-    
+
     // Actualizar cada segundo
     timerInterval = setInterval(() => {
         actualizarTimer();
@@ -780,7 +772,7 @@ function reiniciarTimer(nuevaPreguntaId) {
     if (preguntaActualId !== nuevaPreguntaId) {
         console.log(`🔄 Nueva pregunta detectada (${preguntaActualId} → ${nuevaPreguntaId}), reiniciando timer...`);
         preguntaActualId = nuevaPreguntaId;
-        
+
         // Reiniciar el timer desde el tiempo configurado
         iniciarTimer();
     }
@@ -791,19 +783,19 @@ function actualizarTimer() {
         console.log('⚠️ No hay tiempo de inicio o límite de pregunta');
         return;
     }
-    
+
     const ahora = new Date();
     const inicio = new Date(tiempoInicioPregunta);
     const transcurrido = Math.floor((ahora - inicio) / 1000); // Segundos transcurridos
     const restante = Math.max(0, tiempoPorPregunta - transcurrido); // Tiempo restante (no menor a 0)
-    
+
     const minutos = Math.floor(restante / 60);
     const segundos = restante % 60;
-    
+
     const timerValue = document.getElementById('timer-value');
     if (timerValue) {
         timerValue.textContent = `${String(minutos).padStart(2, '0')}:${String(segundos).padStart(2, '0')}`;
-        
+
         // Cambiar color si queda poco tiempo
         const timerDisplay = document.getElementById('timer-pregunta');
         if (timerDisplay) {
@@ -824,33 +816,33 @@ async function actualizarDetalleEstudiantes() {
     try {
         const response = await fetch(`/api/sala/${SALA_ID}/detalle-respuestas`);
         const data = await response.json();
-        
+
         console.log('📊 Detalle de estudiantes recibido:', data);
-        
+
         if (data.success && data.detalle) {
             const { estudiantes, tiempo_inicio_pregunta, tiempo_por_pregunta, numero_pregunta_actual, estadisticas } = data.detalle;
-            
+
             console.log('✅ Estudiantes:', estudiantes.length);
             console.log('⏱️ Tiempo inicio:', tiempo_inicio_pregunta);
             console.log('⏱️ Tiempo por pregunta:', tiempo_por_pregunta);
             console.log('📝 Número de pregunta actual:', numero_pregunta_actual);
-            
+
             // Guardar tiempo de inicio y límite para el timer
             if (tiempo_inicio_pregunta) {
                 tiempoInicioPregunta = tiempo_inicio_pregunta;
                 console.log('✅ Timer iniciado con:', tiempoInicioPregunta);
             }
-            
+
             if (tiempo_por_pregunta) {
                 tiempoPorPregunta = tiempo_por_pregunta;
                 console.log('✅ Tiempo límite configurado:', tiempoPorPregunta, 'segundos');
             }
-            
+
             // Reiniciar timer si cambió la pregunta
             if (numero_pregunta_actual) {
                 reiniciarTimer(numero_pregunta_actual);
             }
-            
+
             // Mostrar contenedor
             const container = document.getElementById('estudiantes-container');
             if (container) {
@@ -859,19 +851,19 @@ async function actualizarDetalleEstudiantes() {
             } else {
                 console.error('❌ No se encontró el contenedor estudiantes-container');
             }
-            
+
             // Actualizar grid de estudiantes
             const grid = document.getElementById('estudiantes-grid');
             if (!grid) {
                 console.error('❌ No se encontró estudiantes-grid');
                 return;
             }
-            
+
             grid.innerHTML = estudiantes.map(est => {
                 let statusHTML = '';
                 let cardClass = 'estudiante-card ';
                 let iconoEstudiante = '👤';
-                
+
                 if (est.ha_respondido) {
                     cardClass += 'respondido';
                     if (est.es_correcta) {
@@ -886,7 +878,7 @@ async function actualizarDetalleEstudiantes() {
                     statusHTML = '<span class="estudiante-status esperando">⏳ Esperando</span>';
                     iconoEstudiante = '⏳';
                 }
-                
+
                 return `
                     <div class="${cardClass}">
                         <div class="estudiante-icon">${iconoEstudiante}</div>
@@ -898,7 +890,7 @@ async function actualizarDetalleEstudiantes() {
                     </div>
                 `;
             }).join('');
-            
+
             // Actualizar estadísticas también
             document.getElementById('respondieron-count').textContent = estadisticas.respondieron;
             document.getElementById('pendientes-count').textContent = estadisticas.pendientes;
@@ -914,13 +906,13 @@ async function actualizarEstadisticas() {
     try {
         const response = await fetch(`/api/sala/${SALA_ID}/estadisticas-pregunta`);
         const data = await response.json();
-        
+
         if (data.success) {
             const stats = data.estadisticas;
             document.getElementById('total-participantes').textContent = stats.total;
             document.getElementById('respondieron-count').textContent = stats.respondieron;
             document.getElementById('pendientes-count').textContent = stats.pendientes;
-            
+
             // Actualizar barra de progreso
             const porcentaje = stats.total > 0 ? (stats.respondieron / stats.total) * 100 : 0;
             document.getElementById('progress-respuestas').style.width = porcentaje + '%';
@@ -934,24 +926,22 @@ async function actualizarRanking() {
     try {
         const response = await fetch(`/api/sala/${SALA_ID}/ranking`);
         const data = await response.json();
-        
+
         console.log('🔄 Actualizando ranking:', data);
-        
+
         if (data.success && data.ranking && data.ranking.length > 0) {
             const tbody = document.getElementById('ranking-tbody');
             tbody.innerHTML = data.ranking.map((participante, index) => {
-                const posicionClass = index === 0 ? 'posicion-1' : 
-                                     index === 1 ? 'posicion-2' : 
+                const posicionClass = index === 0 ? 'posicion-1' :
+                                     index === 1 ? 'posicion-2' :
                                      index === 2 ? 'posicion-3' : 'posicion-other';
-                
-                console.log('👤 Participante:', participante); // Debug: ver datos
-                
+
                 return `
                     <tr>
                         <td><span class="posicion-badge ${posicionClass}">${participante.posicion || (index + 1)}</span></td>
-                        <td>${participante.nombre_completo || participante.nombre_participante || participante.nombre || 'Participante'}</td>
-                        <td>${participante.numero_grupo || participante.nombre_grupo || participante.grupo || '-'}</td>
-                        <td><strong>${participante.puntos_totales || participante.puntaje_total || participante.puntaje || 0}</strong></td>
+                        <td>${participante.nombre_participante || participante.nombre || 'Participante'}</td>
+                        <td>${participante.nombre_grupo || participante.grupo || '-'}</td>
+                        <td><strong>${participante.puntaje_total || participante.puntaje || 0}</strong></td>
                         <td>${participante.respuestas_correctas || participante.correctas || 0}</td>
                         <td>${(participante.tiempo_total_respuestas || participante.tiempo_total || 0).toFixed(1)}s</td>
                     </tr>
@@ -985,11 +975,11 @@ async function actualizarRanking() {
 
 async function siguientePregunta() {
     if (!confirm('¿Avanzar a la siguiente pregunta?')) return;
-    
+
     const btn = document.getElementById('btn-siguiente');
     btn.disabled = true;
     btn.textContent = 'Cargando...';
-    
+
     try {
         const response = await fetch(`/api/sala/${SALA_ID}/siguiente-pregunta`, {
             method: 'POST',
@@ -997,9 +987,9 @@ async function siguientePregunta() {
                 'Content-Type': 'application/json'
             }
         });
-        
+
         const data = await response.json();
-        
+
         if (data.success) {
             if (data.hay_mas_preguntas) {
                 // Recargar pregunta actual
@@ -1009,15 +999,9 @@ async function siguientePregunta() {
                     btn.textContent = '➡️ Siguiente Pregunta';
                 }, 1000);
             } else {
-                // No hay más preguntas, pero NO finalizar automáticamente
-                // El docente debe usar el botón "Finalizar Juego"
-                alert('Esta es la última pregunta. Cuando estés listo, usa el botón "Finalizar Juego".');
-                btn.disabled = true;
-                btn.textContent = 'Última Pregunta';
-                // Recargar para actualizar el estado
-                setTimeout(() => {
-                    cargarPreguntaActual();
-                }, 500);
+                // Juego terminado
+                alert('¡Juego completado! Mostrando resultados finales...');
+                window.location.href = `/sala/${SALA_ID}/resultados`;
             }
         } else {
             alert('Error: ' + data.error);
@@ -1060,11 +1044,11 @@ function finalizarJuego() {
 // Inicializar cuando carga la página
 window.addEventListener('DOMContentLoaded', () => {
     console.log('🎮 Iniciando ControlJuegoDocente para sala:', SALA_ID);
-    
+
     // Mostrar ranking inmediatamente (incluso si no hay pregunta activa)
     document.getElementById('ranking-container').style.display = 'block';
     actualizarRanking(); // Actualizar ranking al inicio
-    
+
     cargarPreguntaActual();
 });
 
@@ -1102,10 +1086,10 @@ function confirmarSalida() {
     if (modal) {
         modal.style.display = 'none';
     }
-    
+
     if (pollingInterval) clearInterval(pollingInterval);
     if (estadisticasInterval) clearInterval(estadisticasInterval);
-    
+
     if (urlDestino) {
         window.location.href = urlDestino;
     } else {
@@ -1120,7 +1104,7 @@ window.addEventListener('beforeunload', (event) => {
         if (estadisticasInterval) clearInterval(estadisticasInterval);
         return undefined;
     }
-    
+
     // Mostrar confirmación nativa del navegador
     event.preventDefault();
     event.returnValue = '¿Seguro que deseas salir? El juego seguirá en curso.';
@@ -1140,7 +1124,7 @@ document.addEventListener('keydown', function(e) {
             return false;
         }
     }
-    
+
     // Ctrl+R o Cmd+R
     if ((e.ctrlKey || e.metaKey) && (e.key === 'r' || e.keyCode === 82)) {
         if (!permitirSalida) {

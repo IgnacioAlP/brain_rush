@@ -9,13 +9,14 @@ import os, json
 from io import BytesIO
 from datetime import datetime, timedelta
 import requests
+from utils_auth import crear_token_jwt
 # Importar utilidades de autenticación personalizadas
 from utils_auth import (
-    login_required, 
+    login_required,
     jwt_or_session_required,
     docente_required,
     estudiante_required,
-    crear_token_jwt,
+    crear_token_jwt,       # <--- Importante que esto esté
     verificar_token_jwt,
     establecer_cookies_usuario,
     limpiar_cookies_usuario,
@@ -41,7 +42,7 @@ from api_crud import api_crud
 # Ya no necesitamos User class, authenticate e identity con JWT-Extended
 # La autenticación se maneja con endpoints personalizados
 
-    
+
 # Importar msal solo si está disponible (necesario para OneDrive)
 try:
     import msal
@@ -57,7 +58,6 @@ load_dotenv()
 
 # Importa las extensiones y librerías necesarias
 from extensions import mail
-from flask_jwt_extended import JWTManager
 from itsdangerous import URLSafeTimedSerializer
 
 # Crea la aplicación Flask
@@ -74,14 +74,7 @@ mail.init_app(app)
 # Serializador para tokens de email (DEBE usar la MISMA SECRET_KEY durante toda la ejecución)
 serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
 
-# Configurar clave para Flask-JWT-Extended (usar la misma SECRET_KEY por compatibilidad)
-app.config['JWT_SECRET_KEY'] = app.config['SECRET_KEY']
 
-# Configurar Flask-JWT-Extended para usar "JWT" en lugar de "Bearer"
-app.config['JWT_HEADER_TYPE'] = 'JWT'
-
-# Inicializar JWTManager
-jwt = JWTManager(app)
 
 # Registrar blueprints de APIs
 app.register_blueprint(api_crud)
@@ -137,11 +130,11 @@ def verificar_y_crear_tabla_salas():
     try:
         conexion = obtener_conexion()
         cursor = conexion.cursor()
-        
+
         # Verificar si la tabla existe
         cursor.execute("SHOW TABLES LIKE 'salas_juego'")
         tabla_existe = cursor.fetchone()
-        
+
         if not tabla_existe:
             print("DEBUG: Tabla salas_juego no existe, creándola...")
             create_table_query = """
@@ -161,10 +154,10 @@ def verificar_y_crear_tabla_salas():
             print("DEBUG: Tabla salas_juego creada exitosamente")
         else:
             print("DEBUG: Tabla salas_juego ya existe")
-            
+
         conexion.close()
         return True
-        
+
     except Exception as e:
         print(f"DEBUG: Error al verificar/crear tabla salas_juego: {str(e)}")
         if 'conexion' in locals():
@@ -174,32 +167,32 @@ def verificar_y_crear_tabla_salas():
 def crear_sala_simple(cuestionario_id):
     try:
         print(f"DEBUG: crear_sala_simple - Iniciando con cuestionario_id: {cuestionario_id}")
-        
+
         # Verificar que la tabla exista
         if not verificar_y_crear_tabla_salas():
             return None, None
-            
+
         pin_sala = str(random.randint(100000, 999999))
         print(f"DEBUG: crear_sala_simple - PIN generado: {pin_sala}")
-        
+
         conexion = obtener_conexion()
         print(f"DEBUG: crear_sala_simple - Conexión obtenida: {conexion}")
-        
+
         cursor = conexion.cursor()
         query = "INSERT INTO salas_juego (pin_sala, id_cuestionario, modo_juego, estado) VALUES (%s, %s, %s, %s)"
         valores = (pin_sala, cuestionario_id, 'individual', 'esperando')
         print(f"DEBUG: crear_sala_simple - Query: {query}")
         print(f"DEBUG: crear_sala_simple - Valores: {valores}")
-        
+
         cursor.execute(query, valores)
         conexion.commit()
         sala_id = cursor.lastrowid
-        
+
         print(f"DEBUG: crear_sala_simple - Sala creada exitosamente con ID: {sala_id}")
         conexion.close()
-        
+
         return sala_id, pin_sala
-        
+
     except Exception as e:
         print(f"DEBUG: ERROR en crear_sala_simple: {str(e)}")
         import traceback
@@ -211,31 +204,31 @@ def crear_sala_simple(cuestionario_id):
 def crear_grupos_para_sala(sala_id, num_grupos):
     """
     Crea grupos para una sala de juego.
-    
+
     Args:
         sala_id: ID de la sala
         num_grupos: Número de grupos a crear (2-6)
-    
+
     Returns:
         True si se crearon exitosamente, False en caso de error
     """
     try:
         print(f"DEBUG: crear_grupos_para_sala - Iniciando para sala {sala_id} con {num_grupos} grupos")
-        
+
         if num_grupos < 2 or num_grupos > 6:
             print(f"DEBUG: crear_grupos_para_sala - Número de grupos inválido: {num_grupos}")
             return False
-        
+
         conexion = obtener_conexion()
         cursor = conexion.cursor()
-        
+
         # Verificar que la sala exista
         cursor.execute("SELECT id_sala FROM salas_juego WHERE id_sala = %s", (sala_id,))
         if not cursor.fetchone():
             print(f"DEBUG: crear_grupos_para_sala - Sala {sala_id} no encontrada")
             conexion.close()
             return False
-        
+
         # Crear los grupos
         for numero_grupo in range(1, num_grupos + 1):
             nombre_grupo = f"Grupo {numero_grupo}"
@@ -244,13 +237,13 @@ def crear_grupos_para_sala(sala_id, num_grupos):
                 VALUES (%s, %s, %s)
             """, (sala_id, numero_grupo, nombre_grupo))
             print(f"DEBUG: crear_grupos_para_sala - Grupo {numero_grupo} creado: {nombre_grupo}")
-        
+
         conexion.commit()
         print(f"DEBUG: crear_grupos_para_sala - {num_grupos} grupos creados exitosamente")
         conexion.close()
-        
+
         return True
-        
+
     except Exception as e:
         print(f"DEBUG: ERROR en crear_grupos_para_sala: {str(e)}")
         import traceback
@@ -269,7 +262,7 @@ def obtener_sala_por_id_simple(id_sala):
         cursor = conexion.cursor()
         cursor.execute("""
             SELECT id_sala, pin_sala, id_cuestionario, modo_juego, estado, max_participantes, fecha_creacion, total_preguntas
-            FROM salas_juego 
+            FROM salas_juego
             WHERE id_sala = %s
         """, (id_sala,))
         sala = cursor.fetchone()
@@ -281,17 +274,17 @@ def obtener_sala_por_id_simple(id_sala):
             #   - Si modo_juego es 'colaborativo' = Sala con docente
             #   - Si hay múltiples participantes = Sala con docente (clase)
             #   - En cualquier otro caso = Juego individual
-            
+
             modo_juego = sala[3]
             estado = sala[4]
             pin_sala = sala[1]
-            
+
             # Debug logs
             print(f"\n🔍 DEBUG - Detectando modo de sala {id_sala}:")
             print(f"   PIN: {pin_sala} (tipo: {type(pin_sala)}, len: {len(str(pin_sala)) if pin_sala else 0})")
             print(f"   Modo juego: {modo_juego}")
             print(f"   Estado: {estado}")
-            
+
             # REGLA 1: Salas colaborativas siempre tienen docente
             if modo_juego == 'colaborativo':
                 tiene_docente = True
@@ -311,15 +304,15 @@ def obtener_sala_por_id_simple(id_sala):
             else:
                 # REGLA 5: Verificar si hay múltiples participantes (indica sala de clase)
                 cursor.execute("""
-                    SELECT COUNT(*) FROM participantes_sala 
+                    SELECT COUNT(*) FROM participantes_sala
                     WHERE id_sala = %s AND estado != 'desconectado'
                 """, (id_sala,))
                 num_participantes = cursor.fetchone()[0]
                 tiene_docente = (num_participantes > 1)
                 print(f"   🔍 REGLA 5: {num_participantes} participantes → tiene_docente = {tiene_docente}")
-            
+
             print(f"   🎯 RESULTADO FINAL: tiene_docente = {tiene_docente}\n")
-            
+
             return {
                 'id': sala[0],
                 'pin_sala': sala[1],
@@ -350,7 +343,7 @@ def obtener_preguntas_por_cuestionario_simple(id_cuestionario):
         cursor = conexion.cursor()
         cursor.execute("""
             SELECT COUNT(*) FROM cuestionario_preguntas cp
-            JOIN preguntas p ON cp.id_pregunta = p.id_pregunta 
+            JOIN preguntas p ON cp.id_pregunta = p.id_pregunta
             WHERE cp.id_cuestionario = %s
         """, (id_cuestionario,))
         count = cursor.fetchone()[0]
@@ -363,18 +356,18 @@ def obtener_cuestionarios_por_docente_simple(id_docente):
     try:
         cursor = conexion.cursor()
         cursor.execute("""
-            SELECT c.id_cuestionario, c.titulo, c.descripcion, c.id_docente, c.estado, 
+            SELECT c.id_cuestionario, c.titulo, c.descripcion, c.id_docente, c.estado,
                    c.fecha_creacion, c.fecha_programada, c.fecha_publicacion,
                    COUNT(DISTINCT cp.id_pregunta) as num_preguntas
             FROM cuestionarios c
             LEFT JOIN cuestionario_preguntas cp ON c.id_cuestionario = cp.id_cuestionario
             WHERE c.id_docente = %s
-            GROUP BY c.id_cuestionario, c.titulo, c.descripcion, c.id_docente, c.estado, 
+            GROUP BY c.id_cuestionario, c.titulo, c.descripcion, c.id_docente, c.estado,
                      c.fecha_creacion, c.fecha_programada, c.fecha_publicacion
             ORDER BY c.fecha_creacion DESC
         """, (id_docente,))
         resultados = cursor.fetchall()
-        
+
         cuestionarios = []
         for resultado in resultados:
             cuestionarios.append({
@@ -388,7 +381,7 @@ def obtener_cuestionarios_por_docente_simple(id_docente):
                 'fecha_publicacion': resultado[7],  # Mantenemos como datetime object
                 'num_preguntas': resultado[8]  # Ahora cuenta las preguntas reales
             })
-        
+
         return cuestionarios
     finally:
         conexion.close()
@@ -439,27 +432,27 @@ def registrarse():
             email = (data.get('email') or '').strip().lower()
             password = data.get('password') or ''
             tipo_usuario = (data.get('tipo_usuario') or 'estudiante').strip().lower()
-            
+
             # Validar dominio del correo electrónico
             dominios_permitidos = ['@usat.pe', '@usat.edu.pe']
             dominio_valido = any(email.endswith(dominio) for dominio in dominios_permitidos)
-            
+
             if not dominio_valido:
                 error_msg = 'Solo se permiten correos institucionales con dominio @usat.pe o @usat.edu.pe'
                 flash(error_msg, 'error')
                 return render_template('Registrarse.html')
-            
+
             success, result = controlador_usuario.crear_usuario(nombre, apellidos, email, password, tipo_usuario)
             if not success:
                 error_msg = result or 'No se pudo registrar el usuario'
                 flash(error_msg, 'error')
                 return render_template('Registrarse.html')
-            
+
             # Solo intentar enviar correo si está habilitado en la configuración
             if app.config.get('MAIL_ENABLED', False):
                 # Intentar enviar el correo de confirmación
                 correo_enviado, mensaje_correo = controlador_usuario.enviar_correo_confirmacion(email)
-                
+
                 if correo_enviado:
                     flash('¡Registro exitoso! Por favor, revisa tu correo para activar tu cuenta. Verifica también la carpeta de spam.', 'success')
                 else:
@@ -468,7 +461,7 @@ def registrarse():
             else:
                 # Correo desactivado - usuario creado directamente como activo
                 flash('¡Registro exitoso! Ya puedes iniciar sesión con tu cuenta.', 'success')
-            
+
             return redirect(url_for('login'))
         except Exception as e:
             print(f"DEBUG: Excepción en registro: {str(e)}")
@@ -481,29 +474,29 @@ def confirmar_email(token):
     """Confirmar email de usuario mediante token"""
     try:
         print(f"🔐 Intentando confirmar con token: {token[:20]}...")
-        
+
         # Intentar decodificar el token (válido por 1 hora)
         email = serializer.loads(token, salt='email-confirm-salt', max_age=3600)
         print(f"✅ Token válido para email: {email}")
-        
+
         # Activar la cuenta
         success, message = controlador_usuario.activar_cuenta_usuario(email)
-        
+
         if success:
             flash(message, 'success')
             print(f"✅ Cuenta activada exitosamente: {email}")
         else:
             flash(f"Error al activar la cuenta: {message}", 'error')
             print(f"⚠️ Error al activar cuenta: {message}")
-        
+
         return redirect(url_for('login'))
-        
+
     except Exception as e:
         error_type = type(e).__name__
         print(f"❌ Error al confirmar email ({error_type}): {e}")
         import traceback
         traceback.print_exc()
-        
+
         # Mensajes de error más específicos
         if 'expired' in str(e).lower() or 'Signature expired' in str(e):
             flash('El enlace de confirmación ha expirado (válido por 1 hora). Por favor, solicita un nuevo correo de confirmación.', 'error')
@@ -511,7 +504,7 @@ def confirmar_email(token):
             flash('El enlace de confirmación es inválido. Por favor, verifica que copiaste la URL completa o solicita un nuevo correo.', 'error')
         else:
             flash('Error al procesar la confirmación. Por favor, intenta nuevamente o solicita un nuevo correo de confirmación.', 'error')
-        
+
         return redirect(url_for('login'))
 
 # ========== RECUPERACIÓN DE CONTRASEÑA ==========
@@ -521,110 +514,110 @@ def recuperar_contrasena():
     """Página para solicitar recuperación de contraseña"""
     if request.method == 'GET':
         return render_template('RecuperarContrasena.html')
-    
+
     try:
         # Obtener email del formulario
         email = request.form.get('email', '').strip().lower()
-        
+
         if not email:
-            return render_template('RecuperarContrasena.html', 
+            return render_template('RecuperarContrasena.html',
                                  mensaje_error='Por favor ingresa tu correo electrónico.')
-        
+
         # Validar formato de email
         import re
         email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
         if not re.match(email_regex, email):
-            return render_template('RecuperarContrasena.html', 
+            return render_template('RecuperarContrasena.html',
                                  mensaje_error='Por favor ingresa un correo electrónico válido.')
-        
+
         # Llamar a la función de solicitar recuperación
         success, mensaje = controlador_usuario.solicitar_recuperacion_contrasena(email)
-        
+
         # Siempre mostrar mensaje de éxito por seguridad (no revelar si el email existe)
-        return render_template('RecuperarContrasena.html', 
+        return render_template('RecuperarContrasena.html',
                              mensaje_exito='Si el correo existe en nuestro sistema, recibirás instrucciones para restablecer tu contraseña.')
-        
+
     except Exception as e:
         print(f"❌ Error en recuperar_contrasena: {e}")
         import traceback
         traceback.print_exc()
-        return render_template('RecuperarContrasena.html', 
+        return render_template('RecuperarContrasena.html',
                              mensaje_error='Hubo un error al procesar tu solicitud. Por favor intenta nuevamente.')
 
 @app.route('/restablecer/<token>', methods=['GET', 'POST'])
 def restablecer_contrasena(token):
     """Página para restablecer contraseña con token"""
-    
+
     # Validar el token primero
     success, resultado = controlador_usuario.validar_token_recuperacion(token)
-    
+
     if not success:
         # Token inválido o expirado
-        return render_template('RestablecerContrasena.html', 
+        return render_template('RestablecerContrasena.html',
                              token=token,
                              mensaje_error=resultado)
-    
+
     # Token válido, resultado contiene el email
     email = resultado
-    
+
     if request.method == 'GET':
         # Mostrar formulario de nueva contraseña
         return render_template('RestablecerContrasena.html', token=token)
-    
+
     # POST: Procesar nueva contraseña
     try:
         password = request.form.get('password', '')
         confirm_password = request.form.get('confirm_password', '')
-        
+
         # Validaciones
         if not password or not confirm_password:
-            return render_template('RestablecerContrasena.html', 
+            return render_template('RestablecerContrasena.html',
                                  token=token,
                                  mensaje_error='Por favor completa todos los campos.')
-        
+
         if password != confirm_password:
-            return render_template('RestablecerContrasena.html', 
+            return render_template('RestablecerContrasena.html',
                                  token=token,
                                  mensaje_error='Las contraseñas no coinciden.')
-        
+
         # Validar fortaleza de contraseña
         if len(password) < 8:
-            return render_template('RestablecerContrasena.html', 
+            return render_template('RestablecerContrasena.html',
                                  token=token,
                                  mensaje_error='La contraseña debe tener al menos 8 caracteres.')
-        
+
         import re
         if not re.search(r'[A-Z]', password):
-            return render_template('RestablecerContrasena.html', 
+            return render_template('RestablecerContrasena.html',
                                  token=token,
                                  mensaje_error='La contraseña debe contener al menos una mayúscula.')
-        
+
         if not re.search(r'[a-z]', password):
-            return render_template('RestablecerContrasena.html', 
+            return render_template('RestablecerContrasena.html',
                                  token=token,
                                  mensaje_error='La contraseña debe contener al menos una minúscula.')
-        
+
         if not re.search(r'[0-9]', password):
-            return render_template('RestablecerContrasena.html', 
+            return render_template('RestablecerContrasena.html',
                                  token=token,
                                  mensaje_error='La contraseña debe contener al menos un número.')
-        
+
         # Restablecer la contraseña
         success, mensaje = controlador_usuario.restablecer_contrasena(email, password)
-        
+
         if success:
             flash('✅ Tu contraseña ha sido actualizada exitosamente. Ya puedes iniciar sesión.', 'success')
             return redirect(url_for('login'))
         else:
-            return render_template('RestablecerContrasena.html', 
+            return render_template('RestablecerContrasena.html',
                                  token=token,
                                  mensaje_error=mensaje)
-        
+
     except Exception as e:
         print(f"❌ Error en restablecer_contrasena POST: {e}")
         import traceback
         traceback.print_exc()
-        return render_template('RestablecerContrasena.html', 
+        return render_template('RestablecerContrasena.html',
                              token=token,
                              mensaje_error='Hubo un error al actualizar tu contraseña. Por favor intenta nuevamente.')
 
@@ -632,18 +625,18 @@ def restablecer_contrasena(token):
 def unirse_a_sala():
     if request.method == 'GET':
         return render_template('UnirseASala.html')
-    
+
     # POST - Procesar unión a sala
     try:
         data = request.get_json(silent=True) or request.form.to_dict()
         codigo_sala = data.get('codigo_sala', '').strip().upper()
-        
+
         print(f"\n{'='*80}")
         print(f"🎮 ESTUDIANTE INTENTANDO UNIRSE (UnirseASala.html)")
         print(f"Código: {codigo_sala}")
         print(f"Datos recibidos: {data}")
         print(f"{'='*80}\n")
-        
+
         # Validar código (debe ser 6 caracteres)
         if not codigo_sala or len(codigo_sala) != 6:
             error_msg = 'El código debe tener 6 caracteres'
@@ -652,11 +645,11 @@ def unirse_a_sala():
                 return jsonify({'success': False, 'error': error_msg}), 400
             flash(error_msg, 'error')
             return render_template('UnirseASala.html')
-        
+
         # Buscar la sala por PIN
         print(f"🔍 Buscando sala con código: {codigo_sala}")
         sala = controlador_salas.obtener_sala_por_codigo(codigo_sala)
-        
+
         if not sala:
             error_msg = f'No se encontró ninguna sala con el código {codigo_sala}'
             print(f"❌ Error: {error_msg}")
@@ -664,9 +657,9 @@ def unirse_a_sala():
                 return jsonify({'success': False, 'error': error_msg}), 404
             flash(error_msg, 'error')
             return render_template('UnirseASala.html')
-        
+
         print(f"✅ Sala encontrada - ID: {sala['id']}, Estado: {sala['estado']}")
-        
+
         # Verificar estado de la sala
         if sala['estado'] != 'esperando':
             error_msg = 'Esta sala no está disponible para unirse'
@@ -674,36 +667,36 @@ def unirse_a_sala():
                 error_msg = 'Esta sala ya está en curso'
             elif sala['estado'] == 'finalizada':
                 error_msg = 'Esta sala ya ha finalizado'
-            
+
             print(f"❌ Error: {error_msg}")
             if request.is_json:
                 return jsonify({'success': False, 'error': error_msg}), 400
             flash(error_msg, 'error')
             return render_template('UnirseASala.html')
-        
+
         # Guardar información en sesión y redirigir a página para ingresar nombre
         session['pin_sala_temp'] = codigo_sala
         session['sala_id_temp'] = sala['id']
-        
+
         print(f"✅ Redirigiendo a /unirse-juego con PIN: {codigo_sala}")
         print(f"{'='*80}\n")
-        
+
         # Si es JSON, devolver URL de redirección
         if request.is_json:
             return jsonify({
                 'success': True,
                 'redirect_url': url_for('unirse_juego') + f'?pin={codigo_sala}'
             })
-        
+
         # Si es form normal, redirigir directamente
         return redirect(url_for('unirse_juego') + f'?pin={codigo_sala}')
-        
+
     except Exception as e:
         error_msg = f'Error del sistema: {str(e)}'
         print(f"❌ ERROR en unirse_a_sala: {e}")
         import traceback
         traceback.print_exc()
-        
+
         if request.is_json:
             return jsonify({'success': False, 'error': 'Error del servidor'}), 500
         flash('Error al procesar la solicitud', 'error')
@@ -712,11 +705,27 @@ def unirse_a_sala():
 # Middleware para corregir sesión corrupta (tipo_usuario vs usuario_tipo)
 @app.before_request
 def fix_session():
-    """Corrige inconsistencia de nombres en la sesión"""
-    if 'tipo_usuario' in session and 'usuario_tipo' not in session:
-        # Copiar tipo_usuario -> usuario_tipo
-        session['usuario_tipo'] = session['tipo_usuario']
-        print(f"🔧 Sesión corregida: tipo_usuario -> usuario_tipo = {session['usuario_tipo']}")
+    """
+    ⚠️ CRÍTICO: Bloquea sesiones en rutas API - SOLO JWT permitido
+    Elimina TODOS los cookies de sesión para /api/*
+    """
+    # NUCLEAR: Limpiar sesión ANTES de cualquier cosa si es ruta API
+    if request.path.startswith('/api/'):
+        # Vaciar sesión completamente
+        session.clear()
+        # Eliminar cookies de sesión (triple seguridad)
+        response = make_response()
+        response.delete_cookie('session', path='/')
+        response.delete_cookie('user_id', path='/')
+        response.delete_cookie('user_name', path='/')
+        print(f"🔐 NUCLEAR: Sesión borrada + cookies eliminadas para {request.path}")
+        # NO retornar aquí - dejar que continúe el flujo normal
+    
+    # Para rutas normales (no API), corregir la sesión
+    if not request.path.startswith('/api/'):
+        if 'tipo_usuario' in session and 'usuario_tipo' not in session:
+            session['usuario_tipo'] = session['tipo_usuario']
+            print(f"🔧 Sesión corregida: tipo_usuario -> usuario_tipo = {session['usuario_tipo']}")
 
 # ============================================
 # ENDPOINT DE AUTENTICACIÓN JWT
@@ -724,66 +733,40 @@ def fix_session():
 @app.route('/api/auth', methods=['POST'])
 def jwt_login():
     """
-    Endpoint para autenticación JWT.
-    Recibe email y password, retorna access_token si las credenciales son válidas.
-    
-    Request JSON:
-    {
-        "email": "usuario@example.com",
-        "password": "contraseña"
-    }
-    
-    Response JSON (exitosa):
-    {
-        "success": true,
-        "access_token": "eyJ0eXAi...",
-        "usuario": {
-            "id_usuario": 1,
-            "email": "usuario@example.com",
-            "nombre": "Juan",
-            "tipo_usuario": "docente"
-        }
-    }
+    Login que devuelve el token crudo para uso manual.
     """
     try:
         data = request.get_json()
         if not data:
             return jsonify({'success': False, 'error': 'JSON requerido'}), 400
-        
+
         email = (data.get('email') or '').strip().lower()
         password = data.get('password') or ''
-        
-        if not email or not password:
-            return jsonify({'success': False, 'error': 'Email y contraseña son requeridos'}), 400
-        
-        # Autenticar usuario
+
         ok, resultado = controlador_usuario.autenticar_usuario(email, password)
         if not ok:
-            error_msg = resultado if isinstance(resultado, str) else 'Email o contraseña incorrectos'
-            return jsonify({'success': False, 'error': error_msg}), 401
-        
+            return jsonify({'success': False, 'error': resultado}), 401
+
         usuario = resultado
-        
-        # Crear token JWT con el ID del usuario como STRING (Flask-JWT-Extended lo requiere)
-        access_token = crear_token_jwt(str(usuario['id_usuario']), expiracion_horas=24)
-        
-        # Retornar token y datos del usuario (sin contraseña)
+
+        # GENERAR TOKEN EXPLÍCITAMENTE
+        # Nota: Convertimos el ID a string por compatibilidad standard
+        token = crear_token_jwt(str(usuario['id_usuario']))
+
         return jsonify({
             'success': True,
-            'access_token': access_token,
+            'message': 'Autenticación exitosa',
+            'access_token': token,  # <--- AQUÍ ESTÁ TU TOKEN
             'usuario': {
                 'id_usuario': usuario['id_usuario'],
                 'email': usuario['email'],
                 'nombre': usuario['nombre'],
-                'apellidos': usuario.get('apellidos', ''),
                 'tipo_usuario': usuario['tipo_usuario']
             }
         }), 200
-        
+
     except Exception as e:
         print(f"❌ ERROR en jwt_login: {e}")
-        import traceback
-        traceback.print_exc()
         return jsonify({'success': False, 'error': 'Error del servidor'}), 500
 
 # Ruta de error de sistema divertida
@@ -791,14 +774,14 @@ def jwt_login():
 def login():
     if request.method == 'GET':
         return render_template('Login.html')
-    
+
     try:
         data = request.get_json(silent=True) or request.form.to_dict()
         email = (data.get('email') or '').strip().lower()
         password = data.get('password') or ''
 
         print(f"DEBUG: Intento de login para email: {email}")
-        
+
         if not email or not password:
             error_msg = 'Email y contraseña son requeridos'
             if request.is_json:
@@ -816,7 +799,7 @@ def login():
             return render_template('Login.html')
 
         usuario = resultado
-        
+
         # Guardar información del usuario en la sesión
         session['usuario_id'] = usuario['id_usuario']
         session['usuario_email'] = usuario['email']
@@ -843,7 +826,7 @@ def login():
             return response
         else:
             return jsonify({ 'success': True, 'redirect': redirect_url })
-            
+
     except Exception as e:
         error_msg = f'Error del sistema: {str(e)}'
         print(f"DEBUG: Error en login: {error_msg}")
@@ -873,11 +856,11 @@ def obtener_partidas_recientes_estudiante(usuario_id, limit=5):
     """Obtiene las partidas recientes de un estudiante (salas y juegos individuales)"""
     conexion = obtener_conexion()
     cursor = conexion.cursor()
-    
+
     try:
         # Consulta que une participantes_sala con información del cuestionario
         query = """
-            SELECT 
+            SELECT
                 ps.id_participante,
                 rs.puntaje_total,
                 rs.tiempo_total_respuestas,
@@ -897,15 +880,15 @@ def obtener_partidas_recientes_estudiante(usuario_id, limit=5):
             ORDER BY ps.fecha_union DESC
             LIMIT %s
         """
-        
+
         cursor.execute(query, (usuario_id, limit))
         partidas = cursor.fetchall()
-        
+
         # Formatear las partidas (PyMySQL devuelve tuplas, no diccionarios)
         partidas_formateadas = []
         for partida in partidas:
             es_individual = (partida[6] == 'individual')  # modo_juego
-            
+
             partidas_formateadas.append({
                 'id_participante': partida[0],
                 'puntaje': partida[1] if partida[1] is not None else 0,
@@ -921,9 +904,9 @@ def obtener_partidas_recientes_estudiante(usuario_id, limit=5):
                 'total_preguntas': partida[10],
                 'tipo': 'Individual' if es_individual else 'Multijugador'
             })
-        
+
         return partidas_formateadas
-        
+
     except Exception as e:
         print(f"Error en obtener_partidas_recientes_estudiante: {e}")
         import traceback
@@ -937,49 +920,49 @@ def obtener_estadisticas_estudiante(usuario_id):
     """Obtiene estadísticas reales del estudiante desde las tablas del sistema de juego"""
     conexion = obtener_conexion()
     cursor = conexion.cursor()
-    
+
     try:
         # Total de participaciones
         cursor.execute("""
-            SELECT COUNT(*) 
-            FROM participantes_sala 
+            SELECT COUNT(*)
+            FROM participantes_sala
             WHERE id_usuario = %s
         """, (usuario_id,))
         total_participaciones = cursor.fetchone()[0] or 0
-        
+
         # Promedio de puntaje
         cursor.execute("""
-            SELECT AVG(rs.puntaje_total) 
+            SELECT AVG(rs.puntaje_total)
             FROM ranking_sala rs
             INNER JOIN participantes_sala ps ON rs.id_participante = ps.id_participante
             WHERE ps.id_usuario = %s AND rs.puntaje_total IS NOT NULL
         """, (usuario_id,))
         promedio_puntaje = cursor.fetchone()[0] or 0
-        
+
         # Mejor posición
         cursor.execute("""
-            SELECT MIN(rs.posicion) 
+            SELECT MIN(rs.posicion)
             FROM ranking_sala rs
             INNER JOIN participantes_sala ps ON rs.id_participante = ps.id_participante
             WHERE ps.id_usuario = %s AND rs.posicion IS NOT NULL
         """, (usuario_id,))
         mejor_posicion = cursor.fetchone()[0] or 'N/A'
-        
+
         # Recompensas obtenidas (de la tabla recompensas_otorgadas)
         cursor.execute("""
-            SELECT COUNT(*) 
-            FROM recompensas_otorgadas 
+            SELECT COUNT(*)
+            FROM recompensas_otorgadas
             WHERE id_estudiante = %s
         """, (usuario_id,))
         recompensas_obtenidas = cursor.fetchone()[0] or 0
-        
+
         return {
             'total_participaciones': total_participaciones,
             'promedio_puntaje': round(promedio_puntaje, 1) if promedio_puntaje else 0,
             'mejor_posicion': mejor_posicion,
             'recompensas_obtenidas': recompensas_obtenidas
         }
-        
+
     except Exception as e:
         print(f"Error en obtener_estadisticas_estudiante: {e}")
         import traceback
@@ -999,7 +982,7 @@ def obtener_estadisticas_estudiante(usuario_id):
 @estudiante_required
 def dashboard_estudiante():
     """Dashboard para estudiantes - SOLO estudiantes pueden acceder"""
-    
+
     usuario = {
         'id_usuario': session['usuario_id'],
         'nombre': session['usuario_nombre'],
@@ -1007,7 +990,7 @@ def dashboard_estudiante():
         'email': session['usuario_email'],
         'tipo_usuario': session['usuario_tipo']
     }
-    
+
     # Obtener estadísticas del estudiante
     try:
         estadisticas = obtener_estadisticas_estudiante(session['usuario_id'])
@@ -1019,28 +1002,28 @@ def dashboard_estudiante():
             'mejor_posicion': 'N/A',
             'recompensas_obtenidas': 0
         }
-    
+
     # Obtener todos los cuestionarios publicados
     try:
         todos_cuestionarios = controlador_cuestionarios.obtener_cuestionarios_publicados()
     except:
         todos_cuestionarios = []
-    
+
     # Obtener partidas recientes del estudiante
     try:
         partidas_recientes = obtener_partidas_recientes_estudiante(session['usuario_id'])
     except Exception as e:
         print(f"Error obteniendo partidas recientes: {e}")
         partidas_recientes = []
-    
-    return render_template('DashboardEstudiante.html', 
-                         usuario=usuario, 
+
+    return render_template('DashboardEstudiante.html',
+                         usuario=usuario,
                          estadisticas=estadisticas,
                          cuestionarios=todos_cuestionarios,
                          partidas_recientes=partidas_recientes)
 
 @app.route('/admin')
-@login_required 
+@login_required
 @admin_required
 def dashboard_admin():
     """Dashboard para administradores, maestros, etc."""
@@ -1051,11 +1034,11 @@ def dashboard_admin():
         'email': session['usuario_email'],
         'tipo_usuario': session['usuario_tipo']
     }
-    
+
     # Si es docente, redirigir al dashboard de docente
     if session['usuario_tipo'] == 'docente':
         return redirect(url_for('dashboard_docente'))
-    
+
     # Obtener estadísticas del sistema para administradores
     try:
         estadisticas = {
@@ -1073,7 +1056,7 @@ def dashboard_admin():
             'total_participaciones': 0,
             'total_preguntas': 0
         }
-    
+
     return render_template('DashboardAdmin.html', usuario=usuario, estadisticas=estadisticas)
 
 @app.route('/docente')
@@ -1088,15 +1071,15 @@ def dashboard_docente():
         'email': session['usuario_email'],
         'tipo_usuario': session['usuario_tipo']
     }
-    
+
     # Obtener cuestionarios del docente
     try:
         id_docente = session['usuario_id']
         cuestionarios = obtener_cuestionarios_por_docente_simple(id_docente)
-        
+
         # Obtener ranking global de los cuestionarios del docente
         ranking_global = controlador_ranking.obtener_ranking_global_por_docente(id_docente)
-        
+
         # Estadísticas específicas del docente
         estadisticas = {
             'total_cuestionarios': len(cuestionarios),
@@ -1105,7 +1088,7 @@ def dashboard_docente():
             'total_participaciones': sum(e.get('total_participaciones', 0) for e in ranking_global),
             'promedio_calificaciones': round(sum(e.get('promedio_puntaje', 0) for e in ranking_global) / len(ranking_global), 1) if ranking_global else 0
         }
-        
+
     except Exception as e:
         print(f"Error obteniendo datos del docente: {e}")
         import traceback
@@ -1119,9 +1102,9 @@ def dashboard_docente():
             'total_participaciones': 0,
             'promedio_calificaciones': 0
         }
-    
-    return render_template('DashboardDocente.html', 
-                         usuario=usuario, 
+
+    return render_template('DashboardDocente.html',
+                         usuario=usuario,
                          estadisticas=estadisticas,
                          cuestionarios=cuestionarios,
                          ranking_global=ranking_global)
@@ -1142,15 +1125,15 @@ def historial_estudiante():
     """Historial de participaciones del estudiante"""
     if session.get('usuario_tipo') != 'estudiante':
         return redirect(url_for('dashboard_admin'))
-    
+
     try:
         import pymysql.cursors
         conexion = obtener_conexion()
         cursor = conexion.cursor(pymysql.cursors.DictCursor)
-        
+
         # Obtener historial del estudiante desde participantes_sala y ranking_sala
         query = '''
-            SELECT 
+            SELECT
                 p.id_participante,
                 p.nombre_participante,
                 s.id_sala,
@@ -1174,10 +1157,10 @@ def historial_estudiante():
             AND s.estado = 'finalizada'
             ORDER BY s.fecha_creacion DESC
         '''
-        
+
         cursor.execute(query, (session['usuario_id'],))
         participaciones_raw = cursor.fetchall()
-        
+
         # Procesar datos para calcular precisión y duración
         participaciones = []
         for part in participaciones_raw:
@@ -1186,7 +1169,7 @@ def historial_estudiante():
                 precision = round((part['respuestas_correctas'] / part['total_preguntas']) * 100)
             else:
                 precision = 0
-            
+
             # Formatear duración
             if part['tiempo_total_respuestas']:
                 minutos = int(part['tiempo_total_respuestas'] // 60)
@@ -1194,7 +1177,7 @@ def historial_estudiante():
                 duracion = f"{minutos}m {segundos}s"
             else:
                 duracion = "N/A"
-            
+
             participaciones.append({
                 'id_participante': part['id_participante'],
                 'nombre_participante': part['nombre_participante'],
@@ -1209,16 +1192,16 @@ def historial_estudiante():
                 'nombre_grupo': part['nombre_grupo'],
                 'pin_sala': part['pin_sala']
             })
-        
+
         cursor.close()
         conexion.close()
-        
+
     except Exception as e:
         print(f"ERROR en historial_estudiante: {e}")
         import traceback
         traceback.print_exc()
         participaciones = []
-    
+
     return render_template('HistorialEstudiante.html', participaciones=participaciones)
 
 @app.route('/ranking/global')
@@ -1227,7 +1210,7 @@ def ranking_global():
     """Ranking global del sistema"""
     try:
         ranking = controlador_ranking.obtener_ranking_global()
-        
+
         # Si el usuario es estudiante, encontrar su posición
         usuario_actual = None
         if session.get('usuario_tipo') == 'estudiante':
@@ -1236,9 +1219,9 @@ def ranking_global():
                 if estudiante['id_usuario'] == usuario_id:
                     usuario_actual = estudiante
                     break
-        
-        return render_template('RankingGlobal.html', 
-                             ranking=ranking, 
+
+        return render_template('RankingGlobal.html',
+                             ranking=ranking,
                              usuario_actual=usuario_actual)
     except Exception as e:
         print(f"Error en ranking_global: {e}")
@@ -1255,7 +1238,7 @@ def obtener_perfil_xp_api(usuario_id):
         perfil = controlador_xp.obtener_perfil_xp(usuario_id)
         if not perfil:
             return jsonify({'success': False, 'error': 'Usuario no encontrado'}), 404
-        
+
         return jsonify({'success': True, 'perfil': perfil})
     except Exception as e:
         print(f"Error en obtener_perfil_xp_api: {e}")
@@ -1300,7 +1283,7 @@ def pagina_ranking_xp():
     """Página del ranking de XP"""
     try:
         ranking = controlador_xp.obtener_ranking_global(100)
-        
+
         # Si es estudiante, encontrar su posición
         usuario_actual = None
         if session.get('usuario_tipo') == 'estudiante':
@@ -1309,9 +1292,9 @@ def pagina_ranking_xp():
                 if estudiante['id_usuario'] == usuario_id:
                     usuario_actual = estudiante
                     break
-        
-        return render_template('RankingXP.html', 
-                             ranking=ranking, 
+
+        return render_template('RankingXP.html',
+                             ranking=ranking,
                              usuario_actual=usuario_actual)
     except Exception as e:
         print(f"Error en pagina_ranking_xp: {e}")
@@ -1326,19 +1309,19 @@ def mis_insignias():
     if session.get('usuario_tipo') != 'estudiante':
         flash('Solo los estudiantes tienen acceso a insignias', 'error')
         return redirect(url_for('maestra'))
-    
+
     try:
         usuario_id = session.get('usuario_id')
-        
+
         # Obtener perfil XP
         perfil = controlador_xp.obtener_perfil_xp(usuario_id)
-        
+
         # Obtener insignias desbloqueadas
         insignias = controlador_xp.obtener_insignias_usuario(usuario_id)
-        
+
         # Obtener progreso de insignias bloqueadas
         insignias_bloqueadas = controlador_xp.obtener_progreso_insignias(usuario_id)
-        
+
         return render_template('MisInsignias.html',
                              perfil=perfil,
                              insignias=insignias,
@@ -1357,7 +1340,7 @@ def tienda_insignias():
     if session.get('usuario_tipo') != 'estudiante':
         flash('Solo los estudiantes tienen acceso a la tienda', 'error')
         return redirect(url_for('maestra'))
-    
+
     return render_template('TiendaInsignias.html')
 
 @app.route('/api/tienda-insignias')
@@ -1367,21 +1350,21 @@ def obtener_tienda_insignias_api():
     try:
         insignias = controlador_xp.obtener_insignias_tienda()
         usuario_id = session.get('usuario_id')
-        
+
         # Obtener XP del usuario (usar XP total acumulado para la tienda)
         perfil = controlador_xp.obtener_perfil_xp(usuario_id)
         xp_total_acumulado = perfil['xp_total_acumulado'] if perfil else 0
-        
+
         # Marcar cuáles ya tiene el usuario
         insignias_usuario = controlador_xp.obtener_insignias_usuario(usuario_id)
         ids_tenidas = [i['id'] for i in insignias_usuario]
-        
+
         for insignia in insignias:
             insignia['ya_comprada'] = insignia['id_insignia'] in ids_tenidas
             insignia['puede_comprar'] = xp_total_acumulado >= insignia['precio_xp'] and not insignia['ya_comprada']
-        
+
         return jsonify({
-            'success': True, 
+            'success': True,
             'insignias': insignias,
             'xp_actual': xp_total_acumulado  # Enviar XP total acumulado al frontend
         })
@@ -1398,17 +1381,17 @@ def comprar_insignia_api():
         data = request.get_json()
         id_insignia = data.get('id_insignia')
         usuario_id = session.get('usuario_id')
-        
+
         if not id_insignia:
             return jsonify({'success': False, 'error': 'ID de insignia requerido'}), 400
-        
+
         resultado = controlador_xp.comprar_insignia(usuario_id, id_insignia)
-        
+
         if resultado['success']:
             return jsonify(resultado)
         else:
             return jsonify(resultado), 400
-            
+
     except Exception as e:
         print(f"Error en comprar_insignia_api: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -1419,15 +1402,15 @@ def mis_recompensas():
     """Recompensas del estudiante"""
     if session.get('usuario_tipo') != 'estudiante':
         return redirect(url_for('dashboard_admin'))
-    
+
     try:
         recompensas = controlador_recompensas.verificar_recompensas_disponibles(session['usuario_id'])
     except:
         recompensas = []
-    
+
     return render_template('MisRecompensas.html', recompensas=recompensas)
 
-# Rutas adicionales para administradores  
+# Rutas adicionales para administradores
 @app.route('/monitoreo/salas')
 @login_required
 @admin_required
@@ -1437,7 +1420,7 @@ def monitoreo_salas():
         salas = controlador_salas.obtener_salas_activas()
     except:
         salas = []
-    
+
     return render_template('MonitoreoSalas.html', salas=salas)
 
 @app.route('/reportes/sistema')
@@ -1449,12 +1432,12 @@ def reportes_sistema():
         estadisticas = controlador_cuestionarios.obtener_estadisticas_sistema()
     except:
         estadisticas = {}
-    
+
     return render_template('ReportesSystem.html', estadisticas=estadisticas)
 
 @app.route('/configuracion/sistema')
 @login_required
-@admin_required  
+@admin_required
 def configuracion_sistema():
     """Configuración del sistema"""
     return render_template('ConfiguracionSistema.html')
@@ -1496,10 +1479,10 @@ def crear_sala_route():
             flash('Solo los docentes pueden crear salas de juego', 'error')
             return redirect(url_for('maestra'))
         return jsonify({'success': False, 'error': 'Solo los docentes pueden crear salas'}), 403
-    
+
     if request.method == 'GET':
         return render_template('CrearSala.html')
-    
+
     data = request.get_json(silent=True) or request.form.to_dict()
     try:
         nombre = data.get('nombre', '').strip()
@@ -1508,15 +1491,15 @@ def crear_sala_route():
         max_participantes = int(data.get('max_participantes', 30))
         tiempo_respuesta = int(data.get('tiempo_respuesta', 30))
         configuracion = data.get('configuracion', {})
-        
+
         if not nombre:
             raise ValueError("El nombre de la sala es requerido")
-        
+
         # Verificar que el cuestionario existe y pertenece al docente
         cuestionario = controlador_cuestionarios.obtener_cuestionario_por_id(cuestionario_id)
         if not cuestionario:
             raise ValueError("El cuestionario seleccionado no existe")
-        
+
         # Crear la sala
         sala_id = controlador_salas.crear_sala(
             nombre=nombre,
@@ -1526,7 +1509,7 @@ def crear_sala_route():
             max_participantes=max_participantes,
             tiempo_respuesta=tiempo_respuesta
         )
-        
+
         if request.is_json:
             return jsonify({'success': True, 'sala_id': sala_id, 'message': 'Sala creada exitosamente'})
         flash('¡Sala creada exitosamente!', 'success')
@@ -1553,34 +1536,34 @@ def mis_salas():
 def unirse_sala_route(codigo):
     if request.method == 'GET':
         return render_template('UnirseASala.html')
-    
+
     data = request.get_json(silent=True) or request.form.to_dict()
     try:
         nombre_participante = data.get('nombre_participante', '').strip()
-        
+
         if not nombre_participante:
             raise ValueError("El nombre del participante es requerido")
-        
+
         # Buscar la sala por código
         sala = controlador_salas.obtener_sala_por_codigo(codigo)
         if not sala:
             raise ValueError("Sala no encontrada")
-        
+
         if sala['estado'] != 'esperando':
             raise ValueError("La sala no está disponible para unirse")
-        
+
         # Verificar límite de participantes
         participantes_actuales = controlador_salas.obtener_participantes_sala(sala['id'])
         if len(participantes_actuales) >= sala['max_participantes']:
             raise ValueError("La sala ha alcanzado el límite de participantes")
-        
+
         # Agregar el participante a la sala
         participante_id = controlador_salas.agregar_participante_sala(sala['id'], nombre_participante)
-        
+
         session['participante_id'] = participante_id
         session['sala_id'] = sala['id']
         session['nombre_participante'] = nombre_participante
-        
+
         if request.is_json:
             return jsonify({'success': True, 'participante_id': participante_id})
         return redirect(url_for('esperar_juego', sala_id=sala['id']))
@@ -1597,30 +1580,30 @@ def unirse_sala_route(codigo):
 def monitorear_sala(sala_id):
     try:
         print(f"DEBUG: monitorear_sala - sala_id: {sala_id}")
-        
+
         # Usar la función simple que ya existe
         sala = obtener_sala_por_id_simple(sala_id)
         print(f"DEBUG: Sala obtenida: {sala}")
-        
+
         if not sala:
             print("DEBUG: Sala no encontrada")
             flash('Sala no encontrada', 'error')
             return redirect(url_for('mis_cuestionarios'))
-        
+
         # Obtener participantes reales de la sala
         participantes = controlador_salas.obtener_participantes_sala(sala['id'])
         print(f"DEBUG: Participantes: {participantes}")
-        
+
         # Verificar si existe el template MonitoreoJuego.html
         try:
             return render_template('MonitoreoJuego.html', sala=sala, participantes=participantes)
         except Exception as template_error:
             print(f"DEBUG: Error de template: {template_error}")
             # Template temporal hasta que se implemente MonitoreoJuego.html
-            return render_template('MonitoreoJuego.html', 
+            return render_template('MonitoreoJuego.html',
                                  sala=sala,
                                  participantes=participantes)
-            
+
     except Exception as e:
         print(f"DEBUG: Error en monitorear_sala: {str(e)}")
         import traceback
@@ -1634,10 +1617,10 @@ def monitorear_sala(sala_id):
 def iniciar_sala(sala_id):
     try:
         resultado = controlador_juego.iniciar_juego_sala(sala_id)
-        
+
         if not resultado:
             raise ValueError("No se pudo iniciar la sala")
-        
+
         if request.is_json:
             return jsonify({'success': True, 'message': 'Sala iniciada exitosamente'})
         flash('¡Sala iniciada exitosamente!', 'success')
@@ -1716,10 +1699,10 @@ def api_asignar_participante_grupo(participante_id):
 def cerrar_sala(sala_id):
     try:
         resultado = finalizar_sala(sala_id)
-        
+
         if not resultado:
             raise ValueError("No se pudo cerrar la sala")
-        
+
         if request.is_json:
             return jsonify({'success': True, 'message': 'Sala cerrada exitosamente'})
         flash('¡Sala cerrada exitosamente!', 'success')
@@ -1737,24 +1720,24 @@ def juego_sala(sala_id):
         # Verificar que la sala existe
         conexion = obtener_conexion()
         cursor = conexion.cursor()
-        
+
         cursor.execute('''
             SELECT id_sala, pin_sala, id_cuestionario, estado, modo_juego
             FROM salas_juego
             WHERE id_sala = %s
         ''', (sala_id,))
-        
+
         sala_data = cursor.fetchone()
         cursor.close()
         conexion.close()
-        
+
         if not sala_data:
             flash('Sala no encontrada', 'error')
             return redirect(url_for('error_sistema_page'))
-        
+
         # Obtener información completa de la sala incluyendo tiene_docente
         sala_info = obtener_sala_por_id_simple(sala_id)
-        
+
         sala = {
             'id': sala_data[0],
             'pin_sala': sala_data[1],
@@ -1763,13 +1746,13 @@ def juego_sala(sala_id):
             'modo_juego': sala_data[4],
             'tiene_docente': sala_info.get('tiene_docente', False)  # Agregar detección de modo
         }
-        
+
         # Determinar qué vista mostrar según el tipo de usuario
         if session.get('usuario_tipo') == 'docente':
             return render_template('ControlJuegoDocente.html', sala=sala)
         else:
             return render_template('JuegoEstudiante.html', sala=sala)
-            
+
     except Exception as e:
         print(f"ERROR juego_sala: {e}")
         import traceback
@@ -1784,10 +1767,10 @@ def obtener_pregunta_actual(sala_id):
     """API para obtener la pregunta actual que se está mostrando"""
     try:
         pregunta = controlador_juego.obtener_pregunta_actual_sala(sala_id)
-        
+
         if not pregunta:
             return jsonify({'success': False, 'error': 'No hay pregunta activa'}), 404
-        
+
         # Obtener configuración de tiempo de la sala (por defecto 30 segundos)
         conexion = obtener_conexion()
         cursor = conexion.cursor()
@@ -1795,10 +1778,10 @@ def obtener_pregunta_actual(sala_id):
         resultado = cursor.fetchone()
         tiempo_pregunta = resultado[0] if resultado and resultado[0] else 30
         conexion.close()
-        
+
         # Agregar tiempo de pregunta a la respuesta
         pregunta['tiempo_limite'] = tiempo_pregunta
-        
+
         return jsonify({
             'success': True,
             'pregunta': pregunta
@@ -1814,24 +1797,24 @@ def responder_pregunta_juego(sala_id):
     """Registra la respuesta de un participante a la pregunta actual"""
     try:
         data = request.get_json()
-        
+
         participante_id = session.get('participante_id')
         print(f"\n📝 RESPONDER PREGUNTA:")
         print(f"   Sala ID: {sala_id}")
         print(f"   Participante ID: {participante_id}")
         print(f"   Data recibida: {data}")
-        
+
         if not participante_id:
             return jsonify({'success': False, 'error': 'No hay sesión de participante'}), 401
-        
+
         id_pregunta = int(data.get('id_pregunta'))
         id_opcion = int(data.get('id_opcion'))
         tiempo_respuesta = float(data.get('tiempo_respuesta'))
-        
+
         print(f"   ID Pregunta: {id_pregunta}")
         print(f"   ID Opción: {id_opcion}")
         print(f"   Tiempo respuesta: {tiempo_respuesta}s")
-        
+
         resultado = controlador_juego.registrar_respuesta_participante(
             participante_id=participante_id,
             sala_id=sala_id,
@@ -1839,9 +1822,9 @@ def responder_pregunta_juego(sala_id):
             id_opcion_seleccionada=id_opcion,
             tiempo_respuesta=tiempo_respuesta
         )
-        
+
         print(f"   ✅ Resultado: es_correcta={resultado['es_correcta']}, puntaje={resultado['puntaje_obtenido']}")
-        
+
         # CAMBIO: Ya no avanzar automáticamente en ningún modo
         # El estudiante siempre debe esperar a que el docente avance
         return jsonify({
@@ -1849,7 +1832,7 @@ def responder_pregunta_juego(sala_id):
             'resultado': resultado,
             'mensaje': 'Respuesta registrada. Esperando a que el docente avance.'
         })
-        
+
     except Exception as e:
         print(f"ERROR responder_pregunta_juego: {e}")
         import traceback
@@ -1863,16 +1846,16 @@ def avanzar_pregunta(sala_id):
         # Permitir tanto a docentes como a estudiantes avanzar
         # (Estudiantes solo avanzan después de responder)
         usuario_tipo = session.get('usuario_tipo')
-        
+
         if usuario_tipo not in ['docente', 'estudiante']:
             return jsonify({'success': False, 'error': 'No autorizado'}), 403
-        
+
         # Si es estudiante, verificar que haya respondido la pregunta actual
         if usuario_tipo == 'estudiante':
             participante_id = session.get('participante_id')
             if not participante_id:
                 return jsonify({'success': False, 'error': 'No hay sesión de participante'}), 401
-            
+
             # Verificar que el estudiante haya respondido la pregunta actual
             conexion = obtener_conexion()
             try:
@@ -1884,18 +1867,18 @@ def avanzar_pregunta(sala_id):
                         JOIN salas_juego s ON ejs.id_sala = s.id_sala
                         WHERE ejs.id_sala = %s
                     ''', (sala_id,))
-                    
+
                     estado_result = cursor.fetchone()
                     if not estado_result:
                         return jsonify({
-                            'success': False, 
+                            'success': False,
                             'error': 'No se pudo obtener el estado de la sala'
                         }), 500
-                    
+
                     # Usar índices numéricos en lugar de claves de diccionario
                     num_pregunta_actual = estado_result[0]  # pregunta_actual
                     id_cuestionario = estado_result[1]      # id_cuestionario
-                    
+
                     # Obtener el id_pregunta correspondiente al número de pregunta actual
                     cursor.execute('''
                         SELECT p.id_pregunta
@@ -1905,36 +1888,36 @@ def avanzar_pregunta(sala_id):
                         ORDER BY cp.orden
                         LIMIT %s, 1
                     ''', (id_cuestionario, num_pregunta_actual - 1))
-                    
+
                     pregunta_result = cursor.fetchone()
                     if not pregunta_result:
                         return jsonify({
-                            'success': False, 
+                            'success': False,
                             'error': 'No se pudo obtener la pregunta actual'
                         }), 500
-                    
+
                     id_pregunta_actual = pregunta_result[0]  # id_pregunta
-                    
+
                     # Verificar si el estudiante respondió esta pregunta
                     cursor.execute('''
                         SELECT COUNT(*) as count
                         FROM respuestas_participantes
-                        WHERE id_participante = %s 
+                        WHERE id_participante = %s
                         AND id_sala = %s
                         AND id_pregunta = %s
                     ''', (participante_id, sala_id, id_pregunta_actual))
-                    
+
                     result = cursor.fetchone()
                     if not result or result[0] == 0:  # count es el primer elemento
                         return jsonify({
-                            'success': False, 
+                            'success': False,
                             'error': 'Debes responder la pregunta actual antes de avanzar'
                         }), 403
             finally:
                 conexion.close()
-        
+
         hay_mas = controlador_juego.avanzar_siguiente_pregunta(sala_id)
-        
+
         return jsonify({
             'success': True,
             'hay_mas_preguntas': hay_mas,
@@ -1951,7 +1934,7 @@ def obtener_ranking(sala_id):
     """Obtiene el ranking actual de la sala"""
     try:
         ranking = controlador_juego.obtener_ranking_sala(sala_id)
-        
+
         return jsonify({
             'success': True,
             'ranking': ranking
@@ -1967,7 +1950,7 @@ def obtener_estadisticas_pregunta(sala_id):
     """Obtiene estadísticas de cuántos han respondido la pregunta actual"""
     try:
         stats = controlador_juego.obtener_estadisticas_pregunta_actual(sala_id)
-        
+
         return jsonify({
             'success': True,
             'estadisticas': stats
@@ -1983,13 +1966,13 @@ def obtener_detalle_respuestas(sala_id):
     """Obtiene el detalle de qué estudiantes han respondido la pregunta actual"""
     try:
         detalle = controlador_juego.obtener_detalle_respuestas_estudiantes(sala_id)
-        
+
         if not detalle:
             return jsonify({
                 'success': False,
                 'error': 'No se pudo obtener el detalle de respuestas'
             }), 404
-        
+
         return jsonify({
             'success': True,
             'detalle': detalle
@@ -2009,19 +1992,19 @@ def finalizar_juego(sala_id):
         # Solo docentes pueden finalizar
         if session.get('usuario_tipo') != 'docente':
             return jsonify({'success': False, 'error': 'No autorizado'}), 403
-        
+
         resultado = controlador_juego.finalizar_juego_sala(sala_id)
-        
+
         if not resultado:
             raise ValueError("No se pudo finalizar el juego")
-        
+
         if request.is_json:
             return jsonify({
-                'success': True, 
+                'success': True,
                 'message': 'Juego finalizado',
                 'redirect': url_for('ver_resultados_juego', sala_id=sala_id)
             })
-        
+
         return redirect(url_for('ver_resultados_juego', sala_id=sala_id))
     except Exception as e:
         print(f"ERROR finalizar_juego: {e}")
@@ -2041,15 +2024,15 @@ def ver_resultados_juego(sala_id):
         if not sala:
             flash('Sala no encontrada', 'error')
             return redirect(url_for('error_sistema_page'))
-        
+
         # Obtener ranking completo
         ranking = controlador_juego.obtener_ranking_sala(sala_id)
-        
+
         # Obtener cuestionario
         conexion = obtener_conexion()
         cursor = conexion.cursor()
         cursor.execute('''
-            SELECT c.id_cuestionario, c.titulo, c.descripcion 
+            SELECT c.id_cuestionario, c.titulo, c.descripcion
             FROM cuestionarios c
             JOIN salas_juego s ON c.id_cuestionario = s.id_cuestionario
             WHERE s.id_sala = %s
@@ -2057,7 +2040,7 @@ def ver_resultados_juego(sala_id):
         cuestionario_data = cursor.fetchone()
         cursor.close()
         conexion.close()
-        
+
         # Obtener recompensas otorgadas en este juego
         recompensas_otorgadas = []
         if cuestionario_data:
@@ -2066,7 +2049,7 @@ def ver_resultados_juego(sala_id):
             conexion = obtener_conexion()
             cursor = conexion.cursor()
             cursor.execute('''
-                SELECT 
+                SELECT
                     r.nombre AS recompensa,
                     r.tipo,
                     p.nombre_participante,
@@ -2080,7 +2063,7 @@ def ver_resultados_juego(sala_id):
                 WHERE r.id_cuestionario = %s
                 ORDER BY rk.posicion ASC
             ''', (sala_id, id_cuestionario))
-            
+
             recompensas_otorgadas = []
             for row in cursor.fetchall():
                 recompensas_otorgadas.append({
@@ -2092,14 +2075,14 @@ def ver_resultados_juego(sala_id):
                 })
             cursor.close()
             conexion.close()
-        
+
         # Si es estudiante, obtener su resultado personal
         resultado_personal = None
         if session.get('usuario_tipo') == 'estudiante':
             participante_id = session.get('participante_id')
             if participante_id:
                 resultado_personal = controlador_juego.obtener_resultado_participante(sala_id, participante_id)
-        
+
         return render_template('ResultadosJuego.html',
             sala=sala,
             ranking=ranking,
@@ -2126,7 +2109,7 @@ def responder_pregunta():
         sala_id = int(data.get('sala_id'))
         id_opcion_seleccionada = int(data.get('id_opcion'))
         tiempo_respuesta = float(data.get('tiempo_respuesta', 0))
-        
+
         # Registrar respuesta usando la función correcta del controlador
         resultado = controlador_juego.registrar_respuesta_participante(
             participante_id=participante_id,
@@ -2135,7 +2118,7 @@ def responder_pregunta():
             id_opcion_seleccionada=id_opcion_seleccionada,
             tiempo_respuesta=tiempo_respuesta
         )
-        
+
         return jsonify({
             'success': True,
             'es_correcta': resultado['es_correcta'],
@@ -2192,10 +2175,10 @@ def perfil_usuario(user_id):
         if not usuario:
             flash('Usuario no encontrado', 'error')
             return redirect(url_for('maestra'))
-        
+
         # Obtener estadísticas del usuario
         estadisticas = obtener_estadisticas_usuario(user_id)
-        
+
         return render_template('PerfilUsuario.html', usuario=usuario, estadisticas=estadisticas)
     except Exception as e:
         flash(f'Error al cargar el perfil: {str(e)}', 'error')
@@ -2210,12 +2193,12 @@ def configuracion_sistema_old():
         except Exception as e:
             flash(f'Error al cargar configuración: {str(e)}', 'error')
             return redirect(url_for('error_sistema_page'))
-    
+
     # POST - actualizar configuración
     try:
         data = request.get_json(silent=True) or request.form.to_dict()
         actualizar_configuracion_sistema(data)
-        
+
         if request.is_json:
             return jsonify({'success': True, 'message': 'Configuración actualizada exitosamente'})
         flash('¡Configuración actualizada exitosamente!', 'success')
@@ -2235,18 +2218,18 @@ def juego_estudiante(sala_id):
         if not participante_id:
             flash('Debes unirte a una sala primero', 'error')
             return redirect(url_for('unirse_sala_route', codigo=''))
-        
+
         sala = obtener_sala_por_id_simple(sala_id)
         if not sala:
             flash('Sala no encontrada', 'error')
             return redirect(url_for('maestra'))
-        
+
         # Verificar si es modo automático basándose en el PIN
         pin_sala = sala.get('pin_sala', '')
         modo_automatico = es_sala_automatica(pin_sala)
-        
-        return render_template('JuegoEstudiante.html', 
-                             sala=sala, 
+
+        return render_template('JuegoEstudiante.html',
+                             sala=sala,
                              participante_id=participante_id,
                              modo_automatico=modo_automatico)
     except Exception as e:
@@ -2259,7 +2242,7 @@ def siguiente_pregunta(sala_id):
         pregunta = obtener_siguiente_pregunta_sala(sala_id)
         if not pregunta:
             return jsonify({'success': False, 'finished': True, 'message': 'No hay más preguntas'})
-        
+
         return jsonify({'success': True, 'pregunta': pregunta})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 400
@@ -2271,7 +2254,7 @@ def esperar_juego(sala_id):
         if not sala:
             flash('Sala no encontrada', 'error')
             return redirect(url_for('maestra'))
-        
+
         return render_template('EsperarJuego.html', sala=sala)
     except Exception as e:
         flash(f'Error: {str(e)}', 'error')
@@ -2284,7 +2267,7 @@ def api_obtener_participantes(sala_id):
     """API para obtener lista de participantes en tiempo real"""
     try:
         participantes = controlador_salas.obtener_participantes_sala(sala_id)
-        
+
         # Obtener también el estado de la sala para verificar si el juego comenzó
         conexion = obtener_conexion()
         cursor = conexion.cursor()
@@ -2292,12 +2275,12 @@ def api_obtener_participantes(sala_id):
         sala_data = cursor.fetchone()
         cursor.close()
         conexion.close()
-        
+
         estado_sala = sala_data[0] if sala_data else 'esperando'
-        
+
         # Log para depuración
         print(f"📊 API participantes - Sala {sala_id}: Estado = '{estado_sala}', Participantes = {len(participantes)}")
-        
+
         return jsonify({
             'success': True,
             'participantes': participantes,
@@ -2316,9 +2299,9 @@ def api_obtener_estado_sala(sala_id):
         sala = obtener_sala_por_id_simple(sala_id)
         if not sala:
             return jsonify({'success': False, 'error': 'Sala no encontrada'}), 404
-        
+
         participantes = controlador_salas.obtener_participantes_sala(sala_id)
-        
+
         return jsonify({
             'success': True,
             'estado': sala.get('estado', 'esperando'),
@@ -2340,16 +2323,16 @@ def api_verificar_sala_por_pin(pin):
         # Validar formato del PIN
         if not pin or len(pin) != 6 or not pin.isdigit():
             return jsonify({'success': False, 'error': 'PIN inválido'}), 400
-        
+
         # Buscar sala por PIN
         sala = controlador_salas.obtener_sala_por_codigo(pin)
-        
+
         if not sala:
             return jsonify({'success': False, 'error': 'No existe una sala con ese PIN'}), 404
-        
+
         # Obtener participantes actuales
         participantes = controlador_salas.obtener_participantes_sala(sala['id'])
-        
+
         return jsonify({
             'success': True,
             'sala': {
@@ -2372,24 +2355,24 @@ def api_obtener_participantes_por_pin(pin):
     """API para obtener lista de participantes usando el PIN de la sala (para MonitoreoJuego.html)"""
     try:
         print(f"🔍 API: Obteniendo participantes para PIN: {pin}")
-        
+
         # Validar formato del PIN
         if not pin or len(pin) != 6 or not pin.isdigit():
             print(f"❌ PIN inválido: {pin}")
             return jsonify({'success': False, 'error': 'PIN inválido'}), 400
-        
+
         # Buscar sala por PIN
         sala = controlador_salas.obtener_sala_por_codigo(pin)
-        
+
         if not sala:
             print(f"❌ Sala no encontrada con PIN: {pin}")
             return jsonify({'success': False, 'error': 'Sala no encontrada'}), 404
-        
+
         # Obtener participantes
         participantes = controlador_salas.obtener_participantes_sala(sala['id'])
-        
+
         print(f"✅ Participantes encontrados: {len(participantes)}")
-        
+
         # Formatear participantes para el frontend
         participantes_formateados = []
         for p in participantes:
@@ -2401,13 +2384,13 @@ def api_obtener_participantes_por_pin(pin):
                 'id_grupo': p.get('id_grupo'),  # ID del grupo si está asignado
                 'nombre_grupo': p.get('nombre_grupo')  # Nombre del grupo si está asignado
             })
-        
+
         return jsonify({
             'success': True,
             'participantes': participantes_formateados,
             'total': len(participantes_formateados)
         })
-        
+
     except Exception as e:
         print(f"❌ ERROR en api_obtener_participantes_por_pin: {e}")
         import traceback
@@ -2419,43 +2402,43 @@ def unirse_juego():
     """Ruta mejorada para unirse a un juego con PIN"""
     if request.method == 'GET':
         return render_template('UnirseJuego.html')
-    
+
     try:
         data = request.get_json(silent=True) or request.form.to_dict()
         pin_sala = data.get('pin_sala', '').strip()
         nombre_estudiante = data.get('nombre_estudiante', '').strip()
-        
+
         print(f"\n{'='*80}")
         print(f"🎮 ESTUDIANTE INTENTANDO UNIRSE")
         print(f"PIN: {pin_sala}")
         print(f"Nombre: {nombre_estudiante}")
         print(f"Datos recibidos: {data}")
         print(f"{'='*80}\n")
-        
+
         # Validaciones
         if not pin_sala:
             print("❌ Error: PIN vacío")
             return jsonify({'success': False, 'error': 'El PIN de la sala es requerido'}), 400
-        
+
         if not nombre_estudiante:
             print("❌ Error: Nombre vacío")
             return jsonify({'success': False, 'error': 'Tu nombre es requerido'}), 400
-        
+
         if len(pin_sala) != 6 or not pin_sala.isdigit():
             print(f"❌ Error: PIN inválido (longitud: {len(pin_sala)})")
             return jsonify({'success': False, 'error': 'El PIN debe ser de 6 dígitos'}), 400
-        
+
         # Buscar la sala por PIN
         print(f"🔍 Buscando sala con PIN: {pin_sala}")
         sala = controlador_salas.obtener_sala_por_codigo(pin_sala)
         print(f"📋 Sala encontrada: {sala}")
-        
+
         if not sala:
             print(f"❌ Error: No se encontró sala con PIN {pin_sala}")
             return jsonify({'success': False, 'error': 'Sala no encontrada. Verifica el PIN'}), 404
-        
+
         print(f"✅ Sala encontrada - ID: {sala['id']}, Estado: {sala['estado']}")
-        
+
         # Verificar que la sala está en estado 'esperando'
         if sala['estado'] != 'esperando':
             if sala['estado'] == 'en_curso':
@@ -2464,44 +2447,44 @@ def unirse_juego():
                 return jsonify({'success': False, 'error': 'La sala ha finalizado'}), 400
             else:
                 return jsonify({'success': False, 'error': f'La sala no está disponible (estado: {sala["estado"]}'}), 400
-        
+
         # Verificar límite de participantes
         print(f"📊 Obteniendo participantes actuales de sala {sala['id']}...")
         participantes_actuales = controlador_salas.obtener_participantes_sala(sala['id'])
         max_participantes = sala.get('max_participantes', 30)
-        
+
         print(f"👥 Participantes actuales: {len(participantes_actuales)}/{max_participantes}")
         print(f"   Lista: {participantes_actuales}")
-        
+
         if len(participantes_actuales) >= max_participantes:
             print(f"❌ Error: Sala llena")
             return jsonify({'success': False, 'error': f'La sala está llena ({max_participantes} participantes máximo)'}), 400
-        
+
         # Agregar el participante a la sala
         id_usuario = session.get('usuario_id')  # Si está logueado
         print(f"➕ Agregando participante: {nombre_estudiante} (usuario_id: {id_usuario})")
-        
+
         try:
             participante_id = controlador_salas.agregar_participante_sala(sala['id'], nombre_estudiante, id_usuario)
         except ValueError as ve:
             print(f"❌ Error al agregar: {ve}")
             return jsonify({'success': False, 'error': str(ve)}), 400
-        
+
         print(f"✅ Participante agregado exitosamente!")
         print(f"   - ID Participante: {participante_id}")
         print(f"   - Sala ID: {sala['id']}")
         print(f"   - PIN Sala: {pin_sala}")
-        
+
         # Guardar en sesión
         session['participante_id'] = participante_id
         session['sala_id'] = sala['id']
         session['nombre_participante'] = nombre_estudiante
         session['pin_sala'] = pin_sala
-        
+
         redirect_url = url_for('sala_espera', sala_id=sala['id'])
         print(f"   - URL Redirección: {redirect_url}")
         print(f"{'='*80}\n")
-        
+
         return jsonify({
             'success': True,
             'participante_id': participante_id,
@@ -2509,7 +2492,7 @@ def unirse_juego():
             'redirect_url': redirect_url,
             'message': f'¡Te has unido exitosamente! Espera a que el docente inicie el juego.'
         })
-        
+
     except ValueError as ve:
         print(f"DEBUG: ValueError: {ve}")
         return jsonify({'success': False, 'error': str(ve)}), 400
@@ -2527,24 +2510,24 @@ def sala_espera(sala_id):
         if session.get('sala_id') != sala_id:
             flash('No estás registrado en esta sala', 'error')
             return redirect(url_for('unirse_juego'))
-        
+
         sala = obtener_sala_por_id_simple(sala_id)
         if not sala:
             flash('Sala no encontrada', 'error')
             return redirect(url_for('unirse_juego'))
-        
+
         # Obtener título del cuestionario
         cuestionario = obtener_cuestionario_por_id_simple(sala['id_cuestionario'])
         if cuestionario:
             sala['cuestionario_titulo'] = cuestionario[1]  # El título está en índice 1
-        
+
         # Obtener información del participante
         nombre_participante = session.get('nombre_participante', 'Participante')
         participante_id = session.get('participante_id')
         pin_sala = session.get('pin_sala', sala.get('pin_sala', ''))
-        
-        return render_template('SalaEspera.html', 
-                             sala=sala, 
+
+        return render_template('SalaEspera.html',
+                             sala=sala,
                              nombre_participante=nombre_participante,
                              participante_id=participante_id,
                              pin_sala=pin_sala)
@@ -2566,38 +2549,38 @@ def crear_cuestionario_route():
             titulo = data.get('titulo', '').strip()
             descripcion = data.get('descripcion', '').strip()
             id_docente = session.get('usuario_id', 1)  # Usar usuario de sesión si está disponible
-            
+
             if not titulo:
                 raise ValueError("El título es requerido")
-            
+
             # Debug: Verificar los datos antes de crear
             print(f"DEBUG: Creando cuestionario - titulo: {titulo}, id_docente: {id_docente}")
-            
+
             cuestionario_id = controlador_cuestionarios.crear_cuestionario(titulo, descripcion, id_docente)
-            
+
             print(f"DEBUG: Cuestionario creado con ID: {cuestionario_id}")
-            
+
             if request.is_json:
                 return jsonify({'success': True, 'cuestionario_id': cuestionario_id, 'message': 'Cuestionario creado exitosamente'})
-            
+
             # FLUJO CORREGIDO: Después de crear el cuestionario, redirigir a agregar preguntas
             flash('¡Cuestionario creado exitosamente! Ahora puedes agregar preguntas.', 'success')
             return redirect(url_for('agregar_preguntas', cuestionario_id=cuestionario_id))
-            
+
         except Exception as e:
             print(f"DEBUG: Error al crear cuestionario: {str(e)}")
             if request.is_json:
                 return jsonify({'success': False, 'error': str(e)}), 400
             flash(f'Error al crear el cuestionario: {str(e)}', 'error')
             return redirect(url_for('error_sistema_page'))
-    
+
     return render_template('CrearCuestionario.html')
 
 # Nueva ruta: Agregar preguntas a un cuestionario recién creado
 @app.route('/agregar-preguntas/<int:cuestionario_id>', methods=['GET', 'POST'])
 def agregar_preguntas(cuestionario_id):
     print(f"DEBUG: *** agregar_preguntas - Método: {request.method}, cuestionario_id: {cuestionario_id}")
-    
+
     # Si es POST, procesar el formulario de agregar pregunta
     if request.method == 'POST':
         print(f"DEBUG: *** Procesando POST - Form data: {dict(request.form)}")
@@ -2607,41 +2590,41 @@ def agregar_preguntas(cuestionario_id):
                 print(f"DEBUG: Usuario no es docente: {session.get('usuario_tipo')}")
                 flash('Solo los docentes pueden agregar preguntas', 'error')
                 return redirect(url_for('agregar_preguntas', cuestionario_id=cuestionario_id))
-            
+
             # Obtener datos del formulario
             enunciado = request.form.get('question_text', '').strip()
             tipo = request.form.get('question_type', 'opcion_multiple')
-            
+
             print(f"DEBUG: Enunciado: '{enunciado}', Tipo: '{tipo}'")
-            
+
             if not enunciado:
                 flash('El enunciado de la pregunta es requerido', 'error')
                 return redirect(url_for('agregar_preguntas', cuestionario_id=cuestionario_id))
-            
+
             # Verificar que el cuestionario pertenece al docente
             cuestionario = controlador_cuestionarios.obtener_cuestionario_por_id_simple(cuestionario_id)
             if not cuestionario:
                 flash('Cuestionario no encontrado', 'error')
                 return redirect(url_for('mis_cuestionarios'))
-            
+
             id_docente_actual = session.get('usuario_id', 1)
             if cuestionario[3] != id_docente_actual:
                 flash('No tienes permisos para agregar preguntas a este cuestionario', 'error')
                 return redirect(url_for('mis_cuestionarios'))
-            
+
             # Crear la pregunta
             pregunta_id = controlador_preguntas.crear_pregunta(enunciado, tipo, cuestionario_id)
             print(f"DEBUG: Resultado crear_pregunta: {pregunta_id}")
-            
+
             if pregunta_id:
                 print(f"DEBUG: Pregunta {pregunta_id} creada exitosamente")
-                
+
                 # Si es opción múltiple, agregar las opciones
                 if tipo == 'opcion_multiple':
                     opciones = []
                     opcion_correcta = request.form.get('correct_answer', '').strip()
                     print(f"DEBUG: Opción correcta seleccionada: '{opcion_correcta}'")
-                    
+
                     for i in range(0, 4):  # option_0, option_1, option_2, option_3
                         opcion_texto = request.form.get(f'option_{i}', '').strip()
                         if opcion_texto:
@@ -2652,43 +2635,43 @@ def agregar_preguntas(cuestionario_id):
                                 'es_correcta': es_correcta
                             })
                             print(f"DEBUG: Opción {i}: '{opcion_texto}' (correcta: {es_correcta})")
-                    
+
                     # Crear las opciones de respuesta
                     for opcion in opciones:
                         resultado = controlador_preguntas.crear_opcion_respuesta(pregunta_id, opcion['texto'], opcion['es_correcta'])
                         print(f"DEBUG: Opción creada: {resultado}")
-                
+
                 flash('Pregunta agregada exitosamente', 'success')
             else:
                 flash('Error al crear la pregunta', 'error')
-            
+
             return redirect(url_for('agregar_preguntas', cuestionario_id=cuestionario_id))
-            
+
         except Exception as e:
             print(f"DEBUG: Error procesando pregunta: {str(e)}")
             import traceback
             print(f"DEBUG: Traceback: {traceback.format_exc()}")
             flash(f'Error al procesar la pregunta: {str(e)}', 'error')
             return redirect(url_for('agregar_preguntas', cuestionario_id=cuestionario_id))
-    
+
     # Si es GET, mostrar el formulario
     try:
         # Verificar que el cuestionario existe y pertenece al usuario actual
         cuestionario = controlador_cuestionarios.obtener_cuestionario_por_id_simple(cuestionario_id)
         print(f"DEBUG: agregar_preguntas GET - cuestionario obtenido: {cuestionario}")
-        
+
         if not cuestionario:
             print(f"DEBUG: Cuestionario {cuestionario_id} no encontrado")
             flash('Cuestionario no encontrado', 'error')
             return redirect(url_for('mis_cuestionarios'))
-        
+
         # Verificar que el cuestionario pertenece al usuario actual
         id_docente_actual = session.get('usuario_id', 1)
         if cuestionario[3] != id_docente_actual:  # cuestionario[3] es id_docente
             print(f"DEBUG: Usuario {id_docente_actual} no tiene permisos para cuestionario del docente {cuestionario[3]}")
             flash('No tienes permisos para editar este cuestionario', 'error')
             return redirect(url_for('mis_cuestionarios'))
-        
+
         # Obtener las preguntas existentes del cuestionario
         preguntas = []
         try:
@@ -2696,11 +2679,11 @@ def agregar_preguntas(cuestionario_id):
         except Exception as e:
             print(f"DEBUG: Error obteniendo preguntas: {e}")
             preguntas = []  # En caso de error, asumimos que no hay preguntas aún
-        
+
         # Convertir cuestionario (tupla) a diccionario para el template
         cuestionario_data = {
             'id_cuestionario': cuestionario[0],
-            'titulo': cuestionario[1], 
+            'titulo': cuestionario[1],
             'descripcion': cuestionario[2],
             'id_docente': cuestionario[3],
             'fecha_creacion': cuestionario[4],
@@ -2708,15 +2691,15 @@ def agregar_preguntas(cuestionario_id):
             'fecha_publicacion': cuestionario[6] if len(cuestionario) > 6 else None,
             'estado': cuestionario[7] if len(cuestionario) > 7 else 'borrador'
         }
-        
+
         print(f"DEBUG: Mostrando GenerarPreguntas.html con cuestionario: {cuestionario_data}")
         print(f"DEBUG: Número de preguntas existentes: {len(preguntas)}")
-        
+
         # Usar GenerarPreguntas.html que ya existe
-        return render_template('GenerarPreguntas.html', 
-                             cuestionario=cuestionario_data, 
+        return render_template('GenerarPreguntas.html',
+                             cuestionario=cuestionario_data,
                              preguntas=preguntas)
-    
+
     except Exception as e:
         print(f"DEBUG: Error en agregar_preguntas GET: {str(e)}")
         flash(f'Error al cargar el cuestionario: {str(e)}', 'error')
@@ -2728,41 +2711,41 @@ def agregar_preguntas(cuestionario_id):
 def crear_sala_para_cuestionario(cuestionario_id):
     try:
         print(f"DEBUG: crear_sala_para_cuestionario - cuestionario_id: {cuestionario_id}, method: {request.method}")
-        
+
         # Verificar que el cuestionario existe y tiene preguntas
         cuestionario = obtener_cuestionario_por_id_simple(cuestionario_id)
         print(f"DEBUG: Cuestionario obtenido: {cuestionario}")
-        
+
         if not cuestionario:
             flash('Cuestionario no encontrado', 'error')
             return redirect(url_for('mis_cuestionarios'))
-        
+
         # Verificar que el cuestionario tiene preguntas
         preguntas = obtener_preguntas_por_cuestionario_simple(cuestionario_id)
         print(f"DEBUG: Preguntas encontradas: {len(preguntas) if preguntas else 0}")
-        
+
         if not preguntas or len(preguntas) == 0:
             flash('No se puede crear una sala para un cuestionario sin preguntas. Agrega preguntas primero.', 'error')
             return redirect(url_for('agregar_preguntas', cuestionario_id=cuestionario_id))
-        
+
         if request.method == 'POST':
             print("DEBUG: Procesando POST para crear sala")
             data = request.get_json(silent=True) or request.form.to_dict()
             print(f"DEBUG: Datos recibidos: {data}")
-            
+
             nombre_sala = data.get('nombre_sala', f"Sala - {cuestionario[1]}")  # cuestionario[1] es el titulo
             capacidad_maxima = int(data.get('capacidad_maxima', 50))
             modo_juego = data.get('modo_juego', 'individual')
             num_grupos = int(data.get('num_grupos', 3)) if modo_juego == 'grupo' else 0
             id_docente = session.get('usuario_id', 1)
-            
+
             print(f"DEBUG: Creando sala - nombre: {nombre_sala}, capacidad: {capacidad_maxima}, modo: {modo_juego}, grupos: {num_grupos}, docente: {id_docente}")
-            
+
             # Crear la sala
             try:
                 sala_id, codigo_sala = crear_sala_simple(cuestionario_id)
                 print(f"DEBUG: Sala creada con ID: {sala_id}, código: {codigo_sala}")
-                
+
                 if sala_id and codigo_sala:
                     # Si es modo grupo, crear los grupos
                     if modo_juego == 'grupo' and num_grupos > 0:
@@ -2772,11 +2755,11 @@ def crear_sala_para_cuestionario(cuestionario_id):
                         except Exception as grupos_error:
                             print(f"DEBUG: Error al crear grupos: {grupos_error}")
                             # No fallar si los grupos no se crean, la sala ya existe
-                    
+
                     # Para peticiones POST, siempre devolver JSON (ya que el frontend espera JSON)
                     print("DEBUG: Devolviendo respuesta JSON exitosa")
                     return jsonify({
-                        'success': True, 
+                        'success': True,
                         'sala_id': sala_id,
                         'codigo_sala': codigo_sala,
                         'capacidad': capacidad_maxima,
@@ -2792,7 +2775,7 @@ def crear_sala_para_cuestionario(cuestionario_id):
                         'success': False,
                         'error': error_msg
                     }), 500
-                    
+
             except Exception as sala_error:
                 error_msg = f'Error al crear la sala: {str(sala_error)}'
                 print(f"DEBUG: Exception en creación de sala: {error_msg}")
@@ -2801,7 +2784,7 @@ def crear_sala_para_cuestionario(cuestionario_id):
                     'success': False,
                     'error': error_msg
                 }), 500
-        
+
         # GET: Mostrar formulario para crear sala
         print("DEBUG: Mostrando formulario GET")
         cuestionario_data = {
@@ -2811,9 +2794,9 @@ def crear_sala_para_cuestionario(cuestionario_id):
             'num_preguntas': len(preguntas)
         }
         print(f"DEBUG: Datos del cuestionario para template: {cuestionario_data}")
-        
+
         return render_template('CrearSalaEspecifica.html', cuestionario=cuestionario_data)
-        
+
     except Exception as e:
         print(f"DEBUG: Error en crear_sala_para_cuestionario: {str(e)}")
         import traceback
@@ -2829,32 +2812,32 @@ def publicar_cuestionario_route(cuestionario_id):
     print(f"📢 PUBLICAR CUESTIONARIO - ID: {cuestionario_id}")
     print(f"Sesión: logged_in={session.get('logged_in')}, tipo={session.get('usuario_tipo')}, user_id={session.get('usuario_id')}")
     print(f"{'='*80}\n")
-    
+
     # Verificar sesión manualmente (sin decorador @login_required)
     if 'logged_in' not in session or not session.get('logged_in'):
         print("❌ Usuario no autenticado")
         return jsonify({'success': False, 'error': 'No has iniciado sesión'}), 401
-    
+
     if session.get('usuario_tipo') != 'docente':
         print(f"❌ Usuario no es docente: {session.get('usuario_tipo')}")
         return jsonify({'success': False, 'error': 'Solo los docentes pueden publicar cuestionarios'}), 403
-    
+
     try:
         id_docente = session.get('usuario_id')
         print(f"✅ Llamando a publicar_cuestionario({cuestionario_id}, {id_docente})")
-        
+
         # Llamar a la función del controlador
         success, mensaje = controlador_cuestionarios.publicar_cuestionario(cuestionario_id, id_docente)
-        
+
         print(f"Resultado: success={success}, mensaje={mensaje}")
-        
+
         if success:
             print("✅ Publicación exitosa")
             return jsonify({'success': True, 'message': mensaje}), 200
         else:
             print(f"❌ Publicación fallida: {mensaje}")
             return jsonify({'success': False, 'error': mensaje}), 400
-            
+
     except Exception as e:
         print(f"❌ ERROR CRÍTICO en publicar_cuestionario_route: {e}")
         import traceback
@@ -2868,23 +2851,23 @@ def despublicar_cuestionario_route(cuestionario_id):
     try:
         if session.get('usuario_tipo') != 'docente':
             return jsonify({'success': False, 'error': 'Solo los docentes pueden despublicar cuestionarios'}), 403
-        
+
         id_docente = session.get('usuario_id')
-        
+
         # Usar la nueva función despublicar_cuestionario
         success, mensaje = controlador_cuestionarios.despublicar_cuestionario(cuestionario_id, id_docente)
-        
+
         if success:
             return jsonify({
-                'success': True, 
+                'success': True,
                 'message': mensaje
             })
         else:
             return jsonify({
-                'success': False, 
+                'success': False,
                 'error': mensaje
             }), 400
-            
+
     except Exception as e:
         print(f"DEBUG: Error en despublicar_cuestionario: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -2896,10 +2879,10 @@ def mis_cuestionarios():
     try:
         id_docente = session.get('usuario_id', 1)  # Usar usuario de sesión si está disponible
         print(f"DEBUG: Obteniendo cuestionarios para docente ID: {id_docente}")
-        
+
         cuestionarios = obtener_cuestionarios_por_docente_simple(id_docente)
         print(f"DEBUG: Cuestionarios encontrados: {len(cuestionarios) if cuestionarios else 0}")
-        
+
         print(f"DEBUG: Cuestionarios: {cuestionarios}")
         return render_template('MisCuestionarios.html', cuestionarios=cuestionarios)
     except Exception as e:
@@ -2914,7 +2897,7 @@ def ver_cuestionario(cuestionario_id):
         if not cuestionario:
             flash('Cuestionario no encontrado', 'error')
             return redirect(url_for('mis_cuestionarios'))
-        
+
         preguntas = controlador_preguntas.obtener_preguntas_por_cuestionario(cuestionario_id)
         return render_template('VerCuestionario.html', cuestionario=cuestionario, preguntas=preguntas)
     except Exception as e:
@@ -2927,28 +2910,28 @@ def ver_cuestionario(cuestionario_id):
 def editar_cuestionario(cuestionario_id):
     try:
         print(f"DEBUG: Editando cuestionario ID: {cuestionario_id}")
-        
+
         # Verificar que el usuario es docente
         if session.get('usuario_tipo') != 'docente':
             flash('Solo los docentes pueden editar cuestionarios', 'error')
             return redirect(url_for('dashboard_docente'))
-        
+
         # Usar la función que devuelve diccionario
         cuestionario = controlador_cuestionarios.obtener_cuestionario_por_id(cuestionario_id)
         print(f"DEBUG: Cuestionario obtenido (diccionario): {cuestionario}")
-        
+
         if not cuestionario:
             print(f"DEBUG: Cuestionario {cuestionario_id} no encontrado")
             flash('Cuestionario no encontrado', 'error')
             return redirect(url_for('mis_cuestionarios'))
-        
+
         # Verificar que el cuestionario pertenece al docente actual
         id_docente_actual = session.get('usuario_id', 1)
         if cuestionario.get('id_docente') != id_docente_actual:
             print(f"DEBUG: Usuario {id_docente_actual} no tiene permisos para cuestionario del docente {cuestionario.get('id_docente')}")
             flash('No tienes permisos para editar este cuestionario', 'error')
             return redirect(url_for('mis_cuestionarios'))
-        
+
         print(f"DEBUG: Obteniendo preguntas para cuestionario {cuestionario_id}")
         preguntas = []
         try:
@@ -2957,10 +2940,10 @@ def editar_cuestionario(cuestionario_id):
         except Exception as e:
             print(f"DEBUG: Error obteniendo preguntas: {e}")
             preguntas = []
-        
-        return render_template('EditarCuestionario.html', 
-                             cuestionario=cuestionario, 
-                             preguntas=preguntas, 
+
+        return render_template('EditarCuestionario.html',
+                             cuestionario=cuestionario,
+                             preguntas=preguntas,
                              cuestionario_id=cuestionario_id)
     except Exception as e:
         print(f"DEBUG: Error en editar_cuestionario: {str(e)}")
@@ -2976,25 +2959,25 @@ def actualizar_cuestionario_route(cuestionario_id):
     try:
         titulo = data.get('titulo', '').strip()
         descripcion = data.get('descripcion', '').strip()
-        
+
         if not titulo:
             raise ValueError("El título es requerido")
-        
+
         resultado = controlador_cuestionarios.actualizar_cuestionario(cuestionario_id, titulo, descripcion)
-        
+
         if not resultado:
             raise ValueError("No se pudo actualizar el cuestionario")
-        
+
         # Verificar si es AJAX por el header, no solo por request.is_json
         is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json
-        
+
         if is_ajax:
             return jsonify({'success': True, 'message': 'Cuestionario actualizado exitosamente'})
         flash('¡Cuestionario actualizado exitosamente!', 'success')
         return redirect(url_for('mis_cuestionarios'))
     except Exception as e:
         is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json
-        
+
         if is_ajax:
             return jsonify({'success': False, 'error': str(e)}), 400
         flash(f'Error al actualizar el cuestionario: {str(e)}', 'error')
@@ -3004,10 +2987,10 @@ def actualizar_cuestionario_route(cuestionario_id):
 def eliminar_cuestionario_route(cuestionario_id):
     try:
         resultado = controlador_cuestionarios.eliminar_cuestionario(cuestionario_id)
-        
+
         if not resultado:
             raise ValueError("No se pudo eliminar el cuestionario")
-        
+
         if request.is_json:
             return jsonify({'success': True, 'message': 'Cuestionario eliminado exitosamente'})
         flash('¡Cuestionario eliminado exitosamente!', 'success')
@@ -3027,31 +3010,31 @@ def crear_pregunta_route(cuestionario_id):
         tipo = data.get('tipo_pregunta', 'opcion_multiple')  # Corregido: usar 'tipo_pregunta'
         puntaje_base = int(data.get('puntaje_base', 1))
         tiempo_limite = int(data.get('tiempo_limite', 30))
-        
+
         # Obtener opciones del formulario
         opciones_textos = request.form.getlist('opciones[]')
         respuesta_correcta_index = int(data.get('respuesta_correcta', 0))
-        
+
         if not enunciado:
             raise ValueError("El enunciado es requerido")
-        
+
         # Crear la pregunta
         pregunta_id = controlador_preguntas.crear_pregunta(enunciado, tipo, puntaje_base, tiempo_limite)
-        
+
         # Crear las opciones si hay opciones de texto
         if opciones_textos and len(opciones_textos) > 0:
             for i, texto_opcion in enumerate(opciones_textos):
                 if texto_opcion.strip():  # Solo crear si no está vacío
                     es_correcta = (i == respuesta_correcta_index)
                     controlador_opciones.crear_opcion_respuesta(pregunta_id, texto_opcion.strip(), es_correcta)
-        
+
         # Obtener el siguiente orden para la pregunta en el cuestionario
         preguntas_existentes = controlador_preguntas.obtener_preguntas_por_cuestionario(cuestionario_id)
         orden = len(preguntas_existentes) + 1
-        
+
         # Agregar la pregunta al cuestionario
         controlador_preguntas.agregar_pregunta_a_cuestionario(cuestionario_id, pregunta_id, orden)
-        
+
         if request.is_json:
             return jsonify({'success': True, 'pregunta_id': pregunta_id, 'message': 'Pregunta creada exitosamente'})
         flash('¡Pregunta creada exitosamente!', 'success')
@@ -3072,20 +3055,20 @@ def editar_pregunta_route(pregunta_id):
         puntaje_base = int(data.get('puntaje_base', 1))
         tiempo_limite = int(data.get('tiempo_limite', 30))
         opciones_data = data.get('opciones', [])
-        
+
         if not enunciado:
             raise ValueError("El enunciado es requerido")
-        
+
         # Actualizar la pregunta
         resultado = controlador_preguntas.actualizar_pregunta(pregunta_id, enunciado, tipo, puntaje_base, tiempo_limite)
-        
+
         if not resultado:
             raise ValueError("No se pudo actualizar la pregunta")
-        
+
         # Actualizar las opciones si es de opción múltiple
         if tipo == 'opcion_multiple' and opciones_data:
             actualizar_opciones_multiple(pregunta_id, opciones_data)
-        
+
         if request.is_json:
             return jsonify({'success': True, 'message': 'Pregunta actualizada exitosamente'})
         flash('¡Pregunta actualizada exitosamente!', 'success')
@@ -3104,23 +3087,23 @@ def obtener_pregunta_route(pregunta_id):
         # Verificar que el usuario es docente
         if session.get('usuario_tipo') != 'docente':
             return jsonify({'success': False, 'error': 'Solo los docentes pueden obtener preguntas'}), 403
-        
+
         # Obtener la pregunta
         pregunta = controlador_preguntas.obtener_pregunta_por_id(pregunta_id)
-        
+
         if not pregunta:
             return jsonify({'success': False, 'error': 'Pregunta no encontrada'}), 404
-        
+
         # Obtener las opciones de la pregunta
         opciones = controlador_opciones.obtener_opciones_por_pregunta(pregunta_id)
-        
+
         pregunta['opciones'] = opciones
-        
+
         return jsonify({
             'success': True,
             'pregunta': pregunta
         })
-        
+
     except Exception as e:
         print(f"Error al obtener pregunta: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -3132,12 +3115,12 @@ def eliminar_pregunta_route(pregunta_id):
         # Verificar que el usuario es docente
         if session.get('usuario_tipo') != 'docente':
             return jsonify({'success': False, 'error': 'Solo los docentes pueden eliminar preguntas'}), 403
-        
+
         resultado = controlador_preguntas.eliminar_pregunta(pregunta_id)
-        
+
         if not resultado:
             raise ValueError("No se pudo eliminar la pregunta")
-        
+
         if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({'success': True, 'message': 'Pregunta eliminada exitosamente'})
         flash('¡Pregunta eliminada exitosamente!', 'success')
@@ -3156,39 +3139,39 @@ def descargar_plantilla_excel(id_cuestionario):
         from openpyxl import Workbook
         from openpyxl.styles import Font, PatternFill, Alignment
         from io import BytesIO
-        
+
         # Verificar que el usuario es docente
         if session.get('usuario_tipo') != 'docente':
             flash('Solo los docentes pueden descargar plantillas', 'error')
             return redirect(url_for('dashboard_docente'))
-        
+
         # Verificar que el cuestionario existe y pertenece al docente
         cuestionario = controlador_cuestionarios.obtener_cuestionario_por_id(id_cuestionario)
         if not cuestionario or cuestionario.get('id_docente') != session.get('usuario_id'):
             flash('No tienes permiso para acceder a este cuestionario', 'error')
             return redirect(url_for('mis_cuestionarios'))
-        
+
         # Crear libro de Excel
         wb = Workbook()
         ws = wb.active
         ws.title = "Preguntas"
-        
+
         # Configurar encabezados
         headers = ['Pregunta', 'Opción A', 'Opción B', 'Opción C', 'Opción D', 'Respuesta Correcta', 'Tiempo (segundos)']
         header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
         header_font = Font(bold=True, color="FFFFFF")
-        
+
         for col_num, header in enumerate(headers, 1):
             cell = ws.cell(row=1, column=col_num)
             cell.value = header
             cell.fill = header_fill
             cell.font = header_font
             cell.alignment = Alignment(horizontal='center', vertical='center')
-        
+
         # Agregar fila de instrucciones
         instruction_fill = PatternFill(start_color="FFF2CC", end_color="FFF2CC", fill_type="solid")
         instruction_font = Font(italic=True, color="7F6000")
-        
+
         instructions = [
             "Escribe aquí la pregunta",
             "Primera opción de respuesta",
@@ -3198,13 +3181,13 @@ def descargar_plantilla_excel(id_cuestionario):
             "Escribe la letra de la opción correcta: A, B, C o D",
             "Tiempo en segundos (ej: 30)"
         ]
-        
+
         for col_num, instruction in enumerate(instructions, 1):
             cell = ws.cell(row=2, column=col_num)
             cell.value = instruction
             cell.fill = instruction_fill
             cell.font = instruction_font
-        
+
         # Agregar ejemplo
         example_fill = PatternFill(start_color="E2EFDA", end_color="E2EFDA", fill_type="solid")
         example = [
@@ -3216,30 +3199,30 @@ def descargar_plantilla_excel(id_cuestionario):
             "B",
             "30"
         ]
-        
+
         for col_num, value in enumerate(example, 1):
             cell = ws.cell(row=3, column=col_num)
             cell.value = value
             cell.fill = example_fill
-        
+
         # Agregar filas vacías para que el usuario complete
         for row in range(4, 24):
             for col in range(1, 8):
                 ws.cell(row=row, column=col)
-        
+
         # Ajustar ancho de columnas
         column_widths = [50, 30, 30, 30, 30, 20, 20]
         for col_num, width in enumerate(column_widths, 1):
             ws.column_dimensions[chr(64 + col_num)].width = width
-        
+
         # Guardar en memoria
         excel_file = BytesIO()
         wb.save(excel_file)
         excel_file.seek(0)
-        
+
         # Crear nombre de archivo
         filename = f"plantilla_preguntas_{cuestionario['titulo'].replace(' ', '_')}.xlsx"
-        
+
         return send_file(
             excel_file,
             mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -3258,67 +3241,67 @@ def importar_preguntas_excel(id_cuestionario):
     """Importar preguntas desde un archivo Excel"""
     import tempfile
     import os
-    
+
     temp_file_path = None
     try:
         from openpyxl import load_workbook
-        
+
         # Verificar que el usuario es docente
         if session.get('usuario_tipo') != 'docente':
             return jsonify({'success': False, 'error': 'Solo los docentes pueden importar preguntas'}), 403
-        
+
         # Verificar que el cuestionario existe y pertenece al docente
         cuestionario = controlador_cuestionarios.obtener_cuestionario_por_id(id_cuestionario)
         if not cuestionario or cuestionario.get('id_docente') != session.get('usuario_id'):
             return jsonify({'success': False, 'error': 'No tienes permiso para acceder a este cuestionario'}), 403
-        
+
         # Verificar que se envió un archivo
         if 'excel_file' not in request.files:
             return jsonify({'success': False, 'error': 'No se envió ningún archivo'}), 400
-        
+
         file = request.files['excel_file']
-        
+
         if file.filename == '':
             return jsonify({'success': False, 'error': 'No se seleccionó ningún archivo'}), 400
-        
+
         if not file.filename.endswith(('.xlsx', '.xls')):
             return jsonify({'success': False, 'error': 'El archivo debe ser de formato Excel (.xlsx o .xls)'}), 400
-        
+
         # Guardar el archivo temporalmente
         # Esto es necesario en PythonAnywhere y otros servidores
         temp_fd, temp_file_path = tempfile.mkstemp(suffix='.xlsx')
         os.close(temp_fd)  # Cerrar el file descriptor
         file.save(temp_file_path)
-        
+
         # Cargar el archivo Excel desde el archivo temporal
         wb = load_workbook(temp_file_path)
         ws = wb.active
-        
+
         print(f"DEBUG: Archivo Excel cargado. Hojas disponibles: {wb.sheetnames}")
         print(f"DEBUG: Hoja activa: {ws.title}")
         print(f"DEBUG: Total de filas en la hoja: {ws.max_row}")
         print(f"DEBUG: Total de columnas en la hoja: {ws.max_column}")
-        
+
         preguntas_importadas = []
         errores = []
-        
+
         # Mostrar las primeras 5 filas para depuración
         print("\n=== CONTENIDO DEL EXCEL ===")
         for i, row in enumerate(ws.iter_rows(min_row=1, max_row=5, values_only=True), start=1):
             print(f"Fila {i}: {row}")
         print("=========================\n")
-        
+
         # Procesar filas (empezando desde la fila 4 para saltar encabezados, instrucciones y ejemplo)
         filas_procesadas = 0
         for row_num, row in enumerate(ws.iter_rows(min_row=4, values_only=True), start=4):
             filas_procesadas += 1
             print(f"\nDEBUG: Procesando fila {row_num}: {row}")
-            
+
             # Saltar filas vacías
             if not row[0] or str(row[0]).strip() == '':
                 print(f"DEBUG: Fila {row_num} vacía o sin pregunta, saltando...")
                 continue
-            
+
             try:
                 # Extraer datos de la fila
                 texto_pregunta = str(row[0]).strip()
@@ -3327,7 +3310,7 @@ def importar_preguntas_excel(id_cuestionario):
                 opcion_c = str(row[3]).strip() if row[3] else ''
                 opcion_d = str(row[4]).strip() if row[4] else ''
                 respuesta_correcta = str(row[5]).strip().upper() if row[5] else ''
-                
+
                 # Leer tiempo y asegurar que sea un entero en segundos
                 if row[6]:
                     # Convertir a float primero por si acaso tiene decimales, luego a int
@@ -3338,35 +3321,35 @@ def importar_preguntas_excel(id_cuestionario):
                 else:
                     tiempo = cuestionario.get('tiempo_limite_pregunta', 30)
                     print(f"DEBUG: Tiempo no especificado, usando default: {tiempo} segundos")
-                
+
                 # Validaciones
                 if not texto_pregunta:
                     errores.append(f"Fila {row_num}: La pregunta no puede estar vacía")
                     continue
-                
+
                 if not opcion_a or not opcion_b:
                     errores.append(f"Fila {row_num}: Se requieren al menos 2 opciones (A y B)")
                     continue
-                
+
                 if respuesta_correcta not in ['A', 'B', 'C', 'D']:
                     errores.append(f"Fila {row_num}: La respuesta correcta debe ser A, B, C o D")
                     continue
-                
+
                 # Validar que la respuesta correcta corresponde a una opción existente
                 opciones_disponibles = []
                 if opcion_a: opciones_disponibles.append('A')
                 if opcion_b: opciones_disponibles.append('B')
                 if opcion_c: opciones_disponibles.append('C')
                 if opcion_d: opciones_disponibles.append('D')
-                
+
                 if respuesta_correcta not in opciones_disponibles:
                     errores.append(f"Fila {row_num}: La respuesta correcta '{respuesta_correcta}' no tiene opción asociada")
                     continue
-                
+
                 if tiempo < 5 or tiempo > 300:
                     errores.append(f"Fila {row_num}: El tiempo debe estar entre 5 y 300 segundos")
                     continue
-                
+
                 # Crear la pregunta con la firma correcta
                 print(f"DEBUG: Creando pregunta: '{texto_pregunta}'")
                 pregunta_id = controlador_preguntas.crear_pregunta(
@@ -3376,13 +3359,13 @@ def importar_preguntas_excel(id_cuestionario):
                     puntaje_base=1,
                     tiempo_limite=tiempo
                 )
-                
+
                 print(f"DEBUG: Pregunta creada con ID: {pregunta_id}")
-                
+
                 if not pregunta_id:
                     errores.append(f"Fila {row_num}: Error al crear la pregunta en la base de datos")
                     continue
-                
+
                 # Eliminar opciones antiguas si la pregunta ya existía (para actualizarlas)
                 conexion_temp = obtener_conexion()
                 with conexion_temp.cursor() as cursor_temp:
@@ -3390,7 +3373,7 @@ def importar_preguntas_excel(id_cuestionario):
                     conexion_temp.commit()
                 conexion_temp.close()
                 print(f"DEBUG: Opciones antiguas eliminadas para pregunta {pregunta_id}")
-                
+
                 # Crear las opciones
                 opciones_data = []
                 if opcion_a:
@@ -3413,9 +3396,9 @@ def importar_preguntas_excel(id_cuestionario):
                         'texto': opcion_d,
                         'es_correcta': 1 if respuesta_correcta == 'D' else 0
                     })
-                
+
                 print(f"DEBUG: Creando {len(opciones_data)} opciones para pregunta {pregunta_id}")
-                
+
                 # Guardar las opciones
                 opciones_creadas = True
                 for idx, opcion_data in enumerate(opciones_data):
@@ -3429,14 +3412,14 @@ def importar_preguntas_excel(id_cuestionario):
                     if not resultado:
                         opciones_creadas = False
                         break
-                
+
                 if not opciones_creadas:
                     # Si falla la creación de opciones, eliminar la pregunta
                     print(f"DEBUG: Error al crear opciones, eliminando pregunta {pregunta_id}")
                     controlador_preguntas.eliminar_pregunta(pregunta_id)
                     errores.append(f"Fila {row_num}: Error al crear las opciones de respuesta")
                     continue
-                
+
                 # La pregunta ya fue asociada al cuestionario por crear_pregunta()
                 # Solo agregamos a la lista de importadas
                 preguntas_importadas.append({
@@ -3444,36 +3427,36 @@ def importar_preguntas_excel(id_cuestionario):
                     'texto': texto_pregunta,
                     'orden': len(preguntas_importadas) + 1
                 })
-                
+
                 print(f"DEBUG: Pregunta importada exitosamente: {texto_pregunta}")
-                
+
             except Exception as e:
                 print(f"DEBUG: Error al procesar fila {row_num}: {str(e)}")
                 errores.append(f"Fila {row_num}: {str(e)}")
                 continue
-        
+
         print(f"\n=== RESUMEN DE IMPORTACIÓN ===")
         print(f"Filas procesadas: {filas_procesadas}")
         print(f"Preguntas importadas: {len(preguntas_importadas)}")
         print(f"Errores encontrados: {len(errores)}")
         print("============================\n")
-        
+
         # Preparar respuesta
         total_importadas = len(preguntas_importadas)
-        
+
         if total_importadas == 0 and len(errores) == 0:
             return jsonify({
                 'success': False,
                 'error': 'No se encontraron preguntas válidas en el archivo. Asegúrate de seguir el formato de la plantilla.'
             }), 400
-        
+
         return jsonify({
             'success': True,
             'total_importadas': total_importadas,
             'errores': errores,
             'preguntas': preguntas_importadas
         })
-        
+
     except Exception as e:
         print(f"Error al importar preguntas: {str(e)}")
         import traceback
@@ -3494,48 +3477,48 @@ def editar_pregunta_ajax(pregunta_id):
     """Editar una pregunta existente"""
     try:
         print(f"DEBUG: Editando pregunta ID: {pregunta_id}")
-        
+
         # Verificar que el usuario es docente
         if session.get('usuario_tipo') != 'docente':
             return jsonify({'success': False, 'error': 'Solo los docentes pueden editar preguntas'}), 403
-        
+
         # Obtener datos del formulario
         enunciado = request.form.get('enunciado', '').strip()
         tiempo = int(request.form.get('tiempo', 30))
         opciones_json = request.form.get('opciones', '[]')
-        
+
         print(f"DEBUG: Datos recibidos - enunciado: '{enunciado}', tiempo: {tiempo}")
         print(f"DEBUG: Opciones JSON: {opciones_json}")
-        
+
         if not enunciado:
             return jsonify({'success': False, 'error': 'El enunciado es requerido'}), 400
-        
+
         # Parsear opciones
         import json
         opciones = json.loads(opciones_json)
-        
+
         if not opciones or len(opciones) < 2:
             return jsonify({'success': False, 'error': 'Debe haber al menos 2 opciones'}), 400
-        
+
         # Verificar que hay una opción correcta
         if not any(opcion.get('es_correcta') for opcion in opciones):
             return jsonify({'success': False, 'error': 'Debe seleccionar una respuesta correcta'}), 400
-        
+
         # Actualizar la pregunta
         resultado = controlador_preguntas.actualizar_pregunta(
-            pregunta_id, 
-            enunciado, 
-            'opcion_multiple', 
+            pregunta_id,
+            enunciado,
+            'opcion_multiple',
             1,  # puntaje_base
             tiempo
         )
-        
+
         if not resultado:
             return jsonify({'success': False, 'error': 'No se pudo actualizar la pregunta'}), 500
-        
+
         # Eliminar opciones anteriores
         controlador_opciones.eliminar_opciones_pregunta(pregunta_id)
-        
+
         # Crear nuevas opciones
         for opcion in opciones:
             controlador_opciones.crear_opcion(
@@ -3544,24 +3527,24 @@ def editar_pregunta_ajax(pregunta_id):
                 opcion['es_correcta'],
                 ''  # explicacion
             )
-        
+
         # Obtener la pregunta actualizada con sus opciones
         pregunta_actualizada = controlador_preguntas.obtener_pregunta_por_id(pregunta_id)
         opciones_actualizadas = controlador_opciones.obtener_opciones_por_pregunta(pregunta_id)
-        
+
         pregunta_data = {
             'id_pregunta': pregunta_actualizada['id_pregunta'],
             'enunciado': pregunta_actualizada['enunciado'],
             'tiempo': pregunta_actualizada.get('tiempo_limite', 30),
             'opciones': opciones_actualizadas
         }
-        
+
         return jsonify({
-            'success': True, 
+            'success': True,
             'message': 'Pregunta actualizada exitosamente',
             'pregunta': pregunta_data
         })
-        
+
     except json.JSONDecodeError as e:
         print(f"DEBUG: Error parsing JSON: {str(e)}")
         return jsonify({'success': False, 'error': 'Formato de opciones inválido'}), 400
@@ -3585,15 +3568,15 @@ def obtener_pregunta(pregunta_id):
     """Obtener los datos de una pregunta específica"""
     try:
         print(f"DEBUG: Obteniendo pregunta ID: {pregunta_id}")
-        
+
         # Obtener la pregunta
         pregunta = controlador_preguntas.obtener_pregunta_por_id(pregunta_id)
         if not pregunta:
             return jsonify({'success': False, 'error': 'Pregunta no encontrada'}), 404
-        
+
         # Obtener las opciones
         opciones = controlador_opciones.obtener_opciones_por_pregunta(pregunta_id)
-        
+
         # Formatear la respuesta
         pregunta_data = {
             'id_pregunta': pregunta['id_pregunta'],
@@ -3602,10 +3585,10 @@ def obtener_pregunta(pregunta_id):
             'tiempo': pregunta.get('tiempo_limite', 30),
             'opciones': opciones
         }
-        
+
         print(f"DEBUG: Pregunta encontrada: {pregunta_data}")
         return jsonify({'success': True, 'pregunta': pregunta_data})
-        
+
     except Exception as e:
         print(f"DEBUG: Error en obtener_pregunta: {str(e)}")
         import traceback
@@ -3618,46 +3601,46 @@ def agregar_pregunta_cuestionario(cuestionario_id):
     """Agregar una nueva pregunta a un cuestionario"""
     try:
         print(f"DEBUG: agregar_pregunta_cuestionario - cuestionario_id: {cuestionario_id}")
-        
+
         # Verificar que el usuario es docente
         if session.get('usuario_tipo') != 'docente':
             return jsonify({'success': False, 'error': 'Solo los docentes pueden agregar preguntas'}), 403
-        
+
         # Verificar que el cuestionario existe y pertenece al docente
         cuestionario = controlador_cuestionarios.obtener_cuestionario_por_id(cuestionario_id)
         if not cuestionario:
             return jsonify({'success': False, 'error': 'Cuestionario no encontrado'}), 404
-        
+
         id_docente_actual = session.get('usuario_id')
         if cuestionario.get('id_docente') != id_docente_actual:
             return jsonify({'success': False, 'error': 'No tienes permisos para agregar preguntas a este cuestionario'}), 403
-        
+
         # Obtener datos del formulario
         enunciado = request.form.get('enunciado', '').strip()
         tiempo = request.form.get('tiempo', 30)
         opciones_json = request.form.get('opciones', '[]')
-        
+
         print(f"DEBUG: Datos recibidos - enunciado: '{enunciado}', tiempo: {tiempo}")
         print(f"DEBUG: Opciones JSON: {opciones_json}")
-        
+
         if not enunciado:
             return jsonify({'success': False, 'error': 'El enunciado de la pregunta es requerido'}), 400
-        
+
         # Parsear opciones
         import json
         try:
             opciones = json.loads(opciones_json)
         except:
             return jsonify({'success': False, 'error': 'Formato de opciones inválido'}), 400
-        
+
         if len(opciones) < 2:
             return jsonify({'success': False, 'error': 'Debe haber al menos 2 opciones'}), 400
-        
+
         # Verificar que hay una opción correcta
         tiene_correcta = any(opcion.get('es_correcta', False) for opcion in opciones)
         if not tiene_correcta:
             return jsonify({'success': False, 'error': 'Debe seleccionar una respuesta correcta'}), 400
-        
+
         # Crear la pregunta (ya la asocia al cuestionario internamente)
         pregunta_id = controlador_preguntas.crear_pregunta(
             enunciado=enunciado,
@@ -3666,17 +3649,17 @@ def agregar_pregunta_cuestionario(cuestionario_id):
             puntaje_base=1,
             tiempo_limite=int(tiempo)
         )
-        
+
         print(f"DEBUG: Pregunta creada con ID: {pregunta_id}")
-        
+
         if not pregunta_id:
             return jsonify({'success': False, 'error': 'Error al crear la pregunta'}), 500
-        
+
         # Crear las opciones
         for i, opcion in enumerate(opciones):
             texto_opcion = opcion.get('texto_opcion', '').strip()
             es_correcta = opcion.get('es_correcta', False)
-            
+
             if texto_opcion:
                 controlador_opciones.crear_opcion(
                     id_pregunta=pregunta_id,
@@ -3685,11 +3668,11 @@ def agregar_pregunta_cuestionario(cuestionario_id):
                     explicacion=''
                 )
                 print(f"DEBUG: Opción {i+1} creada: '{texto_opcion}' (correcta: {es_correcta})")
-        
+
         # Obtener la pregunta completa para devolverla
         pregunta_completa = controlador_preguntas.obtener_pregunta_por_id(pregunta_id)
         opciones_pregunta = controlador_opciones.obtener_opciones_por_pregunta(pregunta_id)
-        
+
         pregunta_response = {
             'id_pregunta': pregunta_id,
             'enunciado': enunciado,
@@ -3699,13 +3682,13 @@ def agregar_pregunta_cuestionario(cuestionario_id):
                 'es_correcta': opc.get('es_correcta', False)
             } for opc in opciones_pregunta]
         }
-        
+
         return jsonify({
             'success': True,
             'message': 'Pregunta agregada exitosamente',
             'pregunta': pregunta_response
         })
-        
+
     except Exception as e:
         print(f"DEBUG: Error en agregar_pregunta_cuestionario: {str(e)}")
         import traceback
@@ -3721,19 +3704,19 @@ def eliminar_pregunta_cuestionario(pregunta_id):
     """Eliminar una pregunta"""
     try:
         print(f"DEBUG: eliminar_pregunta_cuestionario - pregunta_id: {pregunta_id}")
-        
+
         # Verificar que el usuario es docente
         if session.get('usuario_tipo') != 'docente':
             return jsonify({'success': False, 'error': 'Solo los docentes pueden eliminar preguntas'}), 403
-        
+
         # Verificar que la pregunta existe
         pregunta = controlador_preguntas.obtener_pregunta_por_id(pregunta_id)
         if not pregunta:
             return jsonify({'success': False, 'error': 'Pregunta no encontrada'}), 404
-        
+
         # Eliminar la pregunta (esto también eliminará las opciones por CASCADE)
         resultado = controlador_preguntas.eliminar_pregunta(pregunta_id)
-        
+
         if resultado:
             return jsonify({
                 'success': True,
@@ -3741,7 +3724,7 @@ def eliminar_pregunta_cuestionario(pregunta_id):
             })
         else:
             return jsonify({'success': False, 'error': 'Error al eliminar la pregunta'}), 500
-        
+
     except Exception as e:
         print(f"DEBUG: Error en eliminar_pregunta_cuestionario: {str(e)}")
         import traceback
@@ -3846,7 +3829,7 @@ def insertar_cuestionario():
     categoria = request.form.get('categoria', '')
     tiempo_limite = request.form.get('tiempo_limite', 0)
     max_intentos = request.form.get('max_intentos', 1)
-    
+
     controlador_cuestionarios.crear_cuestionario(
         titulo=titulo,
         descripcion=descripcion,
@@ -3878,7 +3861,7 @@ def actualizar_cuestionario():
     categoria = request.form.get('categoria', '')
     tiempo_limite = request.form.get('tiempo_limite', 0)
     max_intentos = request.form.get('max_intentos', 1)
-    
+
     controlador_cuestionarios.actualizar_cuestionario(id, titulo, descripcion, id_docente, categoria, tiempo_limite, max_intentos)
     return redirect(url_for('cuestionario'))
 
@@ -3914,7 +3897,7 @@ def insertar_pregunta():
     tiempo_limite = request.form.get('tiempo_limite', 30)
     archivo_multimedia = request.form.get('archivo_multimedia', '')
     id_cuestionario = request.form.get('id_cuestionario')
-    
+
     pregunta_id = controlador_preguntas.crear_pregunta(
         enunciado=enunciado,
         tipo=tipo,
@@ -3922,12 +3905,12 @@ def insertar_pregunta():
         tiempo_limite=tiempo_limite,
         archivo_multimedia=archivo_multimedia
     )
-    
+
     # Si se especificó un cuestionario, agregar la pregunta
     if id_cuestionario:
         orden = controlador_cuestionario_preguntas.contar_preguntas_cuestionario(id_cuestionario) + 1
         controlador_preguntas.agregar_pregunta_a_cuestionario(id_cuestionario, pregunta_id, orden)
-    
+
     return redirect(url_for('pregunta'))
 
 @app.route('/eliminar_pregunta/<int:id>')
@@ -3950,7 +3933,7 @@ def actualizar_pregunta():
     puntaje_base = request.form.get('puntaje_base', 1)
     tiempo_limite = request.form.get('tiempo_limite', 30)
     archivo_multimedia = request.form.get('archivo_multimedia', '')
-    
+
     controlador_preguntas.actualizar_pregunta(id, enunciado, tipo, puntaje_base, tiempo_limite, archivo_multimedia)
     return redirect(url_for('pregunta'))
 #-----FIN-PREGUNTA-----#
@@ -3972,7 +3955,7 @@ def insertar_opcion():
     texto_opcion = request.form['texto_opcion']
     es_correcta = 'es_correcta' in request.form
     explicacion = request.form.get('explicacion', '')
-    
+
     controlador_opciones.crear_opcion(
         id_pregunta=id_pregunta,
         texto_opcion=texto_opcion,
@@ -4000,7 +3983,7 @@ def actualizar_opcion():
     texto_opcion = request.form['texto_opcion']
     es_correcta = 'es_correcta' in request.form
     explicacion = request.form.get('explicacion', '')
-    
+
     controlador_opciones.actualizar_opcion(id, id_pregunta, texto_opcion, es_correcta, explicacion)
     return redirect(url_for('opcion'))
 #-----FIN-OPCION-----#
@@ -4025,7 +4008,7 @@ def insertar_sala():
     tipo_sala = request.form.get('tipo_sala', 'individual')
     max_participantes = request.form.get('max_participantes', 30)
     tiempo_respuesta = request.form.get('tiempo_respuesta', 30)
-    
+
     controlador_salas.crear_sala(
         nombre=nombre,
         id_cuestionario=id_cuestionario,
@@ -4058,7 +4041,7 @@ def actualizar_sala():
     tipo_sala = request.form.get('tipo_sala', 'individual')
     max_participantes = request.form.get('max_participantes', 30)
     tiempo_respuesta = request.form.get('tiempo_respuesta', 30)
-    
+
     controlador_salas.actualizar_sala(id, nombre, id_cuestionario, id_docente, tipo_sala, max_participantes, tiempo_respuesta)
     return redirect(url_for('sala'))
 
@@ -4275,7 +4258,7 @@ def eliminar_recompensa_por_cuestionario(id_recompensa):
     except Exception as e:
         print(f"❌ Error al eliminar recompensa {id_recompensa}: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
-    
+
 #-----FIN RECOMPESA-----#
 #-----INICIO-ROL-----#
 @app.route('/rol')
@@ -4291,7 +4274,7 @@ def registrar_rol():
 def insertar_rol():
     nombre_rol = request.form['nombre_rol']
     descripcion = request.form['descripcion']
-    
+
     controlador_roles.crear_rol(
         nombre_rol=nombre_rol,
         descripcion=descripcion
@@ -4314,7 +4297,7 @@ def actualizar_rol():
     id = request.form['id']
     nombre_rol = request.form['nombre_rol']
     descripcion = request.form['descripcion']
-    
+
     controlador_roles.actualizar_rol(id, nombre_rol, descripcion)
     return redirect(url_for('rol'))
 
@@ -4365,9 +4348,9 @@ def obtener_salas_por_cuestionario(cuestionario_id):
     try:
         conexion = obtener_conexion()
         cursor = conexion.cursor()
-        
+
         cursor.execute('''
-            SELECT 
+            SELECT
                 s.id_sala,
                 s.pin_sala,
                 s.estado,
@@ -4381,7 +4364,7 @@ def obtener_salas_por_cuestionario(cuestionario_id):
             GROUP BY s.id_sala
             ORDER BY s.fecha_creacion DESC
         ''', (cuestionario_id,))
-        
+
         salas = []
         for row in cursor.fetchall():
             salas.append({
@@ -4393,10 +4376,10 @@ def obtener_salas_por_cuestionario(cuestionario_id):
                 'total_preguntas': row[5],
                 'total_participantes': row[6]
             })
-        
+
         cursor.close()
         conexion.close()
-        
+
         return jsonify({
             'success': True,
             'salas': salas
@@ -4414,41 +4397,41 @@ def jugar_individual(cuestionario_id):
     try:
         if session.get('usuario_tipo') != 'estudiante':
             return jsonify({'success': False, 'error': 'Solo estudiantes pueden jugar en modo individual'}), 403
-        
+
         import random
         import string
         import pymysql.cursors
-        
+
         conexion = obtener_conexion()
         cursor = conexion.cursor(pymysql.cursors.DictCursor)
-        
+
         # Verificar que el cuestionario existe y está publicado
         cursor.execute('''
-            SELECT id_cuestionario, titulo 
-            FROM cuestionarios 
+            SELECT id_cuestionario, titulo
+            FROM cuestionarios
             WHERE id_cuestionario = %s AND estado = 'publicado'
         ''', (cuestionario_id,))
-        
+
         cuestionario = cursor.fetchone()
         if not cuestionario:
             cursor.close()
             conexion.close()
             return jsonify({'success': False, 'error': 'Cuestionario no encontrado o no está publicado'}), 404
-        
+
         # Obtener preguntas del cuestionario
         cursor.execute('''
             SELECT COUNT(*) as total
             FROM cuestionario_preguntas
             WHERE id_cuestionario = %s
         ''', (cuestionario_id,))
-        
+
         total_preguntas = cursor.fetchone()['total']
-        
+
         if total_preguntas == 0:
             cursor.close()
             conexion.close()
             return jsonify({'success': False, 'error': 'El cuestionario no tiene preguntas'}), 400
-        
+
         # Generar PIN único de 8 caracteres alfanuméricos (para modo automático/individual)
         # Formato: AUTO-XXXX donde X son letras y números
         while True:
@@ -4457,48 +4440,48 @@ def jugar_individual(cuestionario_id):
             cursor.execute('SELECT id_sala FROM salas_juego WHERE pin_sala = %s', (pin_sala,))
             if not cursor.fetchone():
                 break
-        
+
         # Crear sala automática en modo individual
         cursor.execute('''
-            INSERT INTO salas_juego 
+            INSERT INTO salas_juego
             (id_cuestionario, pin_sala, estado, modo_juego, total_preguntas, fecha_creacion, grupos_habilitados, num_grupos)
             VALUES (%s, %s, 'en_curso', 'individual', %s, NOW(), 0, 0)
         ''', (cuestionario_id, pin_sala, total_preguntas))
-        
+
         id_sala = cursor.lastrowid
-        
+
         # Crear participante automáticamente
         nombre_participante = f"{session['usuario_nombre']} {session['usuario_apellidos']}"
         cursor.execute('''
-            INSERT INTO participantes_sala 
+            INSERT INTO participantes_sala
             (id_sala, id_usuario, nombre_participante, estado, fecha_union)
             VALUES (%s, %s, %s, 'jugando', NOW())
         ''', (id_sala, session['usuario_id'], nombre_participante))
-        
+
         id_participante = cursor.lastrowid
-        
+
         # Crear entrada en ranking_sala
         cursor.execute('''
-            INSERT INTO ranking_sala 
+            INSERT INTO ranking_sala
             (id_participante, id_sala, puntaje_total, respuestas_correctas, tiempo_total_respuestas, posicion)
             VALUES (%s, %s, 0, 0, 0, 1)
         ''', (id_participante, id_sala))
-        
+
         # Crear estado del juego (empezar en pregunta 1)
         cursor.execute('''
-            INSERT INTO estado_juego_sala 
+            INSERT INTO estado_juego_sala
             (id_sala, pregunta_actual, estado_pregunta, tiempo_inicio_pregunta)
             VALUES (%s, 1, 'mostrando', NOW())
         ''', (id_sala,))
-        
+
         conexion.commit()
         cursor.close()
         conexion.close()
-        
+
         # Guardar en sesión
         session['sala_actual'] = id_sala
         session['participante_id'] = id_participante
-        
+
         return jsonify({
             'success': True,
             'message': 'Sala individual creada exitosamente',
@@ -4506,7 +4489,7 @@ def jugar_individual(cuestionario_id):
             'pin_sala': pin_sala,
             'redirect': url_for('juego_estudiante', sala_id=id_sala)
         })
-        
+
     except Exception as e:
         print(f"ERROR en jugar_individual: {e}")
         import traceback
@@ -4520,17 +4503,17 @@ def api_publicar_cuestionario(cuestionario_id):
     try:
         conexion = obtener_conexion()
         cursor = conexion.cursor()
-        
+
         cursor.execute('''
-            UPDATE cuestionarios 
-            SET estado = 'publicado' 
+            UPDATE cuestionarios
+            SET estado = 'publicado'
             WHERE id_cuestionario = %s
         ''', (cuestionario_id,))
-        
+
         conexion.commit()
         cursor.close()
         conexion.close()
-        
+
         return jsonify({'success': True, 'message': 'Cuestionario publicado'})
     except Exception as e:
         print(f"ERROR api_publicar_cuestionario: {e}")
@@ -4543,17 +4526,17 @@ def api_despublicar_cuestionario(cuestionario_id):
     try:
         conexion = obtener_conexion()
         cursor = conexion.cursor()
-        
+
         cursor.execute('''
-            UPDATE cuestionarios 
-            SET estado = 'borrador' 
+            UPDATE cuestionarios
+            SET estado = 'borrador'
             WHERE id_cuestionario = %s
         ''', (cuestionario_id,))
-        
+
         conexion.commit()
         cursor.close()
         conexion.close()
-        
+
         return jsonify({'success': True, 'message': 'Cuestionario despublicado'})
     except Exception as e:
         print(f"ERROR api_despublicar_cuestionario: {e}")
@@ -4566,10 +4549,10 @@ def obtener_ranking_tiempo_real_docente(docente_id):
         import pymysql.cursors
         conexion = obtener_conexion()
         cursor = conexion.cursor(pymysql.cursors.DictCursor)
-        
+
         # Obtener todas las salas en curso o esperando del docente
         query = '''
-            SELECT 
+            SELECT
                 s.id_sala,
                 s.pin_sala,
                 s.estado,
@@ -4577,20 +4560,20 @@ def obtener_ranking_tiempo_real_docente(docente_id):
                 c.id_cuestionario
             FROM salas_juego s
             INNER JOIN cuestionarios c ON s.id_cuestionario = c.id_cuestionario
-            WHERE c.id_docente = %s 
+            WHERE c.id_docente = %s
             AND s.estado IN ('esperando', 'en_curso')
             ORDER BY s.fecha_creacion DESC
         '''
-        
+
         cursor.execute(query, (docente_id,))
         salas = cursor.fetchall()
-        
+
         # Para cada sala, obtener el ranking actual
         resultados = []
         for sala in salas:
             # Obtener el top 3 del ranking de cada sala
             ranking_query = '''
-                SELECT 
+                SELECT
                     r.id_participante,
                     p.nombre_participante,
                     g.nombre_grupo,
@@ -4606,10 +4589,10 @@ def obtener_ranking_tiempo_real_docente(docente_id):
                 ORDER BY r.posicion ASC
                 LIMIT 3
             '''
-            
+
             cursor.execute(ranking_query, (sala['id_sala'],))
             ranking = cursor.fetchall()
-            
+
             if ranking:  # Solo incluir salas con participantes
                 resultados.append({
                     'sala_id': sala['id_sala'],
@@ -4619,16 +4602,16 @@ def obtener_ranking_tiempo_real_docente(docente_id):
                     'cuestionario_id': sala['id_cuestionario'],
                     'ranking': ranking
                 })
-        
+
         cursor.close()
         conexion.close()
-        
+
         return jsonify({
             'success': True,
             'salas': resultados,
             'total_salas_activas': len(resultados)
         })
-        
+
     except Exception as e:
         print(f"ERROR obtener_ranking_tiempo_real_docente: {e}")
         import traceback
@@ -4701,11 +4684,11 @@ def api_obtener_usuarios_sala(sala_id):
         sala = controlador_salas.obtener_sala_por_id(sala_id)
         if not sala:
             return jsonify({'success': False, 'error': 'Sala no encontrada'}), 404
-        
+
         # Obtener usuarios de la sala (simulado por ahora)
         # En una implementación real, esto vendría de WebSockets o base de datos
         usuarios = controlador_salas.obtener_participantes_sala(sala_id)
-        
+
         usuarios_formateados = []
         if usuarios:
             for usuario in usuarios:
@@ -4715,12 +4698,12 @@ def api_obtener_usuarios_sala(sala_id):
                     'estado': 'conectado',
                     'puntuacion': usuario[3] if len(usuario) > 3 else 0
                 })
-        
+
         return jsonify({
             'success': True,
             'usuarios': usuarios_formateados
         })
-        
+
     except Exception as e:
         print(f"DEBUG: Error en api_obtener_usuarios_sala: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -4734,15 +4717,15 @@ def api_iniciar_juego_sala(sala_id):
         sala = controlador_salas.obtener_sala_por_id(sala_id)
         if not sala:
             return jsonify({'success': False, 'error': 'Sala no encontrada'}), 404
-        
+
         # Verificar que hay usuarios conectados
         usuarios = controlador_salas.obtener_participantes_sala(sala_id)
         if not usuarios or len(usuarios) == 0:
             return jsonify({'success': False, 'error': 'No hay estudiantes conectados'}), 400
-        
+
         # Cambiar estado de la sala a 'en_progreso'
         success = controlador_salas.actualizar_estado_sala(sala_id, 'en_progreso')
-        
+
         if success:
             return jsonify({
                 'success': True,
@@ -4750,7 +4733,7 @@ def api_iniciar_juego_sala(sala_id):
             })
         else:
             return jsonify({'success': False, 'error': 'Error al iniciar el juego'}), 500
-            
+
     except Exception as e:
         print(f"DEBUG: Error en api_iniciar_juego_sala: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -4764,10 +4747,10 @@ def api_cerrar_sala(sala_id):
         sala = controlador_salas.obtener_sala_por_id(sala_id)
         if not sala:
             return jsonify({'success': False, 'error': 'Sala no encontrada'}), 404
-        
+
         # Cambiar estado de la sala a 'finalizada'
         success = controlador_salas.actualizar_estado_sala(sala_id, 'finalizada')
-        
+
         if success:
             return jsonify({
                 'success': True,
@@ -4775,7 +4758,7 @@ def api_cerrar_sala(sala_id):
             })
         else:
             return jsonify({'success': False, 'error': 'Error al cerrar la sala'}), 500
-            
+
     except Exception as e:
         print(f"DEBUG: Error en api_cerrar_sala: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -4791,17 +4774,17 @@ def exportar_resultados_excel(sala_id):
             from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
         except ImportError:
             return jsonify({'success': False, 'error': 'Librería openpyxl no instalada. Ejecuta: pip install openpyxl'}), 500
-        
+
         data = request.get_json()
         ranking = data.get('ranking', [])
         total_preguntas = data.get('totalPreguntas', 0)
         cuestionario_titulo = data.get('cuestionarioTitulo', 'Cuestionario')
-        
+
         # Crear workbook
         wb = Workbook()
         ws = wb.active
         ws.title = "Resultados Brain RUSH"
-        
+
         # Estilos
         header_fill = PatternFill(start_color="667eea", end_color="667eea", fill_type="solid")
         header_font = Font(bold=True, color="FFFFFF", size=12)
@@ -4812,7 +4795,7 @@ def exportar_resultados_excel(sala_id):
             top=Side(style='thin'),
             bottom=Side(style='thin')
         )
-        
+
         # Título
         ws.merge_cells('A1:G1')
         title_cell = ws['A1']
@@ -4820,14 +4803,14 @@ def exportar_resultados_excel(sala_id):
         title_cell.font = title_font
         title_cell.alignment = Alignment(horizontal='center', vertical='center')
         ws.row_dimensions[1].height = 30
-        
+
         # Fecha
         ws.merge_cells('A2:G2')
         fecha_cell = ws['A2']
         fecha_cell.value = f"Fecha: {datetime.now().strftime('%d/%m/%Y %H:%M')}"
         fecha_cell.alignment = Alignment(horizontal='center')
         ws.row_dimensions[2].height = 20
-        
+
         # Encabezados
         headers = ['Posición', 'Nombre', 'Resp. Correctas', 'Total Preguntas', 'Precisión', 'Puntuación', 'Tiempo (s)']
         for col, header in enumerate(headers, start=1):
@@ -4837,13 +4820,13 @@ def exportar_resultados_excel(sala_id):
             cell.font = header_font
             cell.alignment = Alignment(horizontal='center', vertical='center')
             cell.border = border
-        
+
         ws.row_dimensions[4].height = 25
-        
+
         # Datos
         for idx, player in enumerate(ranking, start=5):
             precision = round((player['respuestas_correctas'] / total_preguntas) * 100) if total_preguntas > 0 else 0
-            
+
             row_data = [
                 player['posicion'],
                 player['nombre_participante'],
@@ -4853,37 +4836,37 @@ def exportar_resultados_excel(sala_id):
                 player['puntaje_total'],
                 round(player['tiempo_total_respuestas'], 2)
             ]
-            
+
             for col, value in enumerate(row_data, start=1):
                 cell = ws.cell(row=idx, column=col)
                 cell.value = value
                 cell.border = border
                 cell.alignment = Alignment(horizontal='center', vertical='center')
-                
+
                 # Colorear top 3
                 if player['posicion'] <= 3:
                     colors = {1: "FFD700", 2: "C0C0C0", 3: "CD7F32"}
-                    cell.fill = PatternFill(start_color=colors[player['posicion']], 
-                                          end_color=colors[player['posicion']], 
+                    cell.fill = PatternFill(start_color=colors[player['posicion']],
+                                          end_color=colors[player['posicion']],
                                           fill_type="solid")
-        
+
         # Ajustar anchos de columna
         column_widths = [12, 25, 18, 18, 15, 15, 15]
         for col, width in enumerate(column_widths, start=1):
             ws.column_dimensions[chr(64 + col)].width = width
-        
+
         # Guardar en memoria
         excel_file = BytesIO()
         wb.save(excel_file)
         excel_file.seek(0)
-        
+
         return send_file(
             excel_file,
             mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             as_attachment=True,
             download_name=f'resultados_brain_rush_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
         )
-        
+
     except Exception as e:
         print(f"ERROR exportar_excel: {e}")
         import traceback
@@ -4901,42 +4884,42 @@ def exportar_resultados_onedrive(sala_id):
                 'success': False,
                 'error': 'Usuario no autenticado'
             }), 401
-        
+
         # Obtener datos de la solicitud
         data = request.get_json()
         ranking = data.get('ranking', [])
         total_preguntas = data.get('totalPreguntas', 0)
         cuestionario_titulo = data.get('cuestionarioTitulo', 'Cuestionario')
-        
+
         # Obtener datos del usuario (quien solicita la exportación)
         conexion = obtener_conexion()
         cursor = conexion.cursor()
         cursor.execute("""
-            SELECT email, nombre, apellidos 
+            SELECT email, nombre, apellidos
             FROM usuarios WHERE id_usuario = %s
         """, (session['usuario_id'],))
         usuario = cursor.fetchone()
         cursor.close()
         conexion.close()
-        
+
         if not usuario:
             return jsonify({
                 'success': False,
                 'error': 'Usuario no encontrado'
             }), 404
-        
+
         email_usuario = usuario[0]
         nombre_completo = f"{usuario[1]} {usuario[2]}"
-        
+
         # Crear archivo Excel en memoria
         import tempfile
         from openpyxl import Workbook
         from openpyxl.styles import Font, Alignment, PatternFill
-        
+
         wb = Workbook()
         ws = wb.active
         ws.title = "Resultados"
-        
+
         # Título del cuestionario
         ws.merge_cells('A1:H1')
         titulo_cell = ws['A1']
@@ -4945,19 +4928,19 @@ def exportar_resultados_onedrive(sala_id):
         titulo_cell.fill = PatternFill(start_color="667eea", end_color="667eea", fill_type="solid")
         titulo_cell.alignment = Alignment(horizontal='center', vertical='center')
         ws.row_dimensions[1].height = 30
-        
+
         # Encabezados
-        headers = ['Posición', 'Estudiante', 'Grupo', 'Puntaje', 'Correctas', 'Incorrectas', 
+        headers = ['Posición', 'Estudiante', 'Grupo', 'Puntaje', 'Correctas', 'Incorrectas',
                    'Precisión (%)', 'Tiempo Total']
         header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
         header_font = Font(bold=True, color="FFFFFF")
-        
+
         for col, header in enumerate(headers, 1):
             cell = ws.cell(row=2, column=col, value=header)
             cell.fill = header_fill
             cell.font = header_font
             cell.alignment = Alignment(horizontal='center', vertical='center')
-        
+
         # Datos del ranking
         for row_idx, participante in enumerate(ranking, 3):
             ws.cell(row=row_idx, column=1, value=participante.get('posicion', row_idx-2))
@@ -4966,16 +4949,16 @@ def exportar_resultados_onedrive(sala_id):
             ws.cell(row=row_idx, column=3, value=participante.get('nombre_grupo', 'Sin grupo'))
             ws.cell(row=row_idx, column=4, value=participante.get('puntaje_total', 0))
             ws.cell(row=row_idx, column=5, value=participante.get('respuestas_correctas', 0))
-            
+
             incorrectas = total_preguntas - participante.get('respuestas_correctas', 0)
             ws.cell(row=row_idx, column=6, value=incorrectas)
-            
+
             if total_preguntas > 0:
                 precision = (participante.get('respuestas_correctas', 0) / total_preguntas) * 100
                 ws.cell(row=row_idx, column=7, value=f"{precision:.1f}%")
             else:
                 ws.cell(row=row_idx, column=7, value="0%")
-            
+
             tiempo = participante.get('tiempo_total_respuestas', 0)
             if tiempo:
                 minutos = int(tiempo) // 60
@@ -4983,51 +4966,51 @@ def exportar_resultados_onedrive(sala_id):
                 ws.cell(row=row_idx, column=8, value=f"{minutos}m {segundos}s")
             else:
                 ws.cell(row=row_idx, column=8, value="0m 0s")
-        
+
         # Ajustar anchos de columna
         column_widths = [12, 25, 15, 10, 12, 12, 15, 15]
         for i, width in enumerate(column_widths, 1):
             ws.column_dimensions[chr(64 + i)].width = width
-        
+
         # Guardar en archivo temporal para PythonAnywhere
         with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
             wb.save(tmp_file.name)
             tmp_file.seek(0)
             with open(tmp_file.name, 'rb') as f:
                 excel_data = f.read()
-        
+
         # Calcular estadísticas
         total_participantes = len(ranking)
         puntaje_maximo = max([p.get('puntaje_total', 0) for p in ranking]) if ranking else 0
         promedio_correctas = sum([p.get('respuestas_correctas', 0) for p in ranking]) / total_participantes if total_participantes > 0 else 0
-        
+
         # Nombre del archivo
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"BrainRush_Resultados_{cuestionario_titulo.replace(' ', '_')}_{timestamp}.xlsx"
-        
+
         # Subir a OneDrive usando el sistema centralizado
         print(f"📤 Subiendo resultados a OneDrive: {filename}")
         resultado_onedrive = subir_archivo_onedrive_sistema(filename, excel_data, carpeta="BrainRush")
-        
+
         if not resultado_onedrive['success']:
             print(f"❌ Error al subir a OneDrive: {resultado_onedrive.get('error')}")
             return jsonify({
                 'success': False,
                 'error': f"Error al subir a OneDrive: {resultado_onedrive.get('error')}"
             }), 500
-        
+
         share_link = resultado_onedrive['share_link']
         file_name = resultado_onedrive['file_name']
-        
+
         print(f"✅ Archivo subido exitosamente a OneDrive")
         print(f"🔗 Link compartido: {share_link}")
-        
+
         # SIEMPRE enviar email con el link
         email_sent = False
         if app.config.get('MAIL_ENABLED') and app.config.get('MAIL_USERNAME'):
             from flask_mail import Message
             from extensions import mail
-            
+
             try:
                 mensaje_html = f"""
                 <html>
@@ -5035,19 +5018,19 @@ def exportar_resultados_onedrive(sala_id):
                     <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
                         <h1 style="color: white; margin: 0;">🎓 Brain RUSH</h1>
                     </div>
-                    
+
                     <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
                         <h2 style="color: #333;">¡Los Resultados están listos! 📊</h2>
-                        
+
                         <p>Hola <strong>{nombre_completo}</strong>,</p>
-                        
+
                         <p>Los resultados del cuestionario "<strong>{cuestionario_titulo}</strong>" han sido exportados exitosamente a OneDrive.</p>
-                        
+
                         <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #667eea;">
                             <p style="margin: 0 0 10px 0; color: #666;">📁 Archivo:</p>
                             <p style="margin: 0; font-size: 16px; color: #333;"><strong>{file_name}</strong></p>
                         </div>
-                        
+
                         <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0;">
                             <p style="margin: 0 0 15px 0; font-size: 14px; color: #666; text-align: center;">📊 <strong>Resumen del Cuestionario</strong></p>
                             <div style="display: flex; justify-content: space-around; text-align: center;">
@@ -5065,44 +5048,44 @@ def exportar_resultados_onedrive(sala_id):
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div style="text-align: center; margin: 30px 0;">
-                            <a href="{share_link}" 
-                               style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                                      color: white; padding: 15px 40px; text-decoration: none; border-radius: 25px; 
+                            <a href="{share_link}"
+                               style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                      color: white; padding: 15px 40px; text-decoration: none; border-radius: 25px;
                                       font-weight: bold; font-size: 16px;">
                                 📂 Ver Resultados en OneDrive
                             </a>
                         </div>
-                        
+
                         <p style="color: #666; font-size: 14px; margin-top: 30px;">
                             💡 <em>Puedes acceder a este archivo en cualquier momento desde tu carpeta "BrainRush" en OneDrive.</em>
                         </p>
                     </div>
-                    
+
                     <div style="text-align: center; margin-top: 20px; color: #999; font-size: 12px;">
                         <p>Brain RUSH - Sistema de Evaluación Interactiva</p>
                     </div>
                 </body>
                 </html>
                 """
-                
+
                 msg = Message(
                     subject=f"📊 Resultados de {cuestionario_titulo} - Brain RUSH",
                     recipients=[email_usuario],
                     html=mensaje_html,
                     sender=app.config['MAIL_DEFAULT_SENDER']
                 )
-                
+
                 mail.send(msg)
                 email_sent = True
                 print(f"✅ Email enviado exitosamente a {email_usuario}")
-                
+
             except Exception as email_error:
                 print(f"❌ Error enviando email: {email_error}")
                 import traceback
                 traceback.print_exc()
-        
+
         # Retornar respuesta con toda la información
         return jsonify({
             'success': True,
@@ -5116,7 +5099,7 @@ def exportar_resultados_onedrive(sala_id):
                 'promedio_correctas': round(promedio_correctas, 1)
             }
         }), 200
-        
+
     except Exception as e:
         print(f"❌ ERROR exportar_resultados_onedrive: {e}")
         import traceback
@@ -5134,7 +5117,7 @@ def obtener_token_sistema_onedrive():
         access_token = app.config.get('ONEDRIVE_ACCESS_TOKEN')
         refresh_token = app.config.get('ONEDRIVE_REFRESH_TOKEN')
         token_expires_str = app.config.get('ONEDRIVE_TOKEN_EXPIRES')
-        
+
         # Convertir fecha de expiración si existe
         token_expires = None
         if token_expires_str:
@@ -5143,24 +5126,24 @@ def obtener_token_sistema_onedrive():
                 token_expires = datetime.fromisoformat(token_expires_str)
             except:
                 pass
-        
+
         # Si hay token y no ha expirado, usarlo
         if access_token and token_expires and datetime.now() < token_expires:
             print("✅ Usando token de OneDrive del .env (válido)")
             return access_token
-        
+
         # Si hay refresh_token, intentar refrescar
         if refresh_token and MSAL_AVAILABLE:
             print("🔄 Token expirado, refrescando...")
             try:
                 authority = f"https://login.microsoftonline.com/{app.config['AZURE_TENANT_ID']}"
-                
+
                 msal_app = msal.ConfidentialClientApplication(
                     app.config['AZURE_CLIENT_ID'],
                     authority=authority,
                     client_credential=app.config['AZURE_CLIENT_SECRET']
                 )
-                
+
                 result = msal_app.acquire_token_by_refresh_token(
                     refresh_token,
                     scopes=app.config.get('ONEDRIVE_SCOPES', [
@@ -5168,58 +5151,58 @@ def obtener_token_sistema_onedrive():
                         'offline_access'
                     ])
                 )
-                
+
                 if "access_token" in result:
                     new_access_token = result['access_token']
                     new_refresh_token = result.get('refresh_token', refresh_token)
                     expires_in = result.get('expires_in', 3600)
                     new_token_expires = datetime.now() + timedelta(seconds=expires_in)
-                    
+
                     # Actualizar tokens en memoria
                     app.config['ONEDRIVE_ACCESS_TOKEN'] = new_access_token
                     app.config['ONEDRIVE_REFRESH_TOKEN'] = new_refresh_token
                     app.config['ONEDRIVE_TOKEN_EXPIRES'] = new_token_expires.isoformat()
-                    
+
                     # Actualizar archivo .env
                     actualizar_env_tokens(new_access_token, new_refresh_token, new_token_expires)
-                    
+
                     print("✅ Token refrescado exitosamente")
                     return new_access_token
                 else:
                     error_desc = result.get("error_description", "Unknown error")
                     print(f"❌ Error refrescando token: {error_desc}")
-                    
+
             except Exception as e:
                 print(f"⚠️ Error al refrescar token: {e}")
-        
+
         # Si no hay tokens o falla el refresh, intentar Client Credentials Flow
         # (solo funciona con Application Permissions)
         if MSAL_AVAILABLE:
             print("🔄 Intentando obtener token con Client Credentials...")
             authority = f"https://login.microsoftonline.com/{app.config['AZURE_TENANT_ID']}"
-            
+
             msal_app = msal.ConfidentialClientApplication(
                 app.config['AZURE_CLIENT_ID'],
                 authority=authority,
                 client_credential=app.config['AZURE_CLIENT_SECRET']
             )
-            
+
             result = msal_app.acquire_token_for_client(
                 scopes=["https://graph.microsoft.com/.default"]
             )
-            
+
             if "access_token" in result:
                 print("✅ Token obtenido con Client Credentials")
                 return result['access_token']
             else:
                 error_desc = result.get("error_description", "Unknown error")
                 print(f"❌ Error con Client Credentials: {error_desc}")
-        
+
         print("❌ No se pudo obtener token de OneDrive")
         print("💡 Necesitas configurar ONEDRIVE_ACCESS_TOKEN y ONEDRIVE_REFRESH_TOKEN en .env")
         print("💡 O configurar Application Permissions en Azure AD")
         return None
-            
+
     except Exception as e:
         print(f"ERROR en obtener_token_sistema_onedrive: {e}")
         import traceback
@@ -5232,11 +5215,11 @@ def actualizar_env_tokens(access_token, refresh_token, token_expires):
     try:
         import os
         env_path = os.path.join(os.path.dirname(__file__), '.env')
-        
+
         # Leer archivo .env
         with open(env_path, 'r', encoding='utf-8') as f:
             lines = f.readlines()
-        
+
         # Actualizar líneas con nuevos tokens
         new_lines = []
         for line in lines:
@@ -5248,13 +5231,13 @@ def actualizar_env_tokens(access_token, refresh_token, token_expires):
                 new_lines.append(f'ONEDRIVE_TOKEN_EXPIRES={token_expires.isoformat()}\n')
             else:
                 new_lines.append(line)
-        
+
         # Escribir archivo actualizado
         with open(env_path, 'w', encoding='utf-8') as f:
             f.writelines(new_lines)
-        
+
         print("✅ Tokens actualizados en .env")
-        
+
     except Exception as e:
         print(f"⚠️ No se pudo actualizar .env: {e}")
         print("   Los tokens están en memoria pero no se guardaron en disco")
@@ -5263,31 +5246,31 @@ def actualizar_env_tokens(access_token, refresh_token, token_expires):
 def subir_archivo_onedrive_sistema(filename, file_data, carpeta="BrainRush"):
     """
     Subir archivo a OneDrive del sistema y crear link de compartición
-    
+
     Args:
         filename: Nombre del archivo
         file_data: Datos binarios del archivo
         carpeta: Carpeta en OneDrive (default: BrainRush)
-    
+
     Returns:
         dict: {'success': bool, 'web_url': str, 'share_link': str, 'error': str}
     """
     try:
         # Obtener token del sistema
         access_token = obtener_token_sistema_onedrive()
-        
+
         if not access_token:
             return {
                 'success': False,
                 'error': 'No se pudo obtener token de acceso a OneDrive'
             }
-        
+
         # 1. Verificar/crear carpeta BrainRush
         folder_url = f"https://graph.microsoft.com/v1.0/me/drive/root:/{carpeta}"
         headers = {'Authorization': f'Bearer {access_token}'}
-        
+
         folder_response = requests.get(folder_url, headers=headers, timeout=10)
-        
+
         if folder_response.status_code == 404:
             # Crear carpeta si no existe
             create_folder_url = "https://graph.microsoft.com/v1.0/me/drive/root/children"
@@ -5296,33 +5279,33 @@ def subir_archivo_onedrive_sistema(filename, file_data, carpeta="BrainRush"):
                 "folder": {},
                 "@microsoft.graph.conflictBehavior": "rename"
             }
-            requests.post(create_folder_url, headers={**headers, 'Content-Type': 'application/json'}, 
+            requests.post(create_folder_url, headers={**headers, 'Content-Type': 'application/json'},
                          json=folder_data, timeout=10)
             print(f"✅ Carpeta '{carpeta}' creada en OneDrive")
-        
+
         # 2. Subir archivo
         upload_url = f"https://graph.microsoft.com/v1.0/me/drive/root:/{carpeta}/{filename}:/content"
         upload_headers = {
             'Authorization': f'Bearer {access_token}',
             'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         }
-        
+
         print(f"📤 Subiendo archivo a OneDrive: {filename}")
         upload_response = requests.put(upload_url, headers=upload_headers, data=file_data, timeout=30)
-        
+
         if upload_response.status_code not in [200, 201]:
             print(f"❌ Error subiendo archivo: {upload_response.status_code} - {upload_response.text}")
             return {
                 'success': False,
                 'error': f'Error subiendo archivo: {upload_response.status_code}'
             }
-        
+
         file_info = upload_response.json()
         file_id = file_info.get('id')
         web_url = file_info.get('webUrl')
-        
+
         print(f"✅ Archivo subido exitosamente. ID: {file_id}")
-        
+
         # 3. Crear link de compartición público
         share_url = f"https://graph.microsoft.com/v1.0/me/drive/items/{file_id}/createLink"
         share_data = {
@@ -5333,14 +5316,14 @@ def subir_archivo_onedrive_sistema(filename, file_data, carpeta="BrainRush"):
             'Authorization': f'Bearer {access_token}',
             'Content-Type': 'application/json'
         }
-        
+
         share_response = requests.post(share_url, headers=share_headers, json=share_data, timeout=10)
-        
+
         if share_response.status_code in [200, 201]:
             share_info = share_response.json()
             share_link = share_info.get('link', {}).get('webUrl')
             print(f"✅ Link de compartición creado: {share_link}")
-            
+
             return {
                 'success': True,
                 'web_url': web_url,
@@ -5359,7 +5342,7 @@ def subir_archivo_onedrive_sistema(filename, file_data, carpeta="BrainRush"):
                 'file_name': filename,
                 'warning': 'Link de compartición no creado'
             }
-            
+
     except Exception as e:
         print(f"ERROR en subir_archivo_onedrive_sistema: {e}")
         import traceback
@@ -5370,19 +5353,19 @@ def subir_archivo_onedrive_sistema(filename, file_data, carpeta="BrainRush"):
         }
 
 
-def enviar_por_email_fallback(email_usuario, nombre_completo, cuestionario_titulo, 
+def enviar_por_email_fallback(email_usuario, nombre_completo, cuestionario_titulo,
                                ranking, total_preguntas, filename, excel_data):
     """Función auxiliar para enviar por email cuando OneDrive falla"""
     try:
         from flask_mail import Message
         from extensions import mail
-        
+
         if not app.config.get('MAIL_ENABLED') or not app.config.get('MAIL_USERNAME'):
             return jsonify({
                 'success': False,
                 'error': 'No se pudo subir a OneDrive y el correo no está configurado'
             }), 500
-        
+
         mensaje_texto = f"""
 Hola {nombre_completo},
 
@@ -5398,22 +5381,22 @@ No se pudo subir directamente a OneDrive, pero adjunto encontrarás los resultad
 Saludos,
 Sistema BrainRush
         """
-        
+
         msg = Message(
             subject=f'Resultados de BrainRush - {cuestionario_titulo}',
             sender=app.config.get('MAIL_DEFAULT_SENDER', app.config.get('MAIL_USERNAME')),
             recipients=[email_usuario],
             body=mensaje_texto
         )
-        
+
         msg.attach(
             filename,
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             excel_data
         )
-        
+
         mail.send(msg)
-        
+
         return jsonify({
             'success': True,
             'message': f'No se pudo subir a OneDrive. Resultados enviados por correo a {email_usuario}',
@@ -5421,7 +5404,7 @@ Sistema BrainRush
             'email_sent': True,
             'fallback': True
         }), 200
-        
+
     except Exception as e:
         print(f"Error enviando email fallback: {e}")
         return jsonify({
@@ -5436,7 +5419,7 @@ def exportar_historial_estudiante_onedrive():
     """Exportar historial completo del estudiante a OneDrive del sistema - Requiere autenticación"""
     try:
         usuario_id = session.get('usuario_id')
-        
+
         # Obtener datos del usuario
         conexion = obtener_conexion()
         cursor = conexion.cursor()
@@ -5445,18 +5428,18 @@ def exportar_historial_estudiante_onedrive():
             FROM usuarios WHERE id_usuario = %s
         """, (usuario_id,))
         usuario = cursor.fetchone()
-        
+
         if not usuario:
             cursor.close()
             conexion.close()
             return jsonify({'success': False, 'error': 'Usuario no encontrado'}), 404
-        
+
         email_usuario = usuario[0]
         nombre_completo = f"{usuario[1]} {usuario[2]}"
-        
+
         # Obtener historial de participaciones del estudiante
         cursor.execute("""
-            SELECT 
+            SELECT
                 c.titulo as titulo_cuestionario,
                 s.fecha_inicio,
                 rs.puntaje_total,
@@ -5479,26 +5462,26 @@ def exportar_historial_estudiante_onedrive():
                 AND s.estado = 'finalizado'
             ORDER BY s.fecha_inicio DESC
         """, (usuario_id,))
-        
+
         participaciones = cursor.fetchall()
         cursor.close()
         conexion.close()
-        
+
         if not participaciones:
             return jsonify({
                 'success': False,
                 'error': 'No tienes participaciones en tu historial'
             }), 404
-        
+
         # Crear archivo Excel con el historial
         import io
         from openpyxl import Workbook
         from openpyxl.styles import Font, Alignment, PatternFill
-        
+
         wb = Workbook()
         ws = wb.active
         ws.title = "Mi Historial"
-        
+
         # Título del documento
         ws.merge_cells('A1:H1')
         titulo_cell = ws['A1']
@@ -5507,19 +5490,19 @@ def exportar_historial_estudiante_onedrive():
         titulo_cell.fill = PatternFill(start_color="667eea", end_color="667eea", fill_type="solid")
         titulo_cell.alignment = Alignment(horizontal='center', vertical='center')
         ws.row_dimensions[1].height = 30
-        
+
         # Encabezados
-        headers = ['Cuestionario', 'Fecha', 'Puntaje', 'Correctas', 'Total Preguntas', 
+        headers = ['Cuestionario', 'Fecha', 'Puntaje', 'Correctas', 'Total Preguntas',
                    'Precisión (%)', 'Posición', 'Tiempo', 'Docente']
         header_fill = PatternFill(start_color="4ECDC4", end_color="4ECDC4", fill_type="solid")
         header_font = Font(bold=True, color="FFFFFF")
-        
+
         for col, header in enumerate(headers, 1):
             cell = ws.cell(row=2, column=col, value=header)
             cell.fill = header_fill
             cell.font = header_font
             cell.alignment = Alignment(horizontal='center', vertical='center')
-        
+
         # Datos
         for row_idx, participacion in enumerate(participaciones, 3):
             titulo_cuest = participacion[0]
@@ -5530,29 +5513,29 @@ def exportar_historial_estudiante_onedrive():
             posicion = participacion[5] or 'N/A'
             tiempo = participacion[6] or 0
             docente = participacion[7] or 'N/A'
-            
+
             ws.cell(row=row_idx, column=1, value=titulo_cuest)
             ws.cell(row=row_idx, column=2, value=fecha_inicio.strftime("%d/%m/%Y %H:%M") if fecha_inicio else 'N/A')
             ws.cell(row=row_idx, column=3, value=puntaje)
             ws.cell(row=row_idx, column=4, value=correctas)
             ws.cell(row=row_idx, column=5, value=total_pregs)
-            
+
             # Calcular precisión
             if total_pregs > 0:
                 precision = (correctas / total_pregs) * 100
                 ws.cell(row=row_idx, column=6, value=f"{precision:.1f}%")
             else:
                 ws.cell(row=row_idx, column=6, value="0%")
-            
+
             ws.cell(row=row_idx, column=7, value=str(posicion))
-            
+
             # Formatear tiempo
             minutos = tiempo // 60
             segundos = tiempo % 60
             ws.cell(row=row_idx, column=8, value=f"{minutos}m {segundos}s")
-            
+
             ws.cell(row=row_idx, column=9, value=docente)
-        
+
         # Agregar estadísticas al final
         ultima_fila = len(participaciones) + 4
         ws.merge_cells(f'A{ultima_fila}:I{ultima_fila}')
@@ -5561,54 +5544,54 @@ def exportar_historial_estudiante_onedrive():
         stats_cell.font = Font(size=14, bold=True, color="FFFFFF")
         stats_cell.fill = PatternFill(start_color="667eea", end_color="667eea", fill_type="solid")
         stats_cell.alignment = Alignment(horizontal='center', vertical='center')
-        
+
         # Calcular estadísticas
         total_juegos = len(participaciones)
         total_puntaje = sum(p[2] or 0 for p in participaciones)
         promedio_puntaje = total_puntaje / total_juegos if total_juegos > 0 else 0
         total_correctas = sum(p[3] or 0 for p in participaciones)
-        
+
         stats_data = [
             ['Total de Juegos:', total_juegos],
             ['Puntos Totales:', total_puntaje],
             ['Promedio por Juego:', f"{promedio_puntaje:.1f}"],
             ['Respuestas Correctas:', total_correctas]
         ]
-        
+
         for i, (label, value) in enumerate(stats_data):
             fila = ultima_fila + 1 + i
             ws.cell(row=fila, column=1, value=label).font = Font(bold=True)
             ws.cell(row=fila, column=2, value=value)
-        
+
         # Ajustar anchos de columna
         column_widths = [30, 18, 10, 10, 15, 12, 10, 12, 25]
         for i, width in enumerate(column_widths, 1):
             ws.column_dimensions[chr(64 + i)].width = width
-        
+
         # Guardar en memoria
         excel_buffer = io.BytesIO()
         wb.save(excel_buffer)
         excel_buffer.seek(0)
         excel_data = excel_buffer.getvalue()
-        
+
         # Nombre del archivo
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"BrainRush_MiHistorial_{nombre_completo.replace(' ', '_')}_{timestamp}.xlsx"
-        
+
         # Usar sistema centralizado de OneDrive
         print(f"📤 Intentando subir historial a OneDrive del sistema para {nombre_completo}")
-        
+
         resultado_onedrive = subir_archivo_onedrive_sistema(filename, excel_data, carpeta="BrainRush")
-        
+
         if resultado_onedrive['success']:
             # Archivo subido exitosamente, enviar email con el link
             share_link = resultado_onedrive.get('share_link')
             file_name = resultado_onedrive.get('file_name')
-            
+
             try:
                 from flask_mail import Message
                 from extensions import mail
-                
+
                 if app.config.get('MAIL_ENABLED'):
                     mensaje_html = f"""
                     <html>
@@ -5616,19 +5599,19 @@ def exportar_historial_estudiante_onedrive():
                         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
                             <h1 style="color: white; margin: 0; font-size: 2rem;">🎓 Brain RUSH</h1>
                         </div>
-                        
+
                         <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
                             <h2 style="color: #333; margin-top: 0;">¡Tu Historial está listo! 📊</h2>
-                            
+
                             <p style="color: #555; font-size: 1.1rem;">Hola <strong>{nombre_completo}</strong>,</p>
-                            
+
                             <p style="color: #666;">Tu historial de participaciones ha sido exportado exitosamente a OneDrive.</p>
-                            
+
                             <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #667eea;">
                                 <p style="margin: 0 0 10px 0; color: #666;">📁 <strong>Archivo:</strong></p>
                                 <p style="margin: 0; font-size: 14px; color: #333;">{file_name}</p>
                             </div>
-                            
+
                             <div style="background: #e8f4f8; padding: 15px; border-radius: 8px; margin: 20px 0;">
                                 <p style="margin: 0; color: #555; font-size: 0.95rem;">
                                     <strong>📊 Estadísticas:</strong><br>
@@ -5637,21 +5620,21 @@ def exportar_historial_estudiante_onedrive():
                                     Promedio: {promedio_puntaje:.1f} pts/juego
                                 </p>
                             </div>
-                            
+
                             <div style="text-align: center; margin: 30px 0;">
-                                <a href="{share_link}" 
-                                   style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                                          color: white; padding: 15px 40px; text-decoration: none; border-radius: 25px; 
+                                <a href="{share_link}"
+                                   style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                          color: white; padding: 15px 40px; text-decoration: none; border-radius: 25px;
                                           font-weight: bold; font-size: 1.1rem; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
                                     📂 Ver mi Historial en OneDrive
                                 </a>
                             </div>
-                            
+
                             <p style="color: #999; font-size: 0.9rem; text-align: center; margin-top: 30px;">
                                 💡 <em>Puedes descargar y guardar este archivo para tus registros personales.</em>
                             </p>
                         </div>
-                        
+
                         <div style="text-align: center; margin-top: 20px; color: #999; font-size: 0.85rem;">
                             <p style="margin: 5px 0;">Brain RUSH - Sistema de Evaluación Interactiva</p>
                             <p style="margin: 5px 0;">Este archivo estará disponible en OneDrive</p>
@@ -5659,17 +5642,17 @@ def exportar_historial_estudiante_onedrive():
                     </body>
                     </html>
                     """
-                    
+
                     msg = Message(
                         subject=f"📊 Tu Historial de Brain RUSH está listo",
                         recipients=[email_usuario],
                         html=mensaje_html,
                         sender=app.config['MAIL_DEFAULT_SENDER']
                     )
-                    
+
                     mail.send(msg)
                     print(f"✅ Email enviado a {email_usuario} con link de OneDrive")
-                    
+
                     return jsonify({
                         'success': True,
                         'message': 'Historial exportado a OneDrive y link enviado por correo',
@@ -5686,7 +5669,7 @@ def exportar_historial_estudiante_onedrive():
                         'share_link': share_link,
                         'email_sent': False
                     }), 200
-                    
+
             except Exception as email_error:
                 print(f"⚠️ Error enviando email: {email_error}")
                 # Aunque falle el email, el archivo está en OneDrive
@@ -5702,7 +5685,7 @@ def exportar_historial_estudiante_onedrive():
             # OneDrive falló, usar email como fallback
             print(f"❌ OneDrive falló: {resultado_onedrive.get('error')}")
             return enviar_historial_por_email(email_usuario, nombre_completo, filename, excel_data)
-    
+
     except Exception as e:
         print(f"ERROR exportar_historial_estudiante: {e}")
         import traceback
@@ -5715,23 +5698,23 @@ def enviar_historial_por_email(email_usuario, nombre_completo, filename, excel_d
     try:
         from flask_mail import Message
         from extensions import mail
-        
+
         if not app.config.get('MAIL_ENABLED'):
             return jsonify({
                 'success': False,
                 'error': 'No se pudo subir a OneDrive y el correo no está configurado'
             }), 500
-        
+
         msg = Message(
             subject='Tu Historial de Brain RUSH',
             sender=app.config.get('MAIL_DEFAULT_SENDER'),
             recipients=[email_usuario],
             body=f'Hola {nombre_completo},\n\nAdjunto tu historial de participaciones en Brain RUSH.'
         )
-        
+
         msg.attach(filename, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', excel_data)
         mail.send(msg)
-        
+
         return jsonify({
             'success': True,
             'message': f'Historial enviado por correo a {email_usuario}',
@@ -5739,7 +5722,7 @@ def enviar_historial_por_email(email_usuario, nombre_completo, filename, excel_d
             'email_sent': True,
             'fallback': True
         }), 200
-    
+
     except Exception as e:
         print(f"Error enviando email: {e}")
         return jsonify({
@@ -5754,26 +5737,26 @@ def onedrive_auth():
         if 'usuario_id' not in session:
             flash('Debes iniciar sesión primero', 'warning')
             return redirect(url_for('login'))
-        
+
         # Guardar usuario_id en el state para recuperarlo en el callback
         state = str(session['usuario_id'])
-        
+
         # Configurar MSAL
         msal_app = msal.ConfidentialClientApplication(
             app.config['AZURE_CLIENT_ID'],
             authority=f"https://login.microsoftonline.com/{app.config['AZURE_TENANT_ID']}",
             client_credential=app.config['AZURE_CLIENT_SECRET']
         )
-        
+
         # Generar URL de autorización
         auth_url = msal_app.get_authorization_request_url(
             scopes=app.config['ONEDRIVE_SCOPES'],
             state=state,
             redirect_uri=app.config['ONEDRIVE_REDIRECT_URI']
         )
-        
+
         return redirect(auth_url)
-        
+
     except Exception as e:
         print(f"Error en onedrive_auth: {e}")
         import traceback
@@ -5801,7 +5784,7 @@ def onedrive_auth_sistema():
             </body>
             </html>
             """
-        
+
         # Verificar que sea admin O docente (temporal)
         conexion = obtener_conexion()
         cursor = conexion.cursor()
@@ -5809,7 +5792,7 @@ def onedrive_auth_sistema():
         usuario = cursor.fetchone()
         cursor.close()
         conexion.close()
-        
+
         if not usuario or usuario[0] not in ['admin', 'docente']:
             return """
             <html>
@@ -5821,26 +5804,26 @@ def onedrive_auth_sistema():
             </body>
             </html>
             """
-        
+
         # Usar state especial para indicar que es configuración del sistema
         state = "SISTEMA_CONFIG"
-        
+
         # Configurar MSAL
         msal_app = msal.ConfidentialClientApplication(
             app.config['AZURE_CLIENT_ID'],
             authority=f"https://login.microsoftonline.com/{app.config['AZURE_TENANT_ID']}",
             client_credential=app.config['AZURE_CLIENT_SECRET']
         )
-        
+
         # Generar URL de autorización
         auth_url = msal_app.get_authorization_request_url(
             scopes=app.config['ONEDRIVE_SCOPES'],
             state=state,
             redirect_uri=app.config['ONEDRIVE_REDIRECT_URI']
         )
-        
+
         return redirect(auth_url)
-        
+
     except Exception as e:
         print(f"Error en onedrive_auth_sistema: {e}")
         import traceback
@@ -5865,7 +5848,7 @@ def onedrive_callback():
         code = request.args.get('code')
         state = request.args.get('state')
         error = request.args.get('error')
-        
+
         if error:
             return f"""
             <html>
@@ -5877,7 +5860,7 @@ def onedrive_callback():
             </body>
             </html>
             """
-        
+
         if not code:
             return """
             <html>
@@ -5889,37 +5872,37 @@ def onedrive_callback():
             </body>
             </html>
             """
-        
+
         # Configurar MSAL
         msal_app = msal.ConfidentialClientApplication(
             app.config['AZURE_CLIENT_ID'],
             authority=f"https://login.microsoftonline.com/{app.config['AZURE_TENANT_ID']}",
             client_credential=app.config['AZURE_CLIENT_SECRET']
         )
-        
+
         # Intercambiar código por token
         result = msal_app.acquire_token_by_authorization_code(
             code,
             scopes=app.config['ONEDRIVE_SCOPES'],
             redirect_uri=app.config['ONEDRIVE_REDIRECT_URI']
         )
-        
+
         if "access_token" in result:
             access_token = result['access_token']
             refresh_token = result.get('refresh_token', '')
             expires_in = result.get('expires_in', 3600)
             token_expires = datetime.now() + timedelta(seconds=expires_in)
-            
+
             # Verificar si es configuración del sistema
             if state == "SISTEMA_CONFIG":
                 # Guardar tokens en .env
                 actualizar_env_tokens(access_token, refresh_token, token_expires)
-                
+
                 # También actualizar en memoria
                 app.config['ONEDRIVE_ACCESS_TOKEN'] = access_token
                 app.config['ONEDRIVE_REFRESH_TOKEN'] = refresh_token
                 app.config['ONEDRIVE_TOKEN_EXPIRES'] = token_expires.isoformat()
-                
+
                 return f"""
                 <html>
                 <head>
@@ -5935,19 +5918,19 @@ def onedrive_callback():
                 </head>
                 <body>
                     <h1>✅ Configuración de OneDrive Exitosa</h1>
-                    
+
                     <div class="success">
                         <h2 style="margin-top: 0;">🎉 ¡Tokens Guardados!</h2>
                         <p>Los tokens de OneDrive del sistema han sido guardados en el archivo .env</p>
                     </div>
-                    
+
                     <h3>📋 Tokens Obtenidos:</h3>
                     <div class="code-block">
 ONEDRIVE_ACCESS_TOKEN={access_token[:50]}...
 ONEDRIVE_REFRESH_TOKEN={refresh_token[:50]}...
 ONEDRIVE_TOKEN_EXPIRES={token_expires.isoformat()}
                     </div>
-                    
+
                     <div class="warning">
                         <h3 style="margin-top: 0;">⚠️ Importante</h3>
                         <ul>
@@ -5957,15 +5940,15 @@ ONEDRIVE_TOKEN_EXPIRES={token_expires.isoformat()}
                             <li>Asegúrate de que el archivo .env esté en tu .gitignore</li>
                         </ul>
                     </div>
-                    
+
                     <h3>✅ Siguiente Paso:</h3>
                     <p>Los archivos exportados ahora se guardarán en la cuenta de OneDrive que acabas de autorizar.</p>
-                    
+
                     <p><a href="/">← Volver al inicio</a></p>
                 </body>
                 </html>
                 """
-            
+
             # Si no es configuración del sistema, es un usuario normal
             try:
                 usuario_id = int(state)
@@ -5980,34 +5963,34 @@ ONEDRIVE_TOKEN_EXPIRES={token_expires.isoformat()}
                 </body>
                 </html>
                 """
-            
+
             # Guardar tokens en la base de datos para el usuario
             conexion = obtener_conexion()
             cursor = conexion.cursor()
-            
+
             cursor.execute("""
-                UPDATE usuarios 
-                SET onedrive_access_token = %s, 
+                UPDATE usuarios
+                SET onedrive_access_token = %s,
                     onedrive_refresh_token = %s,
                     onedrive_token_expires = %s
                 WHERE id_usuario = %s
             """, (access_token, refresh_token, token_expires, usuario_id))
-            
+
             conexion.commit()
-            
+
             # Restaurar sesión
             cursor.execute("SELECT nombre, tipo_usuario FROM usuarios WHERE id_usuario = %s", (usuario_id,))
             usuario = cursor.fetchone()
-            
+
             cursor.close()
             conexion.close()
-            
+
             if usuario:
                 # Restaurar la sesión
                 session['usuario_id'] = usuario_id
                 session['nombre_usuario'] = usuario[0]
                 session['usuario_tipo'] = usuario[1]  # CORREGIDO: usuario_tipo (no tipo_usuario)
-                
+
                 flash('✅ OneDrive conectado exitosamente. Ahora puedes exportar resultados directamente.', 'success')
                 return redirect(url_for('dashboard'))
             else:
@@ -6017,7 +6000,7 @@ ONEDRIVE_TOKEN_EXPIRES={token_expires.isoformat()}
             error_desc = result.get('error_description', 'Error desconocido')
             flash(f'Error al obtener token de OneDrive: {error_desc}', 'danger')
             return redirect(url_for('login'))
-            
+
     except Exception as e:
         print(f"ERROR onedrive_callback: {e}")
         import traceback
@@ -6061,12 +6044,12 @@ def perfil():
         if email != usuario['email']:  # Solo validar si se está cambiando
             dominios_permitidos = ['@usat.pe', '@usat.edu.pe']
             email_valido = any(email.endswith(dominio) for dominio in dominios_permitidos)
-            
+
             if not email_valido:
                 flash('❌ Solo se permiten correos institucionales con dominio @usat.pe o @usat.edu.pe', 'danger')
                 conexion.close()
                 return redirect(url_for('perfil'))
-            
+
             # Verificar que el email no esté en uso por otro usuario
             cursor.execute("SELECT id_usuario FROM usuarios WHERE email = %s AND id_usuario != %s", (email, usuario_id))
             if cursor.fetchone():
@@ -6081,25 +6064,25 @@ def perfil():
                 flash('❌ La contraseña debe tener al menos 8 caracteres', 'danger')
                 conexion.close()
                 return redirect(url_for('perfil'))
-            
+
             # Validar que tenga mayúscula
             if not any(c.isupper() for c in password):
                 flash('❌ La contraseña debe contener al menos una letra mayúscula', 'danger')
                 conexion.close()
                 return redirect(url_for('perfil'))
-            
+
             # Validar que tenga minúscula
             if not any(c.islower() for c in password):
                 flash('❌ La contraseña debe contener al menos una letra minúscula', 'danger')
                 conexion.close()
                 return redirect(url_for('perfil'))
-            
+
             # Validar que tenga número
             if not any(c.isdigit() for c in password):
                 flash('❌ La contraseña debe contener al menos un número', 'danger')
                 conexion.close()
                 return redirect(url_for('perfil'))
-            
+
             # Validar contraseña única (no usada por otros)
             if not controlador_usuario.verificar_contrasena_unica(password, usuario_id):
                 flash('❌ Esta contraseña ya está siendo utilizada por otro usuario. Por favor, elige una diferente.', 'danger')
@@ -6136,10 +6119,10 @@ def perfil():
 
     if request.method == 'POST' and request.form.get('form_type') == 'delete':
         conexion.close()  # Cerrar la conexión actual antes de llamar a la función
-        
+
         # Usar la función que elimina en cascada
         exito, mensaje = controlador_usuario.eliminar_usuario_completo(usuario_id)
-        
+
         if exito:
             session.clear()
             flash('🗑️ Tu cuenta y todos tus datos han sido eliminados correctamente.', 'warning')
@@ -6149,7 +6132,7 @@ def perfil():
             return redirect(url_for('perfil'))
 
     conexion.close()
-    return render_template('MiPerfil.html', usuario=usuario)     
+    return render_template('MiPerfil.html', usuario=usuario)
 
 if __name__ == '__main__':
     # Verificar conexión e inicializar usuarios de prueba
@@ -6159,6 +6142,6 @@ if __name__ == '__main__':
         inicializar_usuarios_prueba()
     else:
         print("❌ Error de conexión a la base de datos")
-    
+
     print("🚀 Iniciando servidor Flask en http://127.0.0.1:5000")
     app.run(debug=True, port=5000)

@@ -803,27 +803,27 @@
 
     function cargarPodium() {
       const podium = document.getElementById('podium');
-      
+
       if (!ranking || ranking.length === 0) {
         podium.innerHTML = '<p style="text-align: center; padding: 40px; opacity: 0.8;">No hay participantes para mostrar</p>';
         return;
       }
-      
+
       const top3 = ranking.slice(0, 3);
-      
+
       const podiumHTML = top3.map((player, index) => {
         const medals = ['🥇', '🥈', '🥉'];
         const classes = ['first', 'second', 'third'];
         const positions = ['1°', '2°', '3°'];
-        
+
         return `
           <div class="podium-place ${classes[index]}">
             <div class="podium-player">
               <div class="player-avatar">
-                ${(player.nombre_completo || player.nombre_participante || 'J').charAt(0).toUpperCase()}
+                ${player.nombre_participante ? player.nombre_participante.charAt(0).toUpperCase() : '?'}
               </div>
-              <div class="player-name">${player.nombre_completo || player.nombre_participante || 'Jugador'}</div>
-              <div class="player-score">${player.puntos_totales || player.puntaje_total || 0} pts</div>
+              <div class="player-name">${player.nombre_participante || 'Jugador'}</div>
+              <div class="player-score">${player.puntaje_total || 0} pts</div>
             </div>
             <div class="podium-base">
               ${positions[index]}
@@ -831,74 +831,72 @@
           </div>
         `;
       }).join('');
-      
+
       podium.innerHTML = podiumHTML;
     }
 
     function cargarTablaCompleta() {
       const rankingsList = document.getElementById('rankings-list');
-      
+
       console.log('🔍 Cargando tabla completa. Datos:', {
         ranking,
         totalPreguntas,
         ejemplo: ranking[0]
       });
-      
+
       if (!ranking || ranking.length === 0) {
         rankingsList.innerHTML = '<div style="text-align: center; padding: 40px; opacity: 0.8;">No hay participantes para mostrar</div>';
         return;
       }
-      
+
       const tablasHTML = ranking.map(player => {
         const precision = totalPreguntas > 0 ? Math.round((player.respuestas_correctas / totalPreguntas) * 100) : 0;
         const isTop3 = player.posicion <= 3;
-        const nombreJugador = player.nombre_completo || player.nombre_participante || 'Jugador';
-        const puntaje = player.puntos_totales || player.puntaje_total || 0;
-        
-        console.log(`Jugador ${nombreJugador}:`, {
+
+        console.log(`Jugador ${player.nombre_participante}:`, {
           respuestas_correctas: player.respuestas_correctas,
-          puntos_totales: puntaje,
+          puntaje_total: player.puntaje_total,
           totalPreguntas,
           precision
         });
-        
+
         return `
           <div class="table-row">
             <div class="rank-number ${isTop3 ? 'top3' : ''}">${player.posicion || '-'}</div>
             <div class="player-info">
-              <div class="avatar">${nombreJugador.charAt(0).toUpperCase()}</div>
-              <span>${nombreJugador}</span>
+              <div class="avatar">${player.nombre_participante ? player.nombre_participante.charAt(0).toUpperCase() : '?'}</div>
+              <span>${player.nombre_participante || 'Jugador'}</span>
             </div>
             <div class="stat-value correct-answers">${player.respuestas_correctas || 0}/${totalPreguntas}</div>
             <div class="stat-value accuracy">${precision}%</div>
-            <div class="stat-value final-score">${puntaje}</div>
+            <div class="stat-value final-score">${player.puntaje_total || 0}</div>
           </div>
         `;
       }).join('');
-      
+
       rankingsList.innerHTML = tablasHTML;
     }
 
     function calcularEstadisticas() {
       const avgScore = totalJugadores > 0 ? Math.round(
-        ranking.reduce((sum, p) => sum + (p.puntos_totales || p.puntaje_total || 0), 0) / totalJugadores
+        ranking.reduce((sum, p) => sum + (p.puntaje_total || 0), 0) / totalJugadores
       ) : 0;
-      
+
       // Calcular tiempo total aproximado (suma de tiempos / jugadores)
       const tiempoTotal = totalJugadores > 0 ?
         ranking.reduce((sum, p) => sum + parseFloat(p.tiempo_total_respuestas || 0), 0) / totalJugadores : 0;
       const minutes = Math.floor(tiempoTotal / 60);
       const seconds = Math.floor(tiempoTotal % 60);
       const completionTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-      
+
       document.getElementById('total-players').textContent = totalJugadores;
-      
+
       // Solo actualizar si el elemento existe (solo para estudiantes)
       const totalQuestionsElement = document.getElementById('total-questions');
       if (totalQuestionsElement) {
         totalQuestionsElement.textContent = totalPreguntas;
       }
-      
+
       document.getElementById('avg-score').textContent = avgScore;
       document.getElementById('completion-time').textContent = completionTime;
     }
@@ -922,9 +920,7 @@
         'Posición,Nombre,Respuestas Correctas,Total Preguntas,Precisión,Puntuación,Tiempo Total',
         ...ranking.map(p => {
           const precision = totalPreguntas > 0 ? Math.round((p.respuestas_correctas / totalPreguntas) * 100) : 0;
-          const nombreJugador = p.nombre_completo || p.nombre_participante || 'Jugador';
-          const puntaje = p.puntos_totales || p.puntaje_total || 0;
-          return `${p.posicion},${nombreJugador},${p.respuestas_correctas},${totalPreguntas},${precision}%,${puntaje},${p.tiempo_total_respuestas}s`;
+          return `${p.posicion},${p.nombre_participante},${p.respuestas_correctas},${totalPreguntas},${precision}%,${p.puntaje_total},${p.tiempo_total_respuestas}s`;
         })
       ].join('\n');
 
@@ -966,7 +962,7 @@
           a.click();
           document.body.removeChild(a);
           window.URL.revokeObjectURL(url);
-          
+
           alert('📊 Archivo Excel descargado correctamente');
         } else {
           alert('❌ Error al generar archivo Excel');
@@ -993,7 +989,7 @@
         });
 
         const data = await response.json();
-        
+
         if (data.success) {
           if (data.fallback) {
             // OneDrive falló, se envió por email

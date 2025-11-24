@@ -228,7 +228,7 @@
     <div class="cuestionario-header animate-fadeIn">
         <h1 class="cuestionario-title">{{ cuestionario.titulo }}</h1>
         <p class="cuestionario-description">{{ cuestionario.descripcion or 'Sin descripción' }}</p>
-        
+
         <div class="cuestionario-meta">
             <div class="meta-item">
                 <i class="fas fa-calendar"></i>
@@ -259,9 +259,9 @@
                     <span class="pregunta-numero">{{ loop.index }}</span>
                     <span class="pregunta-tipo">{{ pregunta.tipo.replace('_', ' ').title() }}</span>
                 </div>
-                
+
                 <div class="pregunta-enunciado">{{ pregunta.enunciado }}</div>
-                
+
                 {% if pregunta.tipo == 'opcion_multiple' and pregunta.opciones %}
                 <div class="opciones-list">
                     {% for opcion in pregunta.opciones %}

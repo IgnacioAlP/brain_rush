@@ -1,4 +1,4 @@
-﻿{% extends "BrainRush_Master.html" %}
+{% extends "BrainRush_Master.html" %}
 
 {% block title %}Brain RUSH - Monitoreo de Sala{% endblock %}
 
@@ -237,7 +237,7 @@
                 <p>{{ participantes|length }}</p>
             </div>
         </div>
-        
+
         <div class="pin-display" onclick="copiarCodigo()">
             Código: {{ sala.pin_sala }}
         </div>
@@ -341,7 +341,7 @@ async function cargarGrupos() {
 function mostrarGrupos(grupos) {
     const container = document.getElementById('grupos-list');
     let html = '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-top: 1rem;">';
-    
+
     grupos.forEach(g => {
         html += `
             <div class="grupo-card" data-grupo-id="${g.id_grupo}" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(16, 185, 129, 0.1)); border: 2px solid rgba(34, 197, 94, 0.3); border-radius: 1.5rem; padding: 1.5rem;">
@@ -357,7 +357,7 @@ function mostrarGrupos(grupos) {
             </div>
         `;
     });
-    
+
     html += '</div>';
     container.innerHTML = html;
 }
@@ -370,23 +370,23 @@ function actualizarParticipantes() {
             if (data.success) {
                 const countElement = document.getElementById('participantes-count');
                 const containerElement = document.getElementById('participantes-container');
-                
+
                 countElement.textContent = data.total;
-                
+
                 // Si hay grupos habilitados, actualizar la vista por grupos
                 if (gruposHabilitados && gruposData.length > 0) {
                     actualizarVistaGrupos(data.participantes);
                 }
-                
+
                 // Actualizar lista general de participantes
                 if (data.participantes.length > 0) {
                     let html = '<div id="participantes-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">';
-                    
+
                     data.participantes.forEach(participante => {
-                        const grupoBadge = participante.nombre_grupo ? 
+                        const grupoBadge = participante.nombre_grupo ?
                             `<span style="background: rgba(34, 197, 94, 0.2); color: rgb(21, 128, 61); padding: 0.25rem 0.75rem; border-radius: 0.5rem; font-size: 0.85rem; display: inline-block; margin-top: 0.5rem;">
                                 <i class="fas fa-users"></i> ${participante.nombre_grupo}
-                            </span>` : 
+                            </span>` :
                             '';
                         html += `
                             <div class="participante-card" style="background: rgba(79, 70, 229, 0.1); border-radius: 1rem; padding: 1rem; text-align: center;">
@@ -397,7 +397,7 @@ function actualizarParticipantes() {
                             </div>
                         `;
                     });
-                    
+
                     html += '</div>';
                     containerElement.innerHTML = html;
                 } else {
@@ -422,7 +422,7 @@ function actualizarParticipantes() {
 function actualizarVistaGrupos(participantes) {
     // Agrupar participantes por id_grupo
     const participantesPorGrupo = {};
-    
+
     participantes.forEach(p => {
         if (p.id_grupo) {
             if (!participantesPorGrupo[p.id_grupo]) {
@@ -431,23 +431,23 @@ function actualizarVistaGrupos(participantes) {
             participantesPorGrupo[p.id_grupo].push(p);
         }
     });
-    
+
     // Actualizar cada grupo
     gruposData.forEach(grupo => {
         const grupoId = grupo.id_grupo;
         const badge = document.getElementById(`grupo-${grupoId}-badge`);
         const container = document.getElementById(`grupo-${grupoId}-participantes`);
-        
+
         const participantesGrupo = participantesPorGrupo[grupoId] || [];
         const count = participantesGrupo.length;
-        
+
         // Actualizar badge con contador
         if (badge) {
             badge.textContent = count;
             badge.style.background = count > 0 ? 'rgba(34, 197, 94, 0.3)' : 'rgba(150, 150, 150, 0.2)';
             badge.style.color = count > 0 ? 'rgb(21, 128, 61)' : 'rgba(100, 100, 100, 0.7)';
         }
-        
+
         // Actualizar lista de participantes
         if (container) {
             if (count > 0) {
@@ -481,12 +481,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function iniciarJuego() {
     const participantesCount = parseInt(document.getElementById('participantes-count').textContent);
-    
+
     if (participantesCount === 0) {
         alert('No hay participantes para iniciar el juego');
         return;
     }
-    
+
     if (confirm(`¿Iniciar juego con ${participantesCount} participante(s)?`)) {
         fetch(`/sala/${SALA_ID}/iniciar`, {
             method: 'POST',
@@ -529,10 +529,10 @@ function copiarCodigo() {
 function mostrarToast(mensaje) {
     const toast = document.getElementById('toastNotification');
     const toastMessage = document.getElementById('toastMessage');
-    
+
     toastMessage.textContent = mensaje;
     toast.style.display = 'block';
-    
+
     // Ocultar después de 3 segundos
     setTimeout(() => {
         toast.classList.add('hiding');
@@ -577,7 +577,7 @@ function confirmarSalida() {
     if (modal) {
         modal.style.display = 'none';
     }
-    
+
     if (urlDestino) {
         window.location.href = urlDestino;
     } else {
@@ -589,7 +589,7 @@ function confirmarSalida() {
 document.addEventListener('DOMContentLoaded', function() {
     cargarGrupos(); // Cargar grupos si existen
     actualizarParticipantes(); // Cargar participantes inmediatamente
-    
+
     // Interceptar el botón "Volver"
     const btnVolver = document.querySelector('a[href*="mis_cuestionarios"]');
     if (btnVolver) {
@@ -629,7 +629,7 @@ document.addEventListener('keydown', function(e) {
             return false;
         }
     }
-    
+
     // Ctrl+R o Cmd+R
     if ((e.ctrlKey || e.metaKey) && (e.key === 'r' || e.keyCode === 82)) {
         if (!permitirSalida) {

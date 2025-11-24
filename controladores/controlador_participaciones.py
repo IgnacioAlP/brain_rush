@@ -1,4 +1,4 @@
-﻿from bd import obtener_conexion
+from bd import obtener_conexion
 
 def obtener_participaciones():
     return []

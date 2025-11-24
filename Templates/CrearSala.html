@@ -233,11 +233,11 @@
     .room-options {
         grid-template-columns: 1fr;
     }
-    
+
     .settings-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .create-room-card {
         margin: var(--space-md);
         padding: var(--space-xl);
@@ -248,13 +248,13 @@
     .create-room-title {
         font-size: 2rem;
     }
-    
+
     .option-icon {
         width: 60px;
         height: 60px;
         font-size: 1.5rem;
     }
-    
+
     .option-title {
         font-size: 1.2rem;
     }
@@ -280,7 +280,7 @@
                     <h3 class="option-title">Sala Rápida</h3>
                     <p class="option-description">Crear una sala inmediata con configuración automática</p>
                 </div>
-                
+
                 <div class="room-option selected" data-type="custom">
                     <div class="option-icon">
                         <i class="fas fa-cogs"></i>
@@ -295,22 +295,22 @@
                     <i class="fas fa-info-circle"></i>
                     Información Básica
                 </h3>
-                
+
                 <div class="form-group">
                     <label for="nombre_sala" class="form-label">
                         <i class="fas fa-tag"></i>
                         Nombre de la Sala
                     </label>
-                    <input type="text" id="nombre_sala" name="nombre_sala" required class="form-input" 
+                    <input type="text" id="nombre_sala" name="nombre_sala" required class="form-input"
                            placeholder="Ej: Matemáticas Avanzadas - Grupo A">
                 </div>
-                
+
                 <div class="form-group">
                     <label for="descripcion" class="form-label">
                         <i class="fas fa-align-left"></i>
                         Descripción (Opcional)
                     </label>
-                    <textarea id="descripcion" name="descripcion" class="form-textarea" 
+                    <textarea id="descripcion" name="descripcion" class="form-textarea"
                               placeholder="Describe el objetivo de tu sala de juego..."></textarea>
                 </div>
             </div>
@@ -320,7 +320,7 @@
                     <i class="fas fa-sliders-h"></i>
                     Configuración Avanzada
                 </h3>
-                
+
                 <div class="settings-grid">
                     <div class="setting-item">
                         <label for="tiempo_pregunta" class="setting-label">
@@ -334,7 +334,7 @@
                             <option value="60">1 minuto</option>
                         </select>
                     </div>
-                    
+
                     <div class="setting-item">
                         <label for="num_preguntas" class="setting-label">
                             <i class="fas fa-list-ol"></i>
@@ -347,7 +347,7 @@
                             <option value="20">20 preguntas</option>
                         </select>
                     </div>
-                    
+
                     <div class="setting-item">
                         <label for="dificultad" class="setting-label">
                             <i class="fas fa-chart-bar"></i>
@@ -360,7 +360,7 @@
                             <option value="mixto">Mixto</option>
                         </select>
                     </div>
-                    
+
                     <div class="setting-item">
                         <label for="max_jugadores" class="setting-label">
                             <i class="fas fa-users"></i>
@@ -399,13 +399,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const customSettings = document.getElementById('customSettings');
     const form = document.getElementById('createRoomForm');
     const submitBtn = document.getElementById('submitBtn');
-    
+
     // Manejo de opciones de sala
     roomOptions.forEach(option => {
         option.addEventListener('click', function() {
             roomOptions.forEach(opt => opt.classList.remove('selected'));
             this.classList.add('selected');
-            
+
             const type = this.dataset.type;
             if (type === 'quick') {
                 customSettings.style.display = 'none';
@@ -419,20 +419,20 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
-    
+
     // Validación en tiempo real
     const requiredFields = ['nombre_sala'];
-    
+
     function validateForm() {
         const isValid = requiredFields.every(fieldName => {
             const field = document.getElementById(fieldName);
             return field && field.value.trim() !== '';
         });
-        
+
         submitBtn.disabled = !isValid;
         submitBtn.style.opacity = isValid ? '1' : '0.6';
     }
-    
+
     // Validar cuando se escriba en campos requeridos
     requiredFields.forEach(fieldName => {
         const field = document.getElementById(fieldName);
@@ -440,16 +440,16 @@ document.addEventListener('DOMContentLoaded', function() {
             field.addEventListener('input', validateForm);
         }
     });
-    
+
     // Validación inicial
     validateForm();
-    
+
     // Animación al enviar formulario
     form.addEventListener('submit', function() {
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando sala...';
         submitBtn.disabled = true;
     });
-    
+
     // Inicializar con configuración personalizada visible
     const selectedOption = document.querySelector('.room-option.selected');
     if (selectedOption && selectedOption.dataset.type === 'quick') {

@@ -345,17 +345,17 @@
   .sala-header h1 {
     font-size: 2rem;
   }
-  
+
   .pin-display {
     font-size: 2rem;
     padding: var(--space-md) var(--space-lg);
     letter-spacing: 0.2em;
   }
-  
+
   .participants-grid {
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   }
-  
+
   .grupos-grid {
     grid-template-columns: 1fr;
   }
@@ -366,7 +366,7 @@
 {% block content %}
 <div class="container sala-espera-page">
   <div class="sala-container animate-fadeIn">
-    
+
     <!-- Header de la Sala -->
     <div class="sala-header">
       <div class="status-badge">
@@ -398,7 +398,7 @@
       <div class="participants-count">
         Total: <span id="participant-count">0</span>
       </div>
-      
+
       <div id="participants-container">
         <div class="participants-grid" id="participants-list">
           <div class="no-participants">
@@ -458,7 +458,7 @@
       try {
         const response = await fetch(`/api/sala/${SALA_ID}/grupos`);
         const data = await response.json();
-        
+
         if (data.success && data.grupos && data.grupos.length > 0) {
           gruposDisponibles = data.grupos;
           mostrarGrupos();
@@ -475,11 +475,11 @@
     function mostrarGrupos() {
       const gruposSection = document.getElementById('grupos-section');
       const gruposGrid = document.getElementById('grupos-grid');
-      
+
       if (gruposDisponibles.length > 0) {
         gruposSection.style.display = 'block';
         gruposGrid.innerHTML = '';
-        
+
         gruposDisponibles.forEach(grupo => {
           const card = document.createElement('div');
           card.className = 'grupo-card-mini';
@@ -497,19 +497,19 @@
     // Función para actualizar contadores de grupos
     function actualizarContadoresGrupos(participantes) {
       if (gruposDisponibles.length === 0) return;
-      
+
       // Contar participantes por grupo
       const gruposCuentas = {};
       gruposDisponibles.forEach(g => {
         gruposCuentas[g.id_grupo] = 0;
       });
-      
+
       participantes.forEach(p => {
         if (p.id_grupo && gruposCuentas[p.id_grupo] !== undefined) {
           gruposCuentas[p.id_grupo]++;
         }
       });
-      
+
       // Actualizar visualización
       Object.keys(gruposCuentas).forEach(grupoId => {
         const countEl = document.getElementById(`grupo-${grupoId}-count`);
@@ -525,13 +525,13 @@
       try {
         const response = await fetch(`/api/sala/${SALA_ID}/participantes`);
         const data = await response.json();
-        
+
         if (data.success) {
           const participantes = data.participantes || [];
-          
+
           // VERIFICAR ESTADO DE LA SALA
           console.log('📊 Estado actual de la sala:', data.sala ? data.sala.estado : 'no disponible');
-          
+
           // Si el estado cambió a 'en_juego', redirigir automáticamente
           if (data.sala && data.sala.estado === 'en_juego') {
             console.log('🎮 ¡EL JUEGO HA INICIADO! Redirigiendo al juego...');
@@ -540,10 +540,10 @@
             window.location.href = `/sala/${SALA_ID}/juego`;
             return;
           }
-          
+
           // Actualizar contador
           document.getElementById('participant-count').textContent = participantes.length;
-          
+
           // Actualizar lista con nuevo diseño
           const listElement = document.getElementById('participants-list');
           if (participantes.length === 0) {
@@ -555,7 +555,7 @@
             `;
           } else {
             listElement.innerHTML = participantes.map(p => {
-              const grupoBadge = p.nombre_grupo ? 
+              const grupoBadge = p.nombre_grupo ?
                 `<div class="grupo-badge">👥 ${p.nombre_grupo}</div>` : '';
               return `
                 <div class="participant-card">
@@ -566,10 +566,10 @@
               `;
             }).join('');
           }
-          
+
           // Actualizar contadores de grupos
           actualizarContadoresGrupos(participantes);
-          
+
           // Habilitar botón de inicio si hay al menos 1 participante (solo para docentes)
           if (ES_DOCENTE) {
             const startButton = document.getElementById('start-game-btn');
@@ -577,7 +577,7 @@
               startButton.disabled = participantes.length === 0;
             }
           }
-          
+
           // Notificar si hay nuevos participantes
           if (participantes.length > ultimosParticipantes.length) {
             const nuevos = participantes.slice(ultimosParticipantes.length);
@@ -585,7 +585,7 @@
               console.log(`✅ Nuevo participante: ${p.nombre_participante || p.nombre}`);
             });
           }
-          
+
           ultimosParticipantes = participantes;
         }
       } catch (error) {
@@ -598,17 +598,17 @@
       try {
         const response = await fetch(`/api/sala/${SALA_ID}/estado`);
         const data = await response.json();
-        
+
         if (data.success) {
           const estado = data.estado;
-          
+
           // Si el estado cambió a 'en_curso', redirigir al juego
           if (estado === 'en_curso') {
             console.log('🎮 El juego ha comenzado, redirigiendo...');
             detenerActualizaciones();
             window.location.href = `/juego/{{ sala.pin_sala }}/jugar`;
           }
-          
+
           // Si la sala se cerró, redirigir
           if (estado === 'finalizada') {
             console.log('❌ La sala ha sido cerrada');
@@ -628,13 +628,13 @@
       cargarGrupos(); // Cargar grupos si existen
       actualizarParticipantes();
       verificarEstadoSala();
-      
+
       // Actualizar cada 2 segundos
       intervaloActualizacion = setInterval(() => {
         actualizarParticipantes();
         verificarEstadoSala();
       }, 2000);
-      
+
       console.log('✅ Sistema de actualizaciones en tiempo real iniciado');
     }
 
@@ -652,16 +652,16 @@
     if (startGameBtn && ES_DOCENTE) {
       startGameBtn.addEventListener('click', async function() {
         const participantesCount = ultimosParticipantes.length;
-        
+
         if (participantesCount === 0) {
           alert('⚠️ Necesitas al menos un participante para iniciar el juego');
           return;
         }
-        
+
         if (confirm(`🎮 ¿Iniciar juego con ${participantesCount} participante(s)?`)) {
           try {
             detenerActualizaciones();
-            
+
             // Llamar al endpoint para iniciar el juego
             const response = await fetch(`/sala/${SALA_ID}/iniciar`, {
               method: 'POST',
@@ -669,9 +669,9 @@
                 'Content-Type': 'application/json'
               }
             });
-            
+
             const data = await response.json();
-            
+
             if (data.success) {
               window.location.href = `/sala/${SALA_ID}/monitorear`;
             } else {
@@ -694,16 +694,16 @@
         if (confirm('❌ ¿Estás seguro de que quieres cerrar la sala? Todos los participantes serán desconectados.')) {
           try {
             detenerActualizaciones();
-            
+
             const response = await fetch(`/sala/${SALA_ID}/cerrar`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json'
               }
             });
-            
+
             const data = await response.json();
-            
+
             if (data.success) {
               window.location.href = '/mis-cuestionarios';
             } else {

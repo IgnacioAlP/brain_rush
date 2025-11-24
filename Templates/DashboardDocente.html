@@ -377,11 +377,11 @@
     .stats-grid {
         grid-template-columns: 1fr 1fr;
     }
-    
+
     .quick-actions {
         grid-template-columns: 1fr;
     }
-    
+
     .export-buttons {
         flex-direction: column;
         align-items: center;
@@ -392,20 +392,20 @@
     .stats-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .quiz-item {
         flex-direction: column;
         align-items: stretch;
         gap: var(--space-md);
     }
-    
+
     /* MEJORA: Centrar badge y botones en móvil */
     .quiz-status-actions {
         flex-direction: column;
-        align-items: center; 
+        align-items: center;
         gap: var(--space-md);
     }
-    
+
     .quiz-actions {
         justify-content: center;
         flex-wrap: wrap; /* Para que los botones se ajusten */
@@ -721,15 +721,15 @@
     .ranking-stats {
         gap: var(--space-sm);
     }
-    
+
     .ranking-stat-value {
         font-size: 0.9rem;
     }
-    
+
     .ranking-stat-label {
         font-size: 0.65rem;
     }
-    
+
     .sala-ranking-header {
         flex-direction: column;
         align-items: flex-start;
@@ -748,7 +748,7 @@
 
     <div class="welcome-message animate-fadeIn">
         <p class="welcome-text">
-            ¡Bienvenido/a, <span class="user-name">{{ usuario.nombre }} {{ usuario.apellidos }}</span>! 
+            ¡Bienvenido/a, <span class="user-name">{{ usuario.nombre }} {{ usuario.apellidos }}</span>!
             Desde aquí puedes gestionar todos tus cuestionarios, revisar el desempeño de tus estudiantes y exportar resultados para tus evaluaciones.
         </p>
     </div>
@@ -851,7 +851,7 @@
                                 <i class="fas fa-edit"></i>
                                 Editar
                             </a>
-                            
+
                             {% if cuestionario.estado == 'borrador' %}
                             <button onclick="publicarCuestionario({{ cuestionario.id_cuestionario }})" class="action-btn btn-success" title="Publicar cuestionario">
                                 <i class="fas fa-share"></i>
@@ -863,7 +863,7 @@
                                 Despublicar
                             </button>
                             {% endif %}
-                            
+
                             <a href="#" onclick="exportarResultados({{ cuestionario.id_cuestionario }})" class="action-btn btn-primary">
                                 <i class="fas fa-download"></i>
                                 Exportar
@@ -944,7 +944,7 @@
             Exportar Resultados
         </h3>
         <p>Descarga los resultados de tus estudiantes para incluirlos en tu proceso de evaluación</p>
-        
+
         <div class="export-buttons">
             <button onclick="exportarExcel()" class="export-btn">
                 <i class="fas fa-file-excel"></i>
@@ -968,32 +968,32 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Animaciones de números en las estadísticas
     const statNumbers = document.querySelectorAll('.stat-number');
-    
+
     statNumbers.forEach(number => {
         const finalValue = parseInt(number.textContent);
         if (finalValue > 0 && !isNaN(finalValue)) {
             animateNumber(number, 0, finalValue, 1000);
         }
     });
-    
+
     function animateNumber(element, start, end, duration) {
         const startTime = performance.now();
-        
+
         function update(currentTime) {
             const elapsed = currentTime - startTime;
             const progress = Math.min(elapsed / duration, 1);
-            
+
             const current = Math.floor(start + (end - start) * easeOutCubic(progress));
             element.textContent = current;
-            
+
             if (progress < 1) {
                 requestAnimationFrame(update);
             }
         }
-        
+
         requestAnimationFrame(update);
     }
-    
+
     function easeOutCubic(t) {
         return 1 - Math.pow(1 - t, 3);
     }
@@ -1053,7 +1053,7 @@ function exportarExcel() {
 function exportarGoogleDrive() {
     // Implementar integración con Google Drive
     alert('Funcionalidad de Google Drive en desarrollo. Próximamente disponible.');
-    
+
     // Aquí se implementaría la integración con Google Drive API
     /*
     fetch('/exportar/google-drive', {

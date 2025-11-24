@@ -208,15 +208,15 @@
         margin: var(--space-md);
         padding: var(--space-xl);
     }
-    
+
     .register-title {
         font-size: 2rem;
     }
-    
+
     .step-indicator {
         gap: var(--space-sm);
     }
-    
+
     .step {
         width: 32px;
         height: 32px;
@@ -250,7 +250,7 @@
                     </label>
                     <input type="text" id="nombre" name="nombre" required class="form-input" placeholder="Tu nombre">
                 </div>
-                
+
                 <div class="form-group">
                     <label for="apellidos" class="form-label">
                         <i class="fas fa-user"></i>
@@ -346,7 +346,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Configurar el token CSRF para todas las peticiones AJAX
     const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-    
+
     // Agregar el token CSRF a todas las peticiones fetch
     const originalFetch = window.fetch;
     window.fetch = function() {
@@ -366,12 +366,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const confirmPasswordInput = document.getElementById('confirm_password');
     const emailInput = document.getElementById('email');
     const submitBtn = document.getElementById('submitBtn');
-    
+
     // Campos para validación de pasos
     const step1Fields = ['nombre', 'apellidos'];
     const step2Fields = ['email', 'tipo_usuario'];
     const step3Fields = ['password', 'confirm_password'];
-    
+
     // Elementos de requisitos
     const requirements = {
         length: document.getElementById('req-length'),
@@ -381,30 +381,30 @@ document.addEventListener('DOMContentLoaded', function() {
         match: document.getElementById('req-match'),
         emailDomain: document.getElementById('req-email-domain')
     };
-    
+
     // Validación de dominio de correo
     emailInput.addEventListener('input', function() {
         const email = this.value.toLowerCase();
         const dominiosPermitidos = ['@usat.pe', '@usat.edu.pe'];
         const dominioValido = dominiosPermitidos.some(dominio => email.endsWith(dominio));
-        
+
         if (email.length > 0) {
             requirements.emailDomain.style.display = 'flex';
             updateRequirement('emailDomain', dominioValido);
         } else {
             requirements.emailDomain.style.display = 'none';
         }
-        
+
         validateForm();
         updateSteps();
     });
 
-    
+
     // Validación de confirmación de contraseña
     confirmPasswordInput.addEventListener('input', function() {
         const password = passwordInput.value;
         const confirmPassword = this.value;
-        
+
         // Mostrar indicador de coincidencia solo si hay texto en ambos campos
         if (confirmPassword.length > 0 && password.length > 0) {
             requirements.match.style.display = 'flex';
@@ -413,28 +413,28 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             requirements.match.style.display = 'none';
         }
-        
+
         validateForm();
         updateSteps();
     });
-    
+
     // También actualizar cuando se cambie la contraseña principal
     passwordInput.addEventListener('input', function() {
         const password = this.value;
         const confirmPassword = confirmPasswordInput.value;
-        
+
         // Verificar longitud
         updateRequirement('length', password.length >= 8);
-        
+
         // Verificar mayúscula
         updateRequirement('uppercase', /[A-Z]/.test(password));
-        
+
         // Verificar minúscula
         updateRequirement('lowercase', /[a-z]/.test(password));
-        
+
         // Verificar número
         updateRequirement('number', /\d/.test(password));
-        
+
         // Actualizar indicador de coincidencia si hay texto en confirmar
         if (confirmPassword.length > 0 && password.length > 0) {
             requirements.match.style.display = 'flex';
@@ -443,21 +443,21 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             requirements.match.style.display = 'none';
         }
-        
+
         validateForm();
         updateSteps();
     });
-    
+
     // Validar campos en tiempo real
     form.addEventListener('input', function() {
         updateSteps();
         validateForm();
     });
-    
+
     function updateRequirement(type, isValid) {
         const req = requirements[type];
         const icon = req.querySelector('i');
-        
+
         if (isValid) {
             req.classList.add('valid');
             icon.className = 'fas fa-check';
@@ -466,20 +466,20 @@ document.addEventListener('DOMContentLoaded', function() {
             icon.className = 'fas fa-times';
         }
     }
-    
+
     function updateSteps() {
         const steps = [
             { element: document.getElementById('step1'), fields: step1Fields },
             { element: document.getElementById('step2'), fields: step2Fields },
             { element: document.getElementById('step3'), fields: step3Fields }
         ];
-        
+
         steps.forEach((step, index) => {
             const isComplete = step.fields.every(fieldName => {
                 const field = document.getElementById(fieldName);
                 return field && field.value.trim() !== '';
             });
-            
+
             if (isComplete) {
                 step.element.classList.remove('active');
                 step.element.classList.add('completed');
@@ -494,31 +494,31 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
+
     function validateForm() {
         const password = passwordInput.value;
         const confirmPassword = confirmPasswordInput.value;
         const email = emailInput.value.toLowerCase();
-        
+
         // Verificar todos los requisitos de contraseña
-        const passwordValid = password.length >= 8 && 
-                            /[A-Z]/.test(password) && 
-                            /[a-z]/.test(password) && 
+        const passwordValid = password.length >= 8 &&
+                            /[A-Z]/.test(password) &&
+                            /[a-z]/.test(password) &&
                             /\d/.test(password);
-        
+
         // Verificar que las contraseñas coincidan
         const passwordsMatch = password === confirmPassword && password !== '';
-        
+
         // Verificar dominio del correo
         const dominiosPermitidos = ['@usat.pe', '@usat.edu.pe'];
         const emailValido = dominiosPermitidos.some(dominio => email.endsWith(dominio));
-        
+
         // Verificar que todos los campos estén llenos
         const allFieldsFilled = [...step1Fields, ...step2Fields, ...step3Fields].every(fieldName => {
             const field = document.getElementById(fieldName);
             return field && field.value.trim() !== '';
         });
-        
+
         // Habilitar/deshabilitar botón de submit
         if (allFieldsFilled && passwordValid && passwordsMatch && emailValido) {
             submitBtn.disabled = false;
@@ -528,17 +528,17 @@ document.addEventListener('DOMContentLoaded', function() {
             submitBtn.style.opacity = '0.6';
         }
     }
-    
+
     // Animación al enviar formulario
     form.addEventListener('submit', function(e) {
         const password = passwordInput.value;
         const confirmPassword = confirmPasswordInput.value;
         const email = emailInput.value.toLowerCase();
-        
+
         // Validación del dominio de correo
         const dominiosPermitidos = ['@usat.pe', '@usat.edu.pe'];
         const emailValido = dominiosPermitidos.some(dominio => email.endsWith(dominio));
-        
+
         if (!emailValido) {
             e.preventDefault();
             Swal.fire({
@@ -553,7 +553,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             return false;
         }
-        
+
         // Validación final antes de enviar
         if (password !== confirmPassword) {
             e.preventDefault();
@@ -569,7 +569,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             return false;
         }
-        
+
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando cuenta...';
         submitBtn.disabled = true;
     });

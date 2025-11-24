@@ -517,15 +517,15 @@
         flex-direction: column;
         gap: var(--space-md);
     }
-    
+
     .quiz-meta {
         flex-wrap: wrap;
         gap: var(--space-md);
     }
-    
+
     .quiz-actions {
         /* Se ajusta a wrap para que los botones fluyan */
-        flex-wrap: wrap; 
+        flex-wrap: wrap;
         justify-content: flex-start; /* Alinea al inicio */
     }
 }
@@ -536,11 +536,11 @@
     .page-title {
         font-size: 2rem; /* Reducir un poco el título principal */
     }
-    
+
     .page-subtitle {
         font-size: 1rem;
     }
-    
+
     /* --- Ajustes de la Tarjeta de Cuestionario --- */
     .quiz-card {
         padding: var(--space-lg); /* Menos padding en la tarjeta */
@@ -549,8 +549,8 @@
     .quiz-title {
         font-size: 1.25rem; /* Título de tarjeta más pequeño */
     }
-    
-    /* * ¡Esto es lo más importante! 
+
+    /* * ¡Esto es lo más importante!
      * Apila los botones de acción verticalmente.
      */
     .quiz-actions {
@@ -558,7 +558,7 @@
         align-items: stretch; /* Estirar botones al 100% del ancho */
         gap: var(--space-md); /* Más espacio vertical entre botones */
     }
-    
+
     .action-btn {
         justify-content: center; /* Centrar ícono y texto */
     }
@@ -567,11 +567,11 @@
     .modal-overlay {
         padding: 0.5rem; /* Menos padding alrededor del modal */
     }
-    
+
     .modal-content {
         max-height: 95vh; /* Permitir que ocupe casi toda la altura */
     }
-    
+
     .modal-header,
     .modal-body {
         padding: 1.5rem 1rem; /* Menos padding dentro del modal */
@@ -585,28 +585,28 @@
     .sala-item {
         padding: 1rem; /* Menos padding */
     }
-    
+
     /* Apila la info de la sala y el badge de estado */
     .sala-header-info {
-        flex-direction: column; 
+        flex-direction: column;
         align-items: flex-start;
         gap: 0.75rem;
     }
-    
+
     /* Apila los meta-items (fecha, participantes, modo) */
     .sala-meta {
         flex-direction: column;
         gap: 0.5rem;
         align-items: flex-start;
     }
-    
+
     /* Apila los botones de la sala (Ver Resultados, Exportar) */
     .sala-actions {
         flex-direction: column;
         align-items: stretch;
         gap: 0.75rem;
     }
-    
+
     .sala-btn {
         justify-content: center; /* Centrar texto/ícono */
     }
@@ -615,7 +615,7 @@
     .empty-state {
         padding: var(--space-xl) var(--space-lg); /* Menos padding */
     }
-    
+
     .empty-title {
         font-size: 1.25rem;
     }
@@ -646,7 +646,7 @@
                         {% if cuestionario.descripcion %}
                         <p class="quiz-description">{{ cuestionario.descripcion }}</p>
                         {% endif %}
-                        
+
                         <div class="quiz-meta">
                             <div class="meta-item">
                                 <i class="fas fa-calendar"></i>
@@ -662,14 +662,14 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="quiz-actions">
-                    <a href="{{ url_for('ver_cuestionario', cuestionario_id=cuestionario.id_cuestionario) }}" 
+                    <a href="{{ url_for('ver_cuestionario', cuestionario_id=cuestionario.id_cuestionario) }}"
                        class="action-btn btn-outline">
                         <i class="fas fa-eye"></i>
                         Ver Preguntas
                     </a>
-                    
+
                     <button class="action-btn btn-outline btn-ver-resultados"
                             data-cuestionario-id="{{ cuestionario.id_cuestionario }}"
                             data-cuestionario-titulo="{{ cuestionario.titulo }}"
@@ -677,16 +677,16 @@
                         <i class="fas fa-chart-bar"></i>
                         Ver Resultados
                     </button>
-                    
-                    <a href="{{ url_for('editar_cuestionario', cuestionario_id=cuestionario.id_cuestionario) }}" 
+
+                    <a href="{{ url_for('editar_cuestionario', cuestionario_id=cuestionario.id_cuestionario) }}"
                        class="action-btn btn-secondary">
                         <i class="fas fa-edit"></i>
                         Editar
                     </a>
                      </button>
-                  
-                     <a href="{{ url_for('gestionar_recompensas', id_cuestionario=cuestionario.id_cuestionario) }}" 
-                     class="action-btn btn-recompensas" 
+
+                     <a href="{{ url_for('gestionar_recompensas', id_cuestionario=cuestionario.id_cuestionario) }}"
+                     class="action-btn btn-recompensas"
                         title="Administrar las recompensas del cuestionario">
                     <i class="fas fa-gift"></i>
                     Gestionar Recompensas
@@ -694,25 +694,25 @@
 
 
                     {% if cuestionario.estado == 'borrador' %}
-                    <button onclick="publicarCuestionario({{ cuestionario.id_cuestionario }})" 
+                    <button onclick="publicarCuestionario({{ cuestionario.id_cuestionario }})"
                             class="action-btn btn-success" title="Publicar cuestionario">
                         <i class="fas fa-share"></i>
                         Publicar
                     </button>
-                   
+
                     {% elif cuestionario.estado == 'publicado' %}
-                    <a href="{{ url_for('crear_sala_para_cuestionario', cuestionario_id=cuestionario.id_cuestionario) }}" 
+                    <a href="{{ url_for('crear_sala_para_cuestionario', cuestionario_id=cuestionario.id_cuestionario) }}"
                        class="action-btn btn-success" title="Crear sala con este cuestionario">
                         <i class="fas fa-users"></i>
                         Crear Sala
                     </a>
-                    
-                    <button onclick="despublicarCuestionario({{ cuestionario.id_cuestionario }})" 
+
+                    <button onclick="despublicarCuestionario({{ cuestionario.id_cuestionario }})"
                             class="action-btn btn-warning" title="Despublicar cuestionario">
                         <i class="fas fa-eye-slash"></i>
                         Despublicar
                     </button>
-                
+
 
 
                     {% endif %}
@@ -762,7 +762,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Animaciones de entrada
     const cards = document.querySelectorAll('.quiz-card');
-    
+
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
@@ -771,23 +771,23 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
-    
+
     cards.forEach(card => {
         card.style.opacity = '0';
         card.style.transform = 'translateY(20px)';
         observer.observe(card);
     });
-    
+
     // Event listeners para botones "Ver Resultados"
     const botonesResultados = document.querySelectorAll('.btn-ver-resultados');
     console.log('🔘 Botones "Ver Resultados" encontrados:', botonesResultados.length);
-    
+
     botonesResultados.forEach((btn, index) => {
         console.log(`🔘 Botón ${index + 1}:`, {
             id: btn.getAttribute('data-cuestionario-id'),
             titulo: btn.getAttribute('data-cuestionario-titulo')
         });
-        
+
         btn.addEventListener('click', function() {
             console.log('🖱️ Click en botón Ver Resultados');
             const cuestionarioId = this.getAttribute('data-cuestionario-id');
@@ -852,31 +852,31 @@ async function verHistorialSalas(cuestionarioId, tituloQuestionario) {
     console.log('  INICIO verHistorialSalas');
     console.log('📊 Cuestionario ID:', cuestionarioId);
     console.log('📝 Título:', tituloQuestionario);
-    
+
     const modal = document.getElementById('modalHistorialSalas');
     const modalTitulo = document.getElementById('modalTitulo');
     const salasContainer = document.getElementById('salasContainer');
-    
+
     console.log('🔍 Modal element:', modal);
     console.log('🔍 Modal titulo element:', modalTitulo);
     console.log('🔍 Salas container element:', salasContainer);
-    
+
     if (!modal) {
         console.error('❌ Modal no encontrado!');
         alert('Error: No se encontró el modal');
         return;
     }
-    
+
     // Actualizar título
     modalTitulo.innerHTML = `
         <i class="fas fa-history"></i>
         Historial de Salas - ${tituloQuestionario}
     `;
-    
+
     // Mostrar modal
     console.log('👁️ Mostrando modal...');
     modal.classList.add('active');
-    
+
     // Mostrar loader
     salasContainer.innerHTML = `
         <div style="text-align: center; padding: 2rem;">
@@ -884,15 +884,15 @@ async function verHistorialSalas(cuestionarioId, tituloQuestionario) {
             <p style="margin-top: 1rem; color: #64748b;">Cargando salas...</p>
         </div>
     `;
-    
+
     try {
         console.log('🌐 Fetching:', `/api/cuestionario/${cuestionarioId}/salas`);
         const response = await fetch(`/api/cuestionario/${cuestionarioId}/salas`);
         console.log('📡 Response status:', response.status);
         const data = await response.json();
-        
+
         console.log('📋 Salas recibidas:', data);
-        
+
         if (data.success && data.salas && data.salas.length > 0) {
             mostrarListaSalas(data.salas, tituloQuestionario);
         } else {
@@ -918,7 +918,7 @@ async function verHistorialSalas(cuestionarioId, tituloQuestionario) {
 
 function mostrarListaSalas(salas, tituloQuestionario) {
     const salasContainer = document.getElementById('salasContainer');
-    
+
     const salasHTML = salas.map(sala => {
         const fechaCreacion = new Date(sala.fecha_creacion).toLocaleDateString('es-ES', {
             year: 'numeric',
@@ -927,12 +927,12 @@ function mostrarListaSalas(salas, tituloQuestionario) {
             hour: '2-digit',
             minute: '2-digit'
         });
-        
+
         const estadoClass = `estado-${sala.estado.replace(' ', '_')}`;
-        const estadoTexto = sala.estado === 'en_curso' ? 'En Curso' : 
-                           sala.estado === 'finalizada' ? 'Finalizada' : 
+        const estadoTexto = sala.estado === 'en_curso' ? 'En Curso' :
+                           sala.estado === 'finalizada' ? 'Finalizada' :
                            'Esperando';
-        
+
         return `
             <div class="sala-item">
                 <div class="sala-header-info">
@@ -960,18 +960,18 @@ function mostrarListaSalas(salas, tituloQuestionario) {
                         ${estadoTexto}
                     </span>
                 </div>
-                
+
                 ${sala.estado === 'finalizada' ? `
                 <div class="sala-actions">
-                    <a href="/sala/${sala.id_sala}/resultados" 
+                    <a href="/sala/${sala.id_sala}/resultados"
                        class="sala-btn btn-view-results"
                        title="Ver resultados completos">
                         <i class="fas fa-chart-line"></i>
                         Ver Resultados
                     </a>
-                    
+
                     <div class="btn-export-dropdown">
-                        <button class="sala-btn btn-outline" 
+                        <button class="sala-btn btn-outline"
                                 onclick="toggleExportMenu(${sala.id_sala})"
                                 id="btn-export-${sala.id_sala}">
                             <i class="fas fa-download"></i>
@@ -979,17 +979,17 @@ function mostrarListaSalas(salas, tituloQuestionario) {
                             <i class="fas fa-caret-up"></i>
                         </button>
                         <div class="export-options" id="export-menu-${sala.id_sala}">
-                            <button class="export-option" 
+                            <button class="export-option"
                                     onclick="exportarSala(${sala.id_sala}, 'csv', '${tituloQuestionario}')">
                                 <i class="fas fa-file-csv"></i>
                                 Descargar CSV
                             </button>
-                            <button class="export-option" 
+                            <button class="export-option"
                                     onclick="exportarSala(${sala.id_sala}, 'excel', '${tituloQuestionario}')">
                                 <i class="fas fa-file-excel"></i>
                                 Descargar Excel
                             </button>
-                            <button class="export-option" 
+                            <button class="export-option"
                                     onclick="exportarSala(${sala.id_sala}, 'onedrive', '${tituloQuestionario}')">
                                 <i class="fab fa-microsoft"></i>
                                 Exportar a OneDrive
@@ -999,7 +999,7 @@ function mostrarListaSalas(salas, tituloQuestionario) {
                 </div>
                 ` : `
                 <div class="sala-actions">
-                    <a href="/sala/${sala.id_sala}/juego" 
+                    <a href="/sala/${sala.id_sala}/juego"
                        class="sala-btn btn-view-results"
                        title="Ir al control de juego">
                         <i class="fas fa-gamepad"></i>
@@ -1010,7 +1010,7 @@ function mostrarListaSalas(salas, tituloQuestionario) {
             </div>
         `;
     }).join('');
-    
+
     salasContainer.innerHTML = `<div class="salas-list">${salasHTML}</div>`;
 }
 
@@ -1024,17 +1024,17 @@ function cerrarModal(event) {
 function toggleExportMenu(salaId) {
     const menu = document.getElementById(`export-menu-${salaId}`);
     const allMenus = document.querySelectorAll('.export-options');
-    
+
     // Cerrar otros menús
     allMenus.forEach(m => {
         if (m.id !== `export-menu-${salaId}`) {
             m.classList.remove('active');
         }
     });
-    
+
     // Toggle este menú
     menu.classList.toggle('active');
-    
+
     event.stopPropagation();
 }
 
@@ -1047,23 +1047,23 @@ document.addEventListener('click', () => {
 
 async function exportarSala(salaId, formato, cuestionarioTitulo) {
     console.log(`📥 Exportando sala ${salaId} en formato ${formato}`);
-    
+
     try {
         // Obtener datos del ranking primero
         const rankingResponse = await fetch(`/api/sala/${salaId}/ranking`);
         const rankingData = await rankingResponse.json();
-        
+
         if (!rankingData.success) {
             alert('❌ Error al obtener datos del ranking');
             return;
         }
-        
+
         // Obtener info de la sala
         const salaResponse = await fetch(`/api/sala/${salaId}/estado`);
         const salaData = await salaResponse.json();
-        
+
         const totalPreguntas = salaData.sala?.total_preguntas || 10;
-        
+
         if (formato === 'csv') {
             exportarCSV(rankingData.ranking, totalPreguntas, cuestionarioTitulo);
         } else if (formato === 'excel') {
@@ -1071,10 +1071,10 @@ async function exportarSala(salaId, formato, cuestionarioTitulo) {
         } else if (formato === 'onedrive') {
             await exportarOneDrive(salaId, rankingData.ranking, totalPreguntas, cuestionarioTitulo);
         }
-        
+
         // Cerrar menú
         document.getElementById(`export-menu-${salaId}`).classList.remove('active');
-        
+
     } catch (error) {
         console.error('❌ Error en exportación:', error);
         alert('❌ Error al exportar: ' + error.message);
@@ -1102,7 +1102,7 @@ function exportarCSV(ranking, totalPreguntas, titulo) {
     a.click();
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
-    
+
     alert('📄 CSV descargado correctamente');
 }
 
@@ -1118,7 +1118,7 @@ async function exportarExcel(salaId, ranking, totalPreguntas, titulo) {
             cuestionarioTitulo: titulo
         })
     });
-    
+
     if (response.ok) {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
@@ -1129,7 +1129,7 @@ async function exportarExcel(salaId, ranking, totalPreguntas, titulo) {
         a.click();
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
-        
+
         alert('📊 Excel descargado correctamente');
     } else {
         const error = await response.json();
@@ -1150,9 +1150,9 @@ async function exportarOneDrive(salaId, ranking, totalPreguntas, titulo) {
                 cuestionarioTitulo: titulo
             })
         });
-        
+
         const data = await response.json();
-        
+
         if (data.success) {
             if (data.already_exported) {
                 // Archivo ya existe en OneDrive
