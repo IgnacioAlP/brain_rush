@@ -13,6 +13,7 @@
 
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/brain_rush_v3.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/notifications.css') }}">
 
     {% block extra_css %}{% endblock %}
 </head>
@@ -299,6 +300,9 @@
     });
   });
     </script>
+
+    <!-- Sistema de Notificaciones -->
+    <script src="{{ url_for('static', filename='js/notifications.js') }}"></script>
 
     {% block extra_js %}{% endblock %}
 </body>

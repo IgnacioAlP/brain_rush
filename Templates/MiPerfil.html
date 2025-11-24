@@ -27,7 +27,6 @@
 
         <!-- 🔹 FORMULARIO ACTUALIZAR PERFIL -->
         <form method="POST" action="{{ url_for('perfil') }}" class="profile-form" id="formActualizar" autocomplete="off">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="form_type" value="update">
 
             <div class="form-group">
@@ -65,7 +64,6 @@
 
         <!-- 🔹 FORMULARIO ELIMINAR CUENTA -->
         <form method="POST" action="{{ url_for('perfil') }}" id="formEliminar" class="delete-form" style="text-align:center;">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="form_type" value="delete">
             <button type="submit" class="btn btn-danger">🗑️ Eliminar cuenta</button>
         </form>

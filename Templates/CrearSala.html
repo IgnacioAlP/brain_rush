@@ -271,7 +271,6 @@
         </div>
 
         <form method="POST" action="{{ url_for('generar_preguntas') }}" id="createRoomForm">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="room-options">
                 <div class="room-option" data-type="quick">
                     <div class="option-icon">

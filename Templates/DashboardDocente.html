@@ -1021,7 +1021,7 @@ function exportarResultados(cuestionarioId) {
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Error al exportar resultados');
+        showError('Error al exportar resultados');
     });
 }
 
@@ -1046,13 +1046,13 @@ function exportarExcel() {
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Error al exportar a Excel');
+        showError('Error al exportar a Excel');
     });
 }
 
 function exportarGoogleDrive() {
     // Implementar integración con Google Drive
-    alert('Funcionalidad de Google Drive en desarrollo. Próximamente disponible.');
+    showWarning('Funcionalidad de Google Drive en desarrollo. Próximamente disponible.');
 
     // Aquí se implementaría la integración con Google Drive API
     /*
@@ -1065,9 +1065,9 @@ function exportarGoogleDrive() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert('Resultados guardados en Google Drive exitosamente');
+            showSuccess('Resultados guardados en Google Drive exitosamente');
         } else {
-            alert('Error al guardar en Google Drive');
+            showError('Error al guardar en Google Drive');
         }
     });
     */
@@ -1094,56 +1094,70 @@ function exportarPDF() {
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Error al generar reporte PDF');
+        showError('Error al generar reporte PDF');
     });
 }
 
 // Funciones para publicar/despublicar cuestionarios
-function publicarCuestionario(cuestionarioId) {
-    if (confirm('¿Estás seguro de que quieres publicar este cuestionario? Una vez publicado, los estudiantes podrán acceder a él.')) {
-        fetch(`/publicar-cuestionario/${cuestionarioId}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
+async function publicarCuestionario(cuestionarioId) {
+    const confirmado = await confirmAction(
+        '¿Estás seguro de que quieres publicar este cuestionario? Una vez publicado, los estudiantes podrán acceder a él.',
+        'Confirmar publicación',
+        'Sí, publicar',
+        'Cancelar'
+    );
+
+    if (confirmado) {
+        try {
+            const response = await fetch(`/publicar-cuestionario/${cuestionarioId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            const data = await response.json();
+
             if (data.success) {
-                alert(data.message);
-                location.reload(); // Recargar para mostrar el cambio de estado
+                showSuccess(data.message);
+                setTimeout(() => location.reload(), 1000);
             } else {
-                alert('Error: ' + data.error);
+                showError('Error: ' + data.error);
             }
-        })
-        .catch(error => {
+        } catch (error) {
             console.error('Error:', error);
-            alert('Error al publicar el cuestionario');
-        });
+            showError('Error al publicar el cuestionario');
+        }
     }
 }
 
-function despublicarCuestionario(cuestionarioId) {
-    if (confirm('¿Estás seguro de que quieres despublicar este cuestionario? Los estudiantes ya no podrán acceder a él.')) {
-        fetch(`/despublicar-cuestionario/${cuestionarioId}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
+async function despublicarCuestionario(cuestionarioId) {
+    const confirmado = await confirmAction(
+        '¿Estás seguro de que quieres despublicar este cuestionario? Los estudiantes ya no podrán acceder a él.',
+        'Confirmar despublicación',
+        'Sí, despublicar',
+        'Cancelar'
+    );
+
+    if (confirmado) {
+        try {
+            const response = await fetch(`/despublicar-cuestionario/${cuestionarioId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            const data = await response.json();
+
             if (data.success) {
-                alert(data.message);
-                location.reload(); // Recargar para mostrar el cambio de estado
+                showSuccess(data.message);
+                setTimeout(() => location.reload(), 1000);
             } else {
-                alert('Error: ' + data.error);
+                showError('Error: ' + data.error);
             }
-        })
-        .catch(error => {
+        } catch (error) {
             console.error('Error:', error);
-            alert('Error al despublicar el cuestionario');
-        });
+            showError('Error al despublicar el cuestionario');
+        }
     }
 }
 </script>

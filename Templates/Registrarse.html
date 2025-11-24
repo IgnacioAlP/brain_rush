@@ -241,7 +241,6 @@
         </div>
 
         <form action="{{ url_for('registrarse') }}" method="POST" id="registerForm">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="form-row">
                 <div class="form-group">
                     <label for="nombre" class="form-label">
@@ -344,22 +343,6 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Configurar el token CSRF para todas las peticiones AJAX
-    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-
-    // Agregar el token CSRF a todas las peticiones fetch
-    const originalFetch = window.fetch;
-    window.fetch = function() {
-        let [url, config] = arguments;
-        if (config === undefined) {
-            config = {};
-        }
-        if (config.headers === undefined) {
-            config.headers = {};
-        }
-        config.headers['X-CSRFToken'] = csrfToken;
-        return originalFetch(url, config);
-    };
 
     const form = document.getElementById('registerForm');
     const passwordInput = document.getElementById('password');

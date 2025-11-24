@@ -527,31 +527,45 @@ async function exportarHistorialOneDrive() {
             if (data.email_sent) {
                 // Email enviado con link
                 let mensaje = `✅ ${data.message}\n\n`;
-                mensaje += `📄 Archivo: ${data.file_name}\n`;
-                mensaje += `📧 Hemos enviado el link a tu correo.\n\n`;
+                let mensaje = `Archivo: ${data.file_name}\n`;
+                mensaje += `Hemos enviado el link a tu correo.\n\n`;
                 mensaje += `¿Deseas abrir el archivo ahora?`;
 
-                if (confirm(mensaje)) {
+                const abrirArchivo = await confirmAction(
+                    mensaje,
+                    'Abrir archivo',
+                    'Sí, abrir',
+                    'No'
+                );
+                if (abrirArchivo) {
                     window.open(data.share_link || data.web_url, '_blank');
                 }
             } else if (data.fallback) {
                 // Fallback a email con archivo adjunto
-                alert(`⚠️ ${data.message}\n\n📧 Se ha enviado tu historial por correo electrónico como archivo adjunto.`);
+                showWarning(`${data.message}\n\nSe ha enviado tu historial por correo electrónico como archivo adjunto.`);
             } else {
                 // Éxito sin email
-                let mensaje = `✅ ${data.message}\n\n📄 Archivo: ${data.file_name}`;
-                alert(mensaje);
+                let mensaje = `${data.message}\n\nArchivo: ${data.file_name}`;
+                showSuccess(mensaje);
 
-                if (data.share_link && confirm('¿Deseas abrir el archivo en OneDrive?')) {
-                    window.open(data.share_link, '_blank');
+                if (data.share_link) {
+                    const abrirOneDrive = await confirmAction(
+                        '¿Deseas abrir el archivo en OneDrive?',
+                        'Abrir en OneDrive',
+                        'Sí, abrir',
+                        'No'
+                    );
+                    if (abrirOneDrive) {
+                        window.open(data.share_link, '_blank');
+                    }
                 }
             }
         } else {
-            alert(`❌ Error: ${data.error || 'No se pudo exportar el historial'}`);
+            showError(`Error: ${data.error || 'No se pudo exportar el historial'}`);
         }
     } catch (error) {
         console.error('Error al exportar:', error);
-        alert('❌ Error al exportar el historial. Por favor, intenta nuevamente.');
+        showError('Error al exportar el historial. Por favor, intenta nuevamente.');
     } finally {
         // Restaurar botón
         btn.disabled = false;

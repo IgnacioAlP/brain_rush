@@ -179,18 +179,29 @@ def jwt_or_session_required(f):
 def docente_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        print(f"\n{'='*80}")
+        print(f"🔒 DOCENTE_REQUIRED - Verificando acceso a: {request.path}")
+        print(f"   Sesión logged_in: {session.get('logged_in')}")
+        print(f"   Sesión usuario_tipo: {session.get('usuario_tipo')}")
+        print(f"   Sesión tipo_usuario: {session.get('tipo_usuario')}")
+        print(f"{'='*80}\n")
+        
         # Primero verificamos login
         auth_response = login_required(lambda: "OK")()
         if auth_response != "OK":
+            print(f"❌ DOCENTE_REQUIRED: Login failed, redirigiendo")
             return auth_response # Retorna el error o redirect del login_required
 
         # Verificar rol (asumiendo que está en sesión tras el login)
         if session.get('usuario_tipo') != 'docente':
+            print(f"❌ DOCENTE_REQUIRED: No es docente (es '{session.get('usuario_tipo')}'), redirigiendo a dashboard")
             if request.is_json:
                 return jsonify({'error': 'Acceso solo para docentes'}), 403
             else:
-                return redirect(url_for('dashboard_estudiante')) # O página de error
+                # Redirigir al dashboard correcto según el tipo de usuario
+                return redirect(url_for('dashboard'))
 
+        print(f"✅ DOCENTE_REQUIRED: Acceso permitido")
         return f(*args, **kwargs)
     return decorated_function
 
@@ -205,7 +216,8 @@ def estudiante_required(f):
             if request.is_json:
                 return jsonify({'error': 'Acceso solo para estudiantes'}), 403
             else:
-                return redirect(url_for('dashboard_admin'))
+                # Redirigir al dashboard correcto según el tipo de usuario
+                return redirect(url_for('dashboard'))
 
         return f(*args, **kwargs)
     return decorated_function

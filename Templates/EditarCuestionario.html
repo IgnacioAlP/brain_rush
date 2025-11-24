@@ -755,8 +755,6 @@
     </div>
 
     <form id="edit-form" method="POST" action="/editar-cuestionario/{{ cuestionario.id_cuestionario }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
         <div id="tab-info" class="tab-content active animate-fadeIn" style="animation-delay: 0.2s;">
             <div class="form-section">
                 <h3 class="section-title"><i class="fas fa-info-circle"></i> Información del Cuestionario</h3>
@@ -1250,8 +1248,7 @@
                 fetch(`/pregunta/${questionId}/eliminar`, {
                     method: 'POST',
                     headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+                        'X-Requested-With': 'XMLHttpRequest'
                     }
                 })
                 .then(response => response.json())
@@ -1294,7 +1291,7 @@
     }
 
     function previewQuiz() {
-        alert('🔍 Vista previa del cuestionario (función en desarrollo)');
+        showWarning('Vista previa del cuestionario (función en desarrollo)');
     }
 
     // Manejar envío del formulario de pregunta
@@ -1368,7 +1365,6 @@
         formData.append('enunciado', questionText);
         formData.append('tiempo', timeLimit);
         formData.append('opciones', JSON.stringify(options));
-        formData.append('csrf_token', document.querySelector('input[name="csrf_token"]').value);
 
         // Determinar URL según si es edición o creación
         const url = currentQuestionId

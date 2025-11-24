@@ -1,0 +1,327 @@
+/**
+ * Estilos para Sistema de Notificaciones Personalizado Brain RUSH
+ */
+
+/* Contenedor de notificaciones */
+.br-notification-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 400px;
+    pointer-events: none;
+}
+
+/* Notificación individual */
+.br-notification {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 300px;
+    opacity: 0;
+    transform: translateX(400px);
+    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    pointer-events: all;
+}
+
+.br-notification.br-show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.br-notification.br-hide {
+    opacity: 0;
+    transform: translateX(400px);
+}
+
+/* Iconos de notificación */
+.br-notification-icon {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+}
+
+/* Tipos de notificación */
+.br-notification-success {
+    border-left: 4px solid #10b981;
+}
+
+.br-notification-success .br-notification-icon {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+}
+
+.br-notification-error {
+    border-left: 4px solid #ef4444;
+}
+
+.br-notification-error .br-notification-icon {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+.br-notification-warning {
+    border-left: 4px solid #f59e0b;
+}
+
+.br-notification-warning .br-notification-icon {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+}
+
+.br-notification-info {
+    border-left: 4px solid #3b82f6;
+}
+
+.br-notification-info .br-notification-icon {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+}
+
+/* Contenido de notificación */
+.br-notification-content {
+    flex: 1;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #1f2937;
+    word-break: break-word;
+}
+
+/* Botón de cierre */
+.br-notification-close {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(0, 0, 0, 0.05);
+    color: #6b7280;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    transition: all 0.2s ease;
+}
+
+.br-notification-close:hover {
+    background: rgba(0, 0, 0, 0.1);
+    color: #1f2937;
+}
+
+/* ========== MODALES ========== */
+
+/* Overlay del modal */
+.br-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    z-index: 10001;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    padding: 20px;
+}
+
+.br-modal-overlay.br-show {
+    opacity: 1;
+}
+
+/* Modal */
+.br-modal {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    max-width: 500px;
+    width: 100%;
+    padding: 24px;
+    transform: scale(0.9) translateY(-20px);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.br-modal.br-show {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+}
+
+/* Icono del modal */
+.br-modal-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+}
+
+.br-modal-success .br-modal-icon {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+}
+
+.br-modal-error .br-modal-icon {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+.br-modal-warning .br-modal-icon {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+}
+
+.br-modal-info .br-modal-icon {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+}
+
+.br-modal-confirm .br-modal-icon {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+}
+
+/* Header del modal */
+.br-modal-header {
+    text-align: center;
+    margin-bottom: 16px;
+}
+
+.br-modal-header h3 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.br-modal-header i {
+    font-size: 24px;
+}
+
+/* Body del modal */
+.br-modal-body {
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.br-modal-body p {
+    font-size: 15px;
+    line-height: 1.6;
+    color: #6b7280;
+    margin: 0;
+}
+
+/* Footer del modal */
+.br-modal-footer {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+/* Botones */
+.br-btn {
+    padding: 10px 24px;
+    border-radius: 8px;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.br-btn:active {
+    transform: scale(0.98);
+}
+
+.br-btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    box-shadow: 0 4px 6px -1px rgba(102, 126, 234, 0.3);
+}
+
+.br-btn-primary:hover {
+    box-shadow: 0 6px 12px -1px rgba(102, 126, 234, 0.4);
+    transform: translateY(-1px);
+}
+
+.br-btn-confirm {
+    background: #10b981;
+    color: white;
+    box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.3);
+}
+
+.br-btn-confirm:hover {
+    background: #059669;
+    box-shadow: 0 6px 12px -1px rgba(16, 185, 129, 0.4);
+    transform: translateY(-1px);
+}
+
+.br-btn-cancel {
+    background: #f3f4f6;
+    color: #6b7280;
+}
+
+.br-btn-cancel:hover {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+    .br-notification-container {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        max-width: none;
+    }
+
+    .br-notification {
+        min-width: 0;
+    }
+
+    .br-modal {
+        max-width: 100%;
+        margin: 20px;
+    }
+}
+
+/* Animaciones adicionales */
+@keyframes br-bounce {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+.br-modal-success .br-modal-icon {
+    animation: br-bounce 0.6s ease;
+}

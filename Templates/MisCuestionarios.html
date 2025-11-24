@@ -799,51 +799,63 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Funciones para publicar/despublicar cuestionarios
-function publicarCuestionario(cuestionarioId) {
-    if (confirm('¿Estás seguro de que quieres publicar este cuestionario? Una vez publicado, los estudiantes podrán acceder a él.')) {
-        fetch(`/api/cuestionarios/${cuestionarioId}/publicar`, {
+async function publicarCuestionario(cuestionarioId) {
+    const confirmed = await confirmAction(
+        '¿Estás seguro de que quieres publicar este cuestionario? Una vez publicado, los estudiantes podrán acceder a él.',
+        'Confirmar publicación'
+    );
+    
+    if (!confirmed) return;
+    
+    try {
+        const response = await fetch(`/api/cuestionarios/${cuestionarioId}/publicar`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert('✅ Cuestionario publicado correctamente');
-                location.reload();
-            } else {
-                alert('❌ Error: ' + data.error);
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('❌ Error al publicar el cuestionario');
         });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            await showSuccess('¡Publicado!', 'El cuestionario está ahora disponible para los estudiantes');
+            location.reload();
+        } else {
+            showError('Error', data.error || 'No se pudo publicar el cuestionario');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showError('Error de conexión', 'No se pudo publicar el cuestionario. Intenta nuevamente.');
     }
 }
 
-function despublicarCuestionario(cuestionarioId) {
-    if (confirm('¿Despublicar este cuestionario? Los estudiantes ya no podrán acceder a él.')) {
-        fetch(`/api/cuestionarios/${cuestionarioId}/despublicar`, {
+async function despublicarCuestionario(cuestionarioId) {
+    const confirmed = await confirmAction(
+        '¿Despublicar este cuestionario? Los estudiantes ya no podrán acceder a él.',
+        'Confirmar despublicación'
+    );
+    
+    if (!confirmed) return;
+    
+    try {
+        const response = await fetch(`/api/cuestionarios/${cuestionarioId}/despublicar`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert('✅ Cuestionario despublicado correctamente');
-                location.reload();
-            } else {
-                alert('❌ Error: ' + data.error);
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('❌ Error al despublicar el cuestionario');
         });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            await showSuccess('Despublicado', 'El cuestionario ya no está disponible para los estudiantes');
+            location.reload();
+        } else {
+            showError('Error', data.error || 'No se pudo despublicar el cuestionario');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showError('Error de conexión', 'No se pudo despublicar el cuestionario. Intenta nuevamente.');
     }
 }
 
@@ -863,7 +875,7 @@ async function verHistorialSalas(cuestionarioId, tituloQuestionario) {
 
     if (!modal) {
         console.error('❌ Modal no encontrado!');
-        alert('Error: No se encontró el modal');
+        showError('Error', 'No se encontró el modal del historial');
         return;
     }
 
@@ -1054,7 +1066,7 @@ async function exportarSala(salaId, formato, cuestionarioTitulo) {
         const rankingData = await rankingResponse.json();
 
         if (!rankingData.success) {
-            alert('❌ Error al obtener datos del ranking');
+            showError('Error', 'No se pudieron obtener los datos del ranking');
             return;
         }
 
@@ -1077,7 +1089,7 @@ async function exportarSala(salaId, formato, cuestionarioTitulo) {
 
     } catch (error) {
         console.error('❌ Error en exportación:', error);
-        alert('❌ Error al exportar: ' + error.message);
+        showError('Error de exportación', error.message || 'No se pudo exportar los resultados');
     }
 }
 
@@ -1103,7 +1115,7 @@ function exportarCSV(ranking, totalPreguntas, titulo) {
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
 
-    alert('📄 CSV descargado correctamente');
+    showSuccess('CSV descargado', 'El archivo CSV se descargó correctamente');
 }
 
 async function exportarExcel(salaId, ranking, totalPreguntas, titulo) {
@@ -1130,10 +1142,10 @@ async function exportarExcel(salaId, ranking, totalPreguntas, titulo) {
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
 
-        alert('📊 Excel descargado correctamente');
+        showSuccess('Excel descargado', 'El archivo Excel se descargó correctamente');
     } else {
         const error = await response.json();
-        alert('❌ Error: ' + error.error);
+        showError('Error', error.error || 'No se pudo descargar el archivo Excel');
     }
 }
 
@@ -1156,40 +1168,39 @@ async function exportarOneDrive(salaId, ranking, totalPreguntas, titulo) {
         if (data.success) {
             if (data.already_exported) {
                 // Archivo ya existe en OneDrive
-                let mensaje = `📂 ${data.message}\n\nArchivo: ${data.file_name}`;
+                let mensaje = `Archivo: ${data.file_name}`;
                 if (data.email_sent) {
-                    mensaje += '\n\n📧 Se ha enviado el link a tu correo.';
+                    mensaje += '\n\nSe ha enviado el link a tu correo.';
                 }
-                alert(mensaje);
-                if (data.web_url && confirm('¿Deseas abrir el archivo en OneDrive?')) {
-                    window.open(data.web_url, '_blank');
+                await showSuccess('Archivo ya exportado', mensaje);
+                if (data.web_url) {
+                    const openFile = await confirmAction('¿Deseas abrir el archivo en OneDrive?', 'Abrir archivo');
+                    if (openFile) window.open(data.web_url, '_blank');
                 }
             } else if (data.fallback) {
                 // OneDrive falló, se envió por email
-                alert(`⚠️ ${data.message}\n\nArchivo: ${data.file_name}\n\n💡 Revisa tu correo.`);
+                showWarning('Enviado por correo', `${data.message}\n\nArchivo: ${data.file_name}\n\nRevisa tu correo.`);
             } else if (data.email_sent) {
                 // Solo email (sin intentar OneDrive)
-                alert(`✅ ${data.message}\n\nArchivo: ${data.file_name}`);
+                showSuccess('Enviado por correo', `Archivo: ${data.file_name}`);
             } else if (data.web_url) {
                 // Subido exitosamente a OneDrive por primera vez
-                alert(`✅ ${data.message}\n\nCarpeta: ${data.folder}`);
-                if (confirm('¿Deseas abrir el archivo en OneDrive?')) {
-                    window.open(data.web_url, '_blank');
-                }
+                await showSuccess('Exportado a OneDrive', `Carpeta: ${data.folder}`);
+                const openFile = await confirmAction('¿Deseas abrir el archivo en OneDrive?', 'Abrir archivo');
+                if (openFile) window.open(data.web_url, '_blank');
             } else {
-                alert(`✅ ${data.message}\n\nArchivo: ${data.file_name}`);
+                showSuccess('Exportado', `Archivo: ${data.file_name}`);
             }
         } else if (data.require_auth) {
             // Necesita autorizar OneDrive
-            if (confirm(`${data.message}\n\n¿Deseas autorizar OneDrive ahora?`)) {
-                window.location.href = data.auth_url;
-            }
+            const authorize = await confirmAction(`${data.message}\n\n¿Deseas autorizar OneDrive ahora?`, 'Autorización requerida');
+            if (authorize) window.location.href = data.auth_url;
         } else {
-            alert('❌ ' + (data.error || 'Error al procesar la solicitud'));
+            showError('Error', data.error || 'Error al procesar la solicitud');
         }
     } catch (error) {
         console.error('Error:', error);
-        alert('❌ Error al procesar la solicitud');
+        showError('Error de conexión', 'No se pudo procesar la solicitud de exportación');
     }
 }
 </script>

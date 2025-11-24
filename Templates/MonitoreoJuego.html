@@ -479,41 +479,60 @@ document.addEventListener('DOMContentLoaded', function() {
     actualizarParticipantes(); // Cargar participantes inmediatamente
 });
 
-function iniciarJuego() {
+async function iniciarJuego() {
     const participantesCount = parseInt(document.getElementById('participantes-count').textContent);
 
     if (participantesCount === 0) {
-        alert('No hay participantes para iniciar el juego');
+        showError('No hay participantes para iniciar el juego');
         return;
     }
 
-    if (confirm(`¿Iniciar juego con ${participantesCount} participante(s)?`)) {
-        fetch(`/sala/${SALA_ID}/iniciar`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
+    const confirmado = await confirmAction(
+        `¿Iniciar juego con ${participantesCount} participante(s)?`,
+        'Confirmar inicio',
+        'Sí, iniciar',
+        'Cancelar'
+    );
+
+    if (confirmado) {
+        try {
+            const response = await fetch(`/sala/${SALA_ID}/iniciar`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            const data = await response.json();
+            
             if (data.success) {
-                alert('¡Juego iniciado!');
+                showSuccess('¡Juego iniciado!');
                 // Redirigir a la página de juego
-                window.location.href = `/sala/${SALA_ID}/juego`;
+                setTimeout(() => {
+                    window.location.href = `/sala/${SALA_ID}/juego`;
+                }, 1000);
             } else {
-                alert('Error: ' + data.error);
+                showError('Error: ' + data.error);
             }
-        })
-        .catch(error => {
+        } catch (error) {
             console.error('Error al iniciar juego:', error);
-            alert('Error al iniciar juego. Ver consola para más detalles.');
-        });
+            showError('Error al iniciar juego. Intenta nuevamente.');
+        }
     }
 }
 
-function finalizarJuego() {
-    if (confirm('¿Está seguro de que desea finalizar la sala?')) {
-        window.location.href = "{{ url_for('mis_cuestionarios') }}";
+async function finalizarJuego() {
+    const confirmado = await confirmAction(
+        '¿Está seguro de que desea finalizar la sala?',
+        'Confirmar finalización',
+        'Sí, finalizar',
+        'Cancelar'
+    );
+
+    if (confirmado) {
+        showSuccess('Sala finalizada correctamente');
+        setTimeout(() => {
+            window.location.href = "{{ url_for('mis_cuestionarios') }}";
+        }, 1000);
     }
 }
 

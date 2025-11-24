@@ -934,7 +934,7 @@
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
 
-      alert('📄 Archivo CSV descargado correctamente');
+      showSuccess('Archivo CSV descargado correctamente');
       document.getElementById('export-menu').style.display = 'none';
     }
 
@@ -963,13 +963,13 @@
           document.body.removeChild(a);
           window.URL.revokeObjectURL(url);
 
-          alert('📊 Archivo Excel descargado correctamente');
+          showSuccess('Archivo Excel descargado correctamente');
         } else {
-          alert('❌ Error al generar archivo Excel');
+          showError('Error al generar archivo Excel');
         }
       } catch (error) {
         console.error('Error:', error);
-        alert('❌ Error al exportar a Excel');
+        showError('Error al exportar a Excel');
       }
       document.getElementById('export-menu').style.display = 'none';
     }
@@ -993,30 +993,42 @@
         if (data.success) {
           if (data.fallback) {
             // OneDrive falló, se envió por email
-            alert(`⚠️ ${data.message}\n\nArchivo: ${data.file_name}\n\n💡 Revisa tu correo.`);
+            showWarning(`${data.message}\n\nArchivo: ${data.file_name}\n\nRevisa tu correo.`);
           } else if (data.email_sent) {
             // Solo email (sin intentar OneDrive)
-            alert(`✅ ${data.message}\n\nArchivo: ${data.file_name}`);
+            showSuccess(`${data.message}\n\nArchivo: ${data.file_name}`);
           } else if (data.web_url) {
             // Subido exitosamente a OneDrive
-            alert(`✅ ${data.message}\n\nCarpeta: ${data.folder}`);
-            if (confirm('¿Deseas abrir el archivo en OneDrive?')) {
+            showSuccess(`${data.message}\n\nCarpeta: ${data.folder}`);
+            const abrirOneDrive = await confirmAction(
+              '¿Deseas abrir el archivo en OneDrive?',
+              'Abrir en OneDrive',
+              'Sí, abrir',
+              'No'
+            );
+            if (abrirOneDrive) {
               window.open(data.web_url, '_blank');
             }
           } else {
-            alert(`✅ ${data.message}\n\nArchivo: ${data.file_name}`);
+            showSuccess(`${data.message}\n\nArchivo: ${data.file_name}`);
           }
         } else if (data.require_auth) {
           // Necesita autorizar OneDrive
-          if (confirm(`${data.message}\n\n¿Deseas autorizar OneDrive ahora?`)) {
+          const autorizar = await confirmAction(
+            `${data.message}\n\n¿Deseas autorizar OneDrive ahora?`,
+            'Autorizar OneDrive',
+            'Sí, autorizar',
+            'Cancelar'
+          );
+          if (autorizar) {
             window.location.href = data.auth_url;
           }
         } else {
-          alert('❌ ' + (data.error || 'Error al procesar la solicitud'));
+          showError(data.error || 'Error al procesar la solicitud');
         }
       } catch (error) {
         console.error('Error:', error);
-        alert('❌ Error al procesar la solicitud');
+        showError('Error al procesar la solicitud');
       }
       document.getElementById('export-menu').style.display = 'none';
     }

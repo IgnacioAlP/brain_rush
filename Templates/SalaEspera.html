@@ -426,7 +426,7 @@
           🚀 Iniciar Juego
         </button>
         <button id="close-room-btn" class="btn-control btn-cerrar">
-          ❌ Cerrar Sala
+          ⬅️ Salir
         </button>
       {% else %}
         <div class="waiting-message">
@@ -535,9 +535,11 @@
           // Si el estado cambió a 'en_juego', redirigir automáticamente
           if (data.sala && data.sala.estado === 'en_juego') {
             console.log('🎮 ¡EL JUEGO HA INICIADO! Redirigiendo al juego...');
-            alert('¡El juego ha comenzado! Redirigiendo...');
+            showSuccess('¡El juego ha comenzado! Redirigiendo...');
             detenerActualizaciones();
-            window.location.href = `/sala/${SALA_ID}/juego`;
+            setTimeout(() => {
+              window.location.href = `/sala/${SALA_ID}/juego`;
+            }, 1000);
             return;
           }
 
@@ -613,8 +615,10 @@
           if (estado === 'finalizada') {
             console.log('❌ La sala ha sido cerrada');
             detenerActualizaciones();
-            alert('La sala ha sido cerrada por el docente');
-            window.location.href = '/dashboard-docente';
+            showWarning('La sala ha sido cerrada por el docente');
+            setTimeout(() => {
+              window.location.href = '/dashboard-docente';
+            }, 1500);
           }
         }
       } catch (error) {
@@ -654,11 +658,18 @@
         const participantesCount = ultimosParticipantes.length;
 
         if (participantesCount === 0) {
-          alert('⚠️ Necesitas al menos un participante para iniciar el juego');
+          showError('Necesitas al menos un participante para iniciar el juego');
           return;
         }
 
-        if (confirm(`🎮 ¿Iniciar juego con ${participantesCount} participante(s)?`)) {
+        const confirmado = await confirmAction(
+          `¿Iniciar juego con ${participantesCount} participante(s)?`,
+          'Confirmar inicio de juego',
+          'Sí, iniciar',
+          'Cancelar'
+        );
+
+        if (confirmado) {
           try {
             detenerActualizaciones();
 
@@ -675,12 +686,12 @@
             if (data.success) {
               window.location.href = `/sala/${SALA_ID}/monitorear`;
             } else {
-              alert('Error al iniciar el juego: ' + data.error);
+              showError('Error al iniciar el juego: ' + data.error);
               iniciarActualizaciones();
             }
           } catch (error) {
-            console.error('Error al iniciar juego:', error);
-            alert('Error al iniciar el juego. Intenta nuevamente.');
+            console.error('Error:', error);
+            showError('Error al iniciar el juego. Intenta nuevamente.');
             iniciarActualizaciones();
           }
         }
@@ -691,27 +702,33 @@
     const closeRoomBtn = document.getElementById('close-room-btn');
     if (closeRoomBtn && ES_DOCENTE) {
       closeRoomBtn.addEventListener('click', async function() {
-        if (confirm('❌ ¿Estás seguro de que quieres cerrar la sala? Todos los participantes serán desconectados.')) {
+        const confirmado = await confirmAction(
+          'Los participantes seguirán en la sala de espera.\n¿Estás seguro de que deseas salir?',
+          '¿Salir de la sala?',
+          'Salir',
+          'Cancelar'
+        );
+
+        if (confirmado) {
           try {
             detenerActualizaciones();
 
-            const response = await fetch(`/sala/${SALA_ID}/cerrar`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              }
-            });
-
-            const data = await response.json();
-
-            if (data.success) {
-              window.location.href = '/mis-cuestionarios';
+            // Obtener el cuestionario_id de la URL o del data attribute
+            const cuestionarioId = {{ sala.id_cuestionario or 'null' }};
+            
+            // Redirigir de vuelta a crear-sala-cuestionario si existe el id
+            if (cuestionarioId) {
+              showSuccess('Saliendo de la sala...');
+              setTimeout(() => {
+                window.location.href = `/crear-sala-cuestionario/${cuestionarioId}`;
+              }, 500);
             } else {
-              alert('Error al cerrar la sala: ' + data.error);
+              // Fallback a mis-cuestionarios
+              window.location.href = '/mis-cuestionarios';
             }
           } catch (error) {
-            console.error('Error al cerrar sala:', error);
-            alert('Error al cerrar la sala. Intenta nuevamente.');
+            console.error('Error:', error);
+            showError('Error al salir de la sala. Intenta nuevamente.');
           }
         }
       });

@@ -974,7 +974,14 @@ async function actualizarRanking() {
 }
 
 async function siguientePregunta() {
-    if (!confirm('¿Avanzar a la siguiente pregunta?')) return;
+    const confirmado = await confirmAction(
+        '¿Avanzar a la siguiente pregunta?',
+        'Confirmar avance',
+        'Sí, siguiente',
+        'Cancelar'
+    );
+
+    if (!confirmado) return;
 
     const btn = document.getElementById('btn-siguiente');
     btn.disabled = true;
@@ -1000,44 +1007,56 @@ async function siguientePregunta() {
                 }, 1000);
             } else {
                 // Juego terminado
-                alert('¡Juego completado! Mostrando resultados finales...');
-                window.location.href = `/sala/${SALA_ID}/resultados`;
+                showSuccess('¡Juego completado! Mostrando resultados finales...');
+                setTimeout(() => {
+                    window.location.href = `/sala/${SALA_ID}/resultados`;
+                }, 1500);
             }
         } else {
-            alert('Error: ' + data.error);
+            showError('Error: ' + data.error);
             btn.disabled = false;
             btn.textContent = '➡️ Siguiente Pregunta';
         }
     } catch (error) {
         console.error('Error al avanzar pregunta:', error);
-        alert('Error al avanzar pregunta');
+        showError('Error al avanzar pregunta');
         btn.disabled = false;
         btn.textContent = '➡️ Siguiente Pregunta';
     }
 }
 
-function finalizarJuego() {
-    if (confirm('¿Está seguro de finalizar el juego?')) {
-        // Enviar POST para finalizar el juego
-        fetch(`/sala/${SALA_ID}/finalizar`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
+async function finalizarJuego() {
+    const confirmado = await confirmAction(
+        '¿Está seguro de finalizar el juego?',
+        'Confirmar finalización',
+        'Sí, finalizar',
+        'Cancelar'
+    );
+
+    if (confirmado) {
+        try {
+            // Enviar POST para finalizar el juego
+            const response = await fetch(`/sala/${SALA_ID}/finalizar`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            const data = await response.json();
+
             if (data.success) {
                 // Redirigir a resultados
-                window.location.href = `/sala/${SALA_ID}/resultados`;
+                showSuccess('Juego finalizado correctamente');
+                setTimeout(() => {
+                    window.location.href = `/sala/${SALA_ID}/resultados`;
+                }, 1000);
             } else {
-                alert('Error al finalizar el juego: ' + data.error);
+                showError('Error al finalizar el juego: ' + data.error);
             }
-        })
-        .catch(error => {
+        } catch (error) {
             console.error('Error:', error);
-            alert('Error al finalizar el juego');
-        });
+            showError('Error al finalizar el juego');
+        }
     }
 }
 

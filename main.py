@@ -376,18 +376,8 @@ def index():
         else:
             return redirect(url_for('dashboard_admin'))
     else:
-        # Usuario no logueado, mostrar página de inicio con nuevo diseño
-        return render_template('BrainRush_Master.html')
-
-@app.route('/demo')
-def demo():
-    """Ruta de demostración del nuevo diseño"""
-    return render_template('BrainRush_Master.html')
-
-@app.route('/maestra')
-def maestra():
-    """Página principal original (mantener por compatibilidad)"""
-    return render_template('Maestra.html')
+        # Usuario no logueado, mostrar login
+        return redirect(url_for('login'))
 
 @app.route('/crear_sala')
 def crear_sala():
@@ -683,17 +673,51 @@ def unirse_a_sala():
 @app.before_request
 def fix_session():
     """Limpiar sesión en rutas API y corregir inconsistencias"""
-    # Limpiar sesión para rutas API (solo JWT permitido)
+    
+    # DEBUG: Mostrar TODAS las peticiones para detectar cuál borra la sesión
+    if session.get('logged_in'):
+        print(f"\n🌐 REQUEST: {request.method} {request.path}")
+        print(f"   📋 Session ANTES: usuario_tipo={session.get('usuario_tipo')}, usuario_id={session.get('usuario_id')}")
+    
+    # Lista de rutas API que permiten autenticación por sesión (además de JWT)
+    api_rutas_con_sesion = [
+        '/api/cuestionarios/',
+        '/api/cuestionario/',  # ✅ AGREGADO: Para /api/cuestionario/<id>/salas
+        '/api/sala/',
+        '/api/exportar-',
+        '/api/participante',  # Sin / al final para que coincida con /api/participantes/
+        '/api/perfil-xp/',
+        '/api/insignias',
+        '/api/tienda-insignias',
+        '/api/comprar-insignia',
+        '/api/recompensas',
+        '/api/otorgar_recompensas_automaticas'
+    ]
+    
+    # Solo limpiar sesión en rutas API que NO están en la lista blanca
     if request.path.startswith('/api/'):
-        session.clear()
-        response = make_response()
-        response.delete_cookie('session', path='/')
-        response.delete_cookie('user_id', path='/')
-        response.delete_cookie('user_name', path='/')
+        # Verificar si la ruta está en la lista de excepciones
+        permitir_sesion = any(ruta in request.path for ruta in api_rutas_con_sesion)
+        
+        if not permitir_sesion:
+            print(f"🧹 ¡LIMPIANDO SESIÓN! Ruta API no permitida: {request.path}")
+            print(f"   ❌ Session DESPUÉS de limpiar: usuario_tipo=None, todo borrado")
+            session.clear()
+            response = make_response()
+            response.delete_cookie('session', path='/')
+            response.delete_cookie('user_id', path='/')
+            response.delete_cookie('user_name', path='/')
+        else:
+            print(f"   ✅ Ruta API permitida, sesión preservada")
     
     # Corregir inconsistencia en sesión (tipo_usuario vs usuario_tipo)
     elif 'tipo_usuario' in session and 'usuario_tipo' not in session:
         session['usuario_tipo'] = session['tipo_usuario']
+        print(f"✅ FIX_SESSION: Corregido usuario_tipo desde tipo_usuario: {session['usuario_tipo']}")
+    
+    # DEBUG: Mostrar sesión final
+    if session.get('logged_in') or request.path.startswith(('/dashboard', '/admin', '/monitorear')):
+        print(f"   📋 Session DESPUÉS: usuario_tipo={session.get('usuario_tipo')}, usuario_id={session.get('usuario_id')}\n")
 
 @app.route('/api/auth', methods=['POST'])
 def jwt_login():
@@ -1070,9 +1094,20 @@ def dashboard_docente():
 @login_required
 def dashboard():
     """Ruta genérica de dashboard que redirije según el tipo de usuario"""
+    print(f"\n{'='*80}")
+    print(f"🏠 DASHBOARD - Redirigiendo según tipo de usuario")
+    print(f"   usuario_tipo: {session.get('usuario_tipo')}")
+    print(f"   tipo_usuario: {session.get('tipo_usuario')}")
+    print(f"{'='*80}\n")
+    
     if session.get('usuario_tipo') == 'estudiante':
+        print("   → Redirigiendo a dashboard_estudiante")
         return redirect(url_for('dashboard_estudiante'))
+    elif session.get('usuario_tipo') == 'docente':
+        print("   → Redirigiendo a dashboard_docente")
+        return redirect(url_for('dashboard_docente'))
     else:
+        print("   → Redirigiendo a dashboard_admin")
         return redirect(url_for('dashboard_admin'))
 
 # Rutas adicionales para estudiantes
