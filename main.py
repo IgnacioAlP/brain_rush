@@ -3,20 +3,17 @@ from werkzeug.exceptions import InternalServerError
 from config import config
 from bd import verificar_conexion, obtener_conexion, inicializar_usuarios_prueba
 import random
-# CSRF deshabilitado para usar JWT
-# from flask_wtf.csrf import CSRFProtect
 import os, json
 from io import BytesIO
 from datetime import datetime, timedelta
 import requests
-from utils_auth import crear_token_jwt
 # Importar utilidades de autenticación personalizadas
 from utils_auth import (
     login_required,
     jwt_or_session_required,
     docente_required,
     estudiante_required,
-    crear_token_jwt,       # <--- Importante que esto esté
+    crear_token_jwt,
     verificar_token_jwt,
     establecer_cookies_usuario,
     limpiar_cookies_usuario,
@@ -37,11 +34,6 @@ from controladores import controlador_xp
 
 # Importar APIs CRUD
 from api_crud import api_crud
-
-
-# Ya no necesitamos User class, authenticate e identity con JWT-Extended
-# La autenticación se maneja con endpoints personalizados
-
 
 # Importar msal solo si está disponible (necesario para OneDrive)
 try:
@@ -79,12 +71,6 @@ serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
 # Registrar blueprints de APIs
 app.register_blueprint(api_crud)
 
-# ============================================
-# CONFIGURACIÓN (CSRF DESHABILITADO)
-# ============================================
-# CSRF está completamente deshabilitado porque usaremos JWT y cookies seguras para autenticación
-app.config['WTF_CSRF_ENABLED'] = False
-
 # Configuración de sesiones seguras
 app.config['SESSION_COOKIE_SECURE'] = app.config.get('ENV') == 'production'  # Solo HTTPS en producción
 app.config['SESSION_COOKIE_HTTPONLY'] = True
@@ -99,18 +85,10 @@ def utility_processor():
     """Agrega funciones útiles al contexto de Jinja"""
     def now():
         return datetime.now()
-    def csrf_token():
-        # Función dummy para compatibilidad con templates
-        # CSRF está deshabilitado, JWT proporciona protección
-        return ''
-    return dict(now=now, csrf_token=csrf_token)
+    return dict(now=now)
 
 
 # ==================== FUNCIONES HELPER ====================
-
-from functools import wraps
-
-# jwt_or_session_required ahora se importa desde utils_auth
 
 def es_sala_automatica(pin_sala):
     """
@@ -702,39 +680,24 @@ def unirse_a_sala():
         flash('Error al procesar la solicitud', 'error')
         return render_template('UnirseASala.html')
 
-# Middleware para corregir sesión corrupta (tipo_usuario vs usuario_tipo)
 @app.before_request
 def fix_session():
-    """
-    ⚠️ CRÍTICO: Bloquea sesiones en rutas API - SOLO JWT permitido
-    Elimina TODOS los cookies de sesión para /api/*
-    """
-    # NUCLEAR: Limpiar sesión ANTES de cualquier cosa si es ruta API
+    """Limpiar sesión en rutas API y corregir inconsistencias"""
+    # Limpiar sesión para rutas API (solo JWT permitido)
     if request.path.startswith('/api/'):
-        # Vaciar sesión completamente
         session.clear()
-        # Eliminar cookies de sesión (triple seguridad)
         response = make_response()
         response.delete_cookie('session', path='/')
         response.delete_cookie('user_id', path='/')
         response.delete_cookie('user_name', path='/')
-        print(f"🔐 NUCLEAR: Sesión borrada + cookies eliminadas para {request.path}")
-        # NO retornar aquí - dejar que continúe el flujo normal
     
-    # Para rutas normales (no API), corregir la sesión
-    if not request.path.startswith('/api/'):
-        if 'tipo_usuario' in session and 'usuario_tipo' not in session:
-            session['usuario_tipo'] = session['tipo_usuario']
-            print(f"🔧 Sesión corregida: tipo_usuario -> usuario_tipo = {session['usuario_tipo']}")
+    # Corregir inconsistencia en sesión (tipo_usuario vs usuario_tipo)
+    elif 'tipo_usuario' in session and 'usuario_tipo' not in session:
+        session['usuario_tipo'] = session['tipo_usuario']
 
-# ============================================
-# ENDPOINT DE AUTENTICACIÓN JWT
-# ============================================
 @app.route('/api/auth', methods=['POST'])
 def jwt_login():
-    """
-    Login que devuelve el token crudo para uso manual.
-    """
+    """Login que devuelve token JWT para acceso API"""
     try:
         data = request.get_json()
         if not data:
@@ -748,15 +711,12 @@ def jwt_login():
             return jsonify({'success': False, 'error': resultado}), 401
 
         usuario = resultado
-
-        # GENERAR TOKEN EXPLÍCITAMENTE
-        # Nota: Convertimos el ID a string por compatibilidad standard
         token = crear_token_jwt(str(usuario['id_usuario']))
 
         return jsonify({
             'success': True,
             'message': 'Autenticación exitosa',
-            'access_token': token,  # <--- AQUÍ ESTÁ TU TOKEN
+            'access_token': token,
             'usuario': {
                 'id_usuario': usuario['id_usuario'],
                 'email': usuario['email'],
@@ -844,9 +804,6 @@ def logout():
     # Limpiar cookies encriptadas
     limpiar_cookies_usuario(response)
     return response
-
-# Los decoradores login_required, admin_required, docente_required y estudiante_required
-# ahora se importan desde utils_auth
 
 def admin_required(f):
     """Decorador para requerir permisos de administrador (alias de docente_required)"""
