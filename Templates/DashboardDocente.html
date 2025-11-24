@@ -1026,51 +1026,120 @@ function exportarResultados(cuestionarioId) {
 }
 
 async function exportarExcel() {
-    // Esta función exporta los resultados desde la vista de resultados de cada juego
-    const info = await showInfo(
-        'Para exportar resultados a Excel:\n\n' +
-        '1. Ve a "Mis Cuestionarios"\n' +
-        '2. Click en "Ver Salas" del cuestionario\n' +
-        '3. Click en "Ver Resultados" de la sala\n' +
-        '4. Usa el botón "📊 Exportar a Excel"\n\n' +
-        'Los resultados se exportan por sala individual.',
-        'Exportar Resultados'
-    );
+    try {
+        // Mostrar loading
+        showInfo('Generando archivo Excel...', 'Exportando');
+        
+        // Llamar a la API de exportación
+        const response = await fetch('/api/exportar-dashboard-docente/excel', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('Error al generar el archivo');
+        }
+        
+        // Descargar el archivo
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = `ranking_global_${new Date().toISOString().split('T')[0]}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        
+        showSuccess('✅ Archivo Excel descargado exitosamente');
+    } catch (error) {
+        console.error('Error:', error);
+        showError('❌ Error al exportar a Excel: ' + error.message);
+    }
 }
 
-function exportarGoogleDrive() {
-    // Implementar integración con Google Drive
-    showWarning('Funcionalidad de Google Drive en desarrollo. Próximamente disponible.');
-
-    // Aquí se implementaría la integración con Google Drive API
-    /*
-    fetch('/exportar/google-drive', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
+async function exportarOneDrive() {
+    try {
+        // Confirmar acción
+        const confirmado = await confirmAction(
+            '¿Deseas guardar el ranking global en OneDrive?\n\nSe enviará un email con el enlace de acceso.',
+            'Guardar en OneDrive',
+            'Sí, guardar',
+            'Cancelar'
+        );
+        
+        if (!confirmado) return;
+        
+        // Mostrar loading
+        showInfo('Subiendo archivo a OneDrive...', 'Guardando');
+        
+        // Llamar a la API
+        const response = await fetch('/api/exportar-dashboard-docente/onedrive', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const data = await response.json();
+        
         if (data.success) {
-            showSuccess('Resultados guardados en Google Drive exitosamente');
+            showSuccess('✅ Ranking guardado en OneDrive exitosamente.\n\nRecibirás un email con el enlace de acceso.');
+            
+            // Si hay web_url, mostrar opción para abrir
+            if (data.web_url) {
+                setTimeout(() => {
+                    const abrir = confirm('¿Deseas abrir el archivo en OneDrive ahora?');
+                    if (abrir) {
+                        window.open(data.web_url, '_blank');
+                    }
+                }, 1500);
+            }
         } else {
-            showError('Error al guardar en Google Drive');
+            showError('❌ ' + (data.error || 'Error al guardar en OneDrive'));
         }
-    });
-    */
+    } catch (error) {
+        console.error('Error:', error);
+        showError('❌ Error al guardar en OneDrive: ' + error.message);
+    }
 }
 
 async function exportarPDF() {
-    // Generar reporte PDF
-    const info = await showInfo(
-        'La exportación a PDF estará disponible próximamente.\n\n' +
-        'Por ahora puedes:\n' +
-        '• Exportar resultados a Excel desde cada sala\n' +
-        '• Ver estadísticas en el ranking global\n' +
-        '• Revisar el historial de juegos',
-        'Exportar PDF'
-    );
+    try {
+        // Mostrar loading
+        showInfo('Generando reporte PDF...', 'Exportando');
+        
+        // Llamar a la API
+        const response = await fetch('/api/exportar-dashboard-docente/pdf', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.error || 'Error al generar el PDF');
+        }
+        
+        // Descargar el archivo
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = `reporte_brainrush_${new Date().toISOString().split('T')[0]}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        
+        showSuccess('✅ Reporte PDF generado exitosamente');
+    } catch (error) {
+        console.error('Error:', error);
+        showError('❌ Error al generar PDF: ' + error.message);
+    }
 }
 
 // Funciones para publicar/despublicar cuestionarios

@@ -1080,6 +1080,452 @@ def dashboard_docente():
                          cuestionarios=cuestionarios,
                          ranking_global=ranking_global)
 
+# ==================== RUTAS DE EXPORTACIÓN PARA DASHBOARD DOCENTE ====================
+
+@app.route('/api/exportar-dashboard-docente/excel', methods=['POST'])
+@login_required
+@docente_required
+def exportar_dashboard_docente_excel():
+    """Exportar ranking global del docente a Excel"""
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        
+        id_docente = session['usuario_id']
+        
+        # Obtener ranking global del docente
+        ranking_global = controlador_ranking.obtener_ranking_global_por_docente(id_docente)
+        
+        # Obtener información del docente
+        conexion = obtener_conexion()
+        cursor = conexion.cursor()
+        cursor.execute("""
+            SELECT nombre, apellidos FROM usuarios WHERE id_usuario = %s
+        """, (id_docente,))
+        docente = cursor.fetchone()
+        nombre_docente = f"{docente[0]} {docente[1]}" if docente else "Docente"
+        cursor.close()
+        conexion.close()
+        
+        # Crear workbook
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Ranking Global"
+        
+        # Estilos
+        header_fill = PatternFill(start_color="667eea", end_color="667eea", fill_type="solid")
+        header_font = Font(bold=True, color="FFFFFF", size=12)
+        title_font = Font(bold=True, size=16, color="667eea")
+        border = Border(
+            left=Side(style='thin'),
+            right=Side(style='thin'),
+            top=Side(style='thin'),
+            bottom=Side(style='thin')
+        )
+        
+        # Título
+        ws.merge_cells('A1:F1')
+        title_cell = ws['A1']
+        title_cell.value = f"📊 Ranking Global de Estudiantes - {nombre_docente}"
+        title_cell.font = title_font
+        title_cell.alignment = Alignment(horizontal='center', vertical='center')
+        ws.row_dimensions[1].height = 30
+        
+        # Fecha
+        ws.merge_cells('A2:F2')
+        fecha_cell = ws['A2']
+        fecha_cell.value = f"Fecha: {datetime.now().strftime('%d/%m/%Y %H:%M')}"
+        fecha_cell.alignment = Alignment(horizontal='center')
+        ws.row_dimensions[2].height = 20
+        
+        # Encabezados
+        headers = ['Posición', 'Nombre Completo', 'Puntaje Total', 'Participaciones', 'Promedio', 'Precisión']
+        for col, header in enumerate(headers, start=1):
+            cell = ws.cell(row=4, column=col)
+            cell.value = header
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal='center', vertical='center')
+            cell.border = border
+        
+        ws.row_dimensions[4].height = 25
+        
+        # Datos
+        for idx, estudiante in enumerate(ranking_global, start=5):
+            row_data = [
+                estudiante['posicion'],
+                estudiante['nombre_completo'],
+                estudiante['puntaje_acumulado'],
+                estudiante['total_participaciones'],
+                f"{estudiante['promedio_puntaje']:.1f}",
+                f"{estudiante['precision_promedio']:.1f}%"
+            ]
+            
+            for col, value in enumerate(row_data, start=1):
+                cell = ws.cell(row=idx, column=col)
+                cell.value = value
+                cell.border = border
+                cell.alignment = Alignment(horizontal='center', vertical='center')
+                
+                # Colorear top 3
+                if estudiante['posicion'] <= 3:
+                    colors = {1: "FFD700", 2: "C0C0C0", 3: "CD7F32"}
+                    cell.fill = PatternFill(start_color=colors[estudiante['posicion']],
+                                          end_color=colors[estudiante['posicion']],
+                                          fill_type="solid")
+        
+        # Ajustar anchos de columna
+        column_widths = [12, 30, 18, 18, 15, 15]
+        for col, width in enumerate(column_widths, start=1):
+            ws.column_dimensions[chr(64 + col)].width = width
+        
+        # Guardar en memoria
+        excel_file = BytesIO()
+        wb.save(excel_file)
+        excel_file.seek(0)
+        
+        return send_file(
+            excel_file,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=f'ranking_global_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
+        )
+    
+    except Exception as e:
+        print(f"ERROR exportar_dashboard_docente_excel: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/exportar-dashboard-docente/onedrive', methods=['POST'])
+@login_required
+@docente_required
+def exportar_dashboard_docente_onedrive():
+    """Exportar ranking global del docente a OneDrive"""
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        
+        # Verificar que msal está disponible
+        if not MSAL_AVAILABLE:
+            return jsonify({
+                'success': False,
+                'error': 'La integración con OneDrive no está disponible. Instala msal: pip install msal'
+            }), 500
+        
+        id_docente = session['usuario_id']
+        
+        # Obtener ranking global del docente
+        ranking_global = controlador_ranking.obtener_ranking_global_por_docente(id_docente)
+        
+        # Obtener información del docente
+        conexion = obtener_conexion()
+        cursor = conexion.cursor()
+        cursor.execute("""
+            SELECT nombre, apellidos, email FROM usuarios WHERE id_usuario = %s
+        """, (id_docente,))
+        docente = cursor.fetchone()
+        nombre_docente = f"{docente[0]} {docente[1]}" if docente else "Docente"
+        email_docente = docente[2] if docente else None
+        cursor.close()
+        conexion.close()
+        
+        # Crear archivo Excel
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Ranking Global"
+        
+        # Estilos
+        header_fill = PatternFill(start_color="667eea", end_color="667eea", fill_type="solid")
+        header_font = Font(bold=True, color="FFFFFF", size=12)
+        title_font = Font(bold=True, size=16, color="667eea")
+        border = Border(
+            left=Side(style='thin'),
+            right=Side(style='thin'),
+            top=Side(style='thin'),
+            bottom=Side(style='thin')
+        )
+        
+        # Título
+        ws.merge_cells('A1:F1')
+        title_cell = ws['A1']
+        title_cell.value = f"📊 Ranking Global de Estudiantes - {nombre_docente}"
+        title_cell.font = title_font
+        title_cell.alignment = Alignment(horizontal='center', vertical='center')
+        ws.row_dimensions[1].height = 30
+        
+        # Fecha
+        ws.merge_cells('A2:F2')
+        fecha_cell = ws['A2']
+        fecha_cell.value = f"Fecha: {datetime.now().strftime('%d/%m/%Y %H:%M')}"
+        fecha_cell.alignment = Alignment(horizontal='center')
+        ws.row_dimensions[2].height = 20
+        
+        # Encabezados y datos (igual que la versión Excel)
+        headers = ['Posición', 'Nombre Completo', 'Puntaje Total', 'Participaciones', 'Promedio', 'Precisión']
+        for col, header in enumerate(headers, start=1):
+            cell = ws.cell(row=4, column=col)
+            cell.value = header
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal='center', vertical='center')
+            cell.border = border
+        
+        for idx, estudiante in enumerate(ranking_global, start=5):
+            row_data = [
+                estudiante['posicion'],
+                estudiante['nombre_completo'],
+                estudiante['puntaje_acumulado'],
+                estudiante['total_participaciones'],
+                f"{estudiante['promedio_puntaje']:.1f}",
+                f"{estudiante['precision_promedio']:.1f}%"
+            ]
+            
+            for col, value in enumerate(row_data, start=1):
+                cell = ws.cell(row=idx, column=col)
+                cell.value = value
+                cell.border = border
+                cell.alignment = Alignment(horizontal='center', vertical='center')
+                
+                if estudiante['posicion'] <= 3:
+                    colors = {1: "FFD700", 2: "C0C0C0", 3: "CD7F32"}
+                    cell.fill = PatternFill(start_color=colors[estudiante['posicion']],
+                                          end_color=colors[estudiante['posicion']],
+                                          fill_type="solid")
+        
+        column_widths = [12, 30, 18, 18, 15, 15]
+        for col, width in enumerate(column_widths, start=1):
+            ws.column_dimensions[chr(64 + col)].width = width
+        
+        # Guardar en memoria
+        excel_buffer = BytesIO()
+        wb.save(excel_buffer)
+        excel_content = excel_buffer.getvalue()
+        
+        # Subir a OneDrive
+        filename = f"ranking_global_brainrush_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        
+        # Obtener access token
+        access_token = app.config.get('ONEDRIVE_ACCESS_TOKEN')
+        if not access_token:
+            return jsonify({
+                'success': False,
+                'error': 'OneDrive no está configurado. Por favor, configura la integración con OneDrive primero.'
+            }), 400
+        
+        # Subir archivo a OneDrive
+        upload_url = 'https://graph.microsoft.com/v1.0/me/drive/root:/BrainRUSH/' + filename + ':/content'
+        headers = {
+            'Authorization': f'Bearer {access_token}',
+            'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        }
+        
+        response = requests.put(upload_url, headers=headers, data=excel_content)
+        
+        if response.status_code in [200, 201]:
+            file_data = response.json()
+            web_url = file_data.get('webUrl', '')
+            
+            # Enviar email con el link (si está configurado)
+            if app.config.get('MAIL_ENABLED') and email_docente:
+                try:
+                    from flask_mail import Message
+                    msg = Message(
+                        '📊 Ranking Global exportado a OneDrive - Brain RUSH',
+                        sender=app.config['MAIL_DEFAULT_SENDER'],
+                        recipients=[email_docente]
+                    )
+                    msg.html = f"""
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                        <h2 style="color: #667eea;">📊 Ranking Global Exportado</h2>
+                        <p>Hola {nombre_docente},</p>
+                        <p>Tu ranking global de estudiantes ha sido exportado exitosamente a OneDrive.</p>
+                        <p><strong>Archivo:</strong> {filename}</p>
+                        <p><strong>Fecha:</strong> {datetime.now().strftime('%d/%m/%Y %H:%M')}</p>
+                        <p style="margin: 30px 0;">
+                            <a href="{web_url}" style="background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                                📂 Abrir en OneDrive
+                            </a>
+                        </p>
+                        <p style="color: #666; font-size: 12px;">Brain RUSH - Sistema de Evaluación Gamificada</p>
+                    </div>
+                    """
+                    mail.send(msg)
+                except Exception as e:
+                    print(f"Error enviando email: {e}")
+            
+            return jsonify({
+                'success': True,
+                'message': 'Ranking exportado exitosamente a OneDrive',
+                'web_url': web_url
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': f'Error al subir a OneDrive: {response.status_code}'
+            }), 500
+    
+    except Exception as e:
+        print(f"ERROR exportar_dashboard_docente_onedrive: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/exportar-dashboard-docente/pdf', methods=['POST'])
+@login_required
+@docente_required
+def exportar_dashboard_docente_pdf():
+    """Generar reporte PDF del dashboard del docente"""
+    try:
+        # Intentar importar reportlab
+        try:
+            from reportlab.lib.pagesizes import letter, A4
+            from reportlab.lib import colors
+            from reportlab.lib.units import inch
+            from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
+            from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+            from reportlab.lib.enums import TA_CENTER, TA_LEFT
+        except ImportError:
+            return jsonify({
+                'success': False,
+                'error': 'Librería reportlab no instalada. Ejecuta: pip install reportlab'
+            }), 500
+        
+        id_docente = session['usuario_id']
+        
+        # Obtener datos
+        ranking_global = controlador_ranking.obtener_ranking_global_por_docente(id_docente)
+        cuestionarios = obtener_cuestionarios_por_docente_simple(id_docente)
+        
+        # Obtener información del docente
+        conexion = obtener_conexion()
+        cursor = conexion.cursor()
+        cursor.execute("""
+            SELECT nombre, apellidos FROM usuarios WHERE id_usuario = %s
+        """, (id_docente,))
+        docente = cursor.fetchone()
+        nombre_docente = f"{docente[0]} {docente[1]}" if docente else "Docente"
+        cursor.close()
+        conexion.close()
+        
+        # Crear PDF en memoria
+        pdf_buffer = BytesIO()
+        doc = SimpleDocTemplate(pdf_buffer, pagesize=A4)
+        story = []
+        
+        # Estilos
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=24,
+            textColor=colors.HexColor('#667eea'),
+            spaceAfter=30,
+            alignment=TA_CENTER
+        )
+        
+        heading_style = ParagraphStyle(
+            'CustomHeading',
+            parent=styles['Heading2'],
+            fontSize=16,
+            textColor=colors.HexColor('#667eea'),
+            spaceAfter=12
+        )
+        
+        # Título
+        story.append(Paragraph(f"📊 Reporte Brain RUSH", title_style))
+        story.append(Paragraph(f"<b>Docente:</b> {nombre_docente}", styles['Normal']))
+        story.append(Paragraph(f"<b>Fecha:</b> {datetime.now().strftime('%d/%m/%Y %H:%M')}", styles['Normal']))
+        story.append(Spacer(1, 0.3*inch))
+        
+        # Estadísticas generales
+        story.append(Paragraph("📈 Estadísticas Generales", heading_style))
+        stats_data = [
+            ['Cuestionarios Creados', len(cuestionarios)],
+            ['Cuestionarios Activos', len([c for c in cuestionarios if c.get('estado') == 'activo' or c.get('estado') == 'publicado'])],
+            ['Estudiantes Participantes', len(ranking_global)],
+            ['Promedio General', f"{sum(e['promedio_puntaje'] for e in ranking_global) / len(ranking_global):.1f}%" if ranking_global else "0%"]
+        ]
+        
+        stats_table = Table(stats_data, colWidths=[3*inch, 2*inch])
+        stats_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f0f0f0')),
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 12),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+            ('GRID', (0, 0), (-1, -1), 1, colors.grey)
+        ]))
+        story.append(stats_table)
+        story.append(Spacer(1, 0.3*inch))
+        
+        # Ranking Global
+        story.append(Paragraph("🏆 Ranking Global de Estudiantes", heading_style))
+        
+        if ranking_global:
+            # Encabezados de tabla
+            ranking_data = [['Pos', 'Nombre', 'Puntaje', 'Partidas', 'Promedio', 'Precisión']]
+            
+            # Datos
+            for estudiante in ranking_global[:20]:  # Top 20
+                ranking_data.append([
+                    str(estudiante['posicion']),
+                    estudiante['nombre_completo'][:25],
+                    str(estudiante['puntaje_acumulado']),
+                    str(estudiante['total_participaciones']),
+                    f"{estudiante['promedio_puntaje']:.1f}",
+                    f"{estudiante['precision_promedio']:.1f}%"
+                ])
+            
+            ranking_table = Table(ranking_data, colWidths=[0.5*inch, 2*inch, 1*inch, 1*inch, 1*inch, 1*inch])
+            ranking_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#667eea')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                ('GRID', (0, 0), (-1, -1), 1, colors.grey),
+                ('FONTSIZE', (0, 1), (-1, -1), 9)
+            ]))
+            
+            # Colorear top 3
+            if len(ranking_data) > 1:
+                ranking_table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 1), (-1, 1), colors.HexColor('#FFD700')),
+                ]))
+            if len(ranking_data) > 2:
+                ranking_table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 2), (-1, 2), colors.HexColor('#C0C0C0')),
+                ]))
+            if len(ranking_data) > 3:
+                ranking_table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 3), (-1, 3), colors.HexColor('#CD7F32')),
+                ]))
+            
+            story.append(ranking_table)
+        else:
+            story.append(Paragraph("No hay datos de ranking disponibles", styles['Normal']))
+        
+        # Construir PDF
+        doc.build(story)
+        pdf_buffer.seek(0)
+        
+        return send_file(
+            pdf_buffer,
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=f'reporte_brainrush_{datetime.now().strftime("%Y%m%d_%H%M%S")}.pdf'
+        )
+    
+    except Exception as e:
+        print(f"ERROR exportar_dashboard_docente_pdf: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/dashboard')
 @login_required
 def dashboard():
