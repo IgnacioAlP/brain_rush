@@ -518,10 +518,19 @@
     }
 
     function mostrarGrupos() {
+      console.log('🎨 [UNIRSE] Ejecutando mostrarGrupos()');
       const container = document.getElementById('grupos-grid');
+      
+      if (!container) {
+        console.error('❌ [UNIRSE] No se encontró el elemento grupos-grid');
+        return;
+      }
+      
       container.innerHTML = '';
+      console.log(`📦 [UNIRSE] Renderizando ${gruposDisponibles.length} grupos`);
 
       gruposDisponibles.forEach(grupo => {
+        console.log(`➕ [UNIRSE] Agregando grupo: ${grupo.nombre_grupo} (ID: ${grupo.id_grupo})`);
         const card = document.createElement('div');
         card.className = 'grupo-card';
         card.dataset.grupoId = grupo.id_grupo;
@@ -533,9 +542,12 @@
         card.addEventListener('click', () => seleccionarGrupo(grupo.id_grupo));
         container.appendChild(card);
       });
+      
+      console.log('✅ [UNIRSE] Grupos renderizados correctamente');
     }
 
     function seleccionarGrupo(grupoId) {
+      console.log(`🎯 [UNIRSE] Grupo seleccionado: ${grupoId}`);
       grupoSeleccionado = grupoId;
 
       // Actualizar visualización
@@ -543,11 +555,13 @@
         card.classList.remove('selected');
         if (parseInt(card.dataset.grupoId) === grupoId) {
           card.classList.add('selected');
+          console.log(`✅ [UNIRSE] Tarjeta del grupo ${grupoId} marcada como seleccionada`);
         }
       });
 
       // Habilitar botón de unirse
       joinGameBtn.disabled = false;
+      console.log('✅ [UNIRSE] Botón "Unirse al Juego" habilitado');
     }
 
     async function asignarGrupoAParticipante(participanteId, grupoId) {
@@ -675,21 +689,26 @@
         return;
       }
 
-      console.log('📝 Nombre validado, verificando grupos...');
-      console.log('📊 Datos de sala:', salaData);
+      console.log('📝 [UNIRSE] Nombre validado, verificando grupos...');
+      console.log('📊 [UNIRSE] Datos de sala:', salaData);
 
       // Verificar si hay grupos habilitados en esta sala
       const salaId = salaData.id_sala || salaData.id;
+      console.log(`🔍 [UNIRSE] Llamando a cargarGrupos con sala ID: ${salaId}`);
+      
       const hayGrupos = await cargarGrupos(salaId);
+      console.log(`📊 [UNIRSE] ¿Hay grupos disponibles? ${hayGrupos}`);
+      console.log(`📊 [UNIRSE] Grupos cargados:`, gruposDisponibles);
 
       if (hayGrupos) {
         // Ir al paso de selección de grupo
-        console.log('👥 Mostrando selección de grupos');
+        console.log('👥 [UNIRSE] Mostrando selección de grupos');
         mostrarGrupos();
         updateStep(2.5);
+        console.log('✅ [UNIRSE] Paso 2.5 activado - selección de grupos visible');
       } else {
         // No hay grupos, ir directo a unirse
-        console.log('➡️ No hay grupos, uniendo directamente');
+        console.log('➡️ [UNIRSE] No hay grupos, uniendo directamente');
         unirseDirecto();
       }
     });

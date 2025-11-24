@@ -3,81 +3,409 @@
 {% block title %}Gestión de Recompensas - Brain RUSH{% endblock %}
 
 {% block extra_css %}
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/gestionar_recompensas.css') }}">
+<style>
+.recompensas-container {
+    max-width: 1200px;
+    margin: var(--space-xl) auto;
+    padding: 0 var(--space-lg);
+}
+
+.recompensas-header {
+    background: var(--gradient-primary);
+    border-radius: var(--radius-xl);
+    padding: var(--space-xl);
+    margin-bottom: var(--space-xxl);
+    box-shadow: var(--shadow-lg);
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.recompensas-header h1 {
+    font-family: var(--font-primary);
+    font-size: 2rem;
+    margin: 0;
+}
+
+.recompensas-card {
+    background: white;
+    border-radius: var(--radius-xl);
+    padding: var(--space-xxl);
+    box-shadow: var(--shadow-lg);
+    margin-bottom: var(--space-xl);
+}
+
+.recompensas-card h2 {
+    font-family: var(--font-primary);
+    color: var(--primary-dark);
+    margin-bottom: var(--space-xl);
+    font-size: 1.5rem;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--space-lg);
+    margin-bottom: var(--space-xl);
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.form-group label {
+    font-weight: 600;
+    color: var(--dark-gray);
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    padding: var(--space-md);
+    border: 2px solid var(--light-gray);
+    border-radius: var(--radius-md);
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(69, 183, 209, 0.1);
+}
+
+.form-actions {
+    display: flex;
+    gap: var(--space-md);
+    justify-content: flex-end;
+}
+
+.btn-save {
+    background: var(--gradient-primary);
+    color: white;
+    padding: var(--space-md) var(--space-xxl);
+    border: none;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: var(--shadow-md);
+}
+
+.btn-save:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.recompensas-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.recompensas-table thead {
+    background: var(--gradient-accent);
+}
+
+.recompensas-table th {
+    padding: var(--space-lg);
+    text-align: left;
+    font-weight: 600;
+    color: white;
+}
+
+.recompensas-table td {
+    padding: var(--space-lg);
+    border-bottom: 1px solid var(--light-gray);
+}
+
+.recompensas-table tbody tr:hover {
+    background: rgba(69, 183, 209, 0.05);
+}
+
+.tipo-badge {
+    display: inline-block;
+    padding: var(--space-xs) var(--space-md);
+    border-radius: var(--radius-md);
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.tipo-insignia {
+    background: rgba(150, 206, 180, 0.2);
+    color: rgb(34, 139, 34);
+}
+
+.tipo-premio {
+    background: rgba(255, 193, 7, 0.2);
+    color: #F7931E;
+}
+
+.tipo-extra {
+    background: rgba(69, 183, 209, 0.2);
+    color: var(--accent-color);
+}
+
+.action-btns {
+    display: flex;
+    gap: var(--space-sm);
+}
+
+.btn-action {
+    padding: var(--space-sm) var(--space-md);
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+}
+
+.btn-delete {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-delete:hover {
+    background: #c82333;
+    transform: scale(1.05);
+}
+
+.empty-state {
+    text-align: center;
+    padding: var(--space-xxl);
+    color: var(--gray);
+}
+
+.empty-state i {
+    font-size: 3rem;
+    margin-bottom: var(--space-lg);
+    opacity: 0.5;
+}
+</style>
 {% endblock %}
 
 {% block content %}
-<section class="recompensas-section py-5">
-  <div class="container">
-    <div class="card shadow-lg rounded-4 p-4 bg-light">
-      <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="fw-bold text-gradient">Gestión de Recompensas</h1>
-        <a href="{{ url_for('mis_cuestionarios') }}" class="btn btn-outline-primary">
-          <i class="fas fa-arrow-left"></i> Volver
+<div class="recompensas-container animate-fadeIn">
+    <div class="recompensas-header">
+        <h1>🏆 Gestión de Recompensas</h1>
+        <a href="{{ url_for('mis_cuestionarios') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver
         </a>
-      </div>
-
-      <form id="form-recompensa" class="row g-3">
-        <!-- ✅ Campo oculto corregido -->
-        <input type="hidden" id="id_cuestionario" name="id_cuestionario" value="{{ id_cuestionario }}">
-
-        <div class="col-md-6">
-          <label for="nombre" class="form-label fw-semibold">Nombre:</label>
-          <input type="text" id="nombre" name="nombre" class="form-control" placeholder="Ej. Estrella Dorada" required>
-        </div>
-
-        <div class="col-md-6">
-          <label for="puntos" class="form-label fw-semibold">Puntos requeridos:</label>
-          <input type="number" id="puntos" name="puntos" class="form-control" min="1" placeholder="Ej. 100" required>
-        </div>
-
-        <div class="col-12">
-          <label for="descripcion" class="form-label fw-semibold">Descripción:</label>
-          <textarea id="descripcion" name="descripcion" class="form-control" rows="2" placeholder="Breve descripción..."></textarea>
-        </div>
-
-        <div class="col-md-6">
-          <label for="tipo" class="form-label fw-semibold">Tipo:</label>
-          <select id="tipo" name="tipo" class="form-select" required>
-            <option value="Insignia">Insignia</option>
-            <option value="Premio">Premio</option>
-            <option value="Extra">Extra</option>
-          </select>
-        </div>
-
-        <div class="col-md-6 d-flex align-items-end justify-content-center">
-          <button type="submit" class="btn btn-warning w-100 fw-bold shadow-sm">
-            <i class="fas fa-save"></i> Guardar recompensa
-          </button>
-        </div>
-      </form>
-
-      <hr class="my-4">
-      <h2 class="text-center fw-bold text-warning mb-3">Recompensas registradas</h2>
-
-      <div class="table-responsive">
-        <table id="tabla-recompensas" class="table table-hover align-middle">
-          <thead class="table-warning text-center">
-            <tr>
-              <th>Nombre</th>
-              <th>Descripción</th>
-              <th>Puntos</th>
-              <th>Tipo</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td colspan="5" class="text-center text-muted">Cargando recompensas...</td></tr>
-          </tbody>
-        </table>
-      </div>
     </div>
-  </div>
-</section>
+
+    <div class="recompensas-card">
+        <h2>➕ Nueva Recompensa</h2>
+        
+        <form id="form-recompensa">
+            <input type="hidden" id="id_cuestionario" name="id_cuestionario" value="{{ id_cuestionario }}">
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="nombre">
+                        <i class="fas fa-trophy"></i> Nombre *
+                    </label>
+                    <input type="text" id="nombre" name="nombre" placeholder="Ej. Estrella Dorada" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="puntos">
+                        <i class="fas fa-star"></i> Puntos requeridos *
+                    </label>
+                    <input type="number" id="puntos" name="puntos" min="1" placeholder="Ej. 100" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="tipo">
+                        <i class="fas fa-tag"></i> Tipo *
+                    </label>
+                    <select id="tipo" name="tipo" required>
+                        <option value="">Selecciona un tipo</option>
+                        <option value="Trofeo">🏆 Trofeo (1er lugar)</option>
+                        <option value="Medalla">🥇 Medalla (2do lugar)</option>
+                        <option value="Insignia">🏅 Insignia (3er lugar)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="descripcion">
+                    <i class="fas fa-align-left"></i> Descripción
+                </label>
+                <textarea id="descripcion" name="descripcion" rows="3" placeholder="Breve descripción de la recompensa..."></textarea>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn-save">
+                    <i class="fas fa-save"></i> Guardar Recompensa
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="recompensas-card">
+        <h2>📋 Recompensas Registradas</h2>
+        
+        <table class="recompensas-table">
+            <thead>
+                <tr>
+                    <th><i class="fas fa-trophy"></i> Nombre</th>
+                    <th><i class="fas fa-align-left"></i> Descripción</th>
+                    <th><i class="fas fa-star"></i> Puntos</th>
+                    <th><i class="fas fa-tag"></i> Tipo</th>
+                    <th><i class="fas fa-cog"></i> Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="tabla-recompensas">
+                <tr>
+                    <td colspan="5" class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        <p>Cargando recompensas...</p>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="{{ url_for('static', filename='js/gestionar_recompensas.js') }}"></script>
+<script>
+const ID_CUESTIONARIO = {{ id_cuestionario }};
+
+// Cargar recompensas al inicio
+document.addEventListener('DOMContentLoaded', cargarRecompensas);
+
+// Manejar envío del formulario
+document.getElementById('form-recompensa').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = {
+        id_cuestionario: ID_CUESTIONARIO,
+        nombre: document.getElementById('nombre').value.trim(),
+        descripcion: document.getElementById('descripcion').value.trim(),
+        puntos: parseInt(document.getElementById('puntos').value),
+        tipo: document.getElementById('tipo').value
+    };
+
+    if (!formData.nombre || !formData.puntos || !formData.tipo) {
+        showError('Por favor completa todos los campos obligatorios');
+        return;
+    }
+
+    try {
+        const response = await fetch('/insertar_recompensa', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showSuccess('Recompensa guardada exitosamente');
+            document.getElementById('form-recompensa').reset();
+            cargarRecompensas();
+        } else {
+            showError('Error al guardar recompensa: ' + (data.error || 'Error desconocido'));
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showError('Error al guardar recompensa');
+    }
+});
+
+async function cargarRecompensas() {
+    try {
+        const response = await fetch(`/api/recompensas/${ID_CUESTIONARIO}`);
+        const data = await response.json();
+
+        const tbody = document.getElementById('tabla-recompensas');
+
+        if (!data.success || !data.recompensas || data.recompensas.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="empty-state">
+                        <i class="fas fa-trophy"></i>
+                        <p>No hay recompensas registradas</p>
+                        <small>Agrega la primera recompensa usando el formulario arriba</small>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        tbody.innerHTML = data.recompensas.map(r => `
+            <tr>
+                <td><strong>${r.nombre}</strong></td>
+                <td>${r.descripcion || '<em style="color: var(--gray)">Sin descripción</em>'}</td>
+                <td><span style="color: var(--warning-color); font-weight: 600;">${r.puntos_requeridos}</span></td>
+                <td><span class="tipo-badge tipo-${r.tipo.toLowerCase()}">${getTipoIcon(r.tipo)} ${r.tipo}</span></td>
+                <td>
+                    <div class="action-btns">
+                        <button class="btn-action btn-delete" onclick="eliminarRecompensa(${r.id_recompensa})">
+                            <i class="fas fa-trash"></i> Eliminar
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    } catch (error) {
+        console.error('Error:', error);
+        document.getElementById('tabla-recompensas').innerHTML = `
+            <tr>
+                <td colspan="5" class="empty-state" style="color: var(--error-color);">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>Error al cargar recompensas</p>
+                </td>
+            </tr>
+        `;
+    }
+}
+
+function getTipoIcon(tipo) {
+    const icons = {
+        'Trofeo': '🏆',
+        'Medalla': '🥇',
+        'Insignia': '🏅',
+        'Premio': '🎁',
+        'Extra': '⭐'
+    };
+    return icons[tipo] || '🏆';
+}
+
+async function eliminarRecompensa(id) {
+    const confirmado = await confirmAction(
+        '¿Estás seguro de que quieres eliminar esta recompensa?',
+        'Confirmar eliminación',
+        'Sí, eliminar',
+        'Cancelar'
+    );
+
+    if (!confirmado) return;
+
+    try {
+        const response = await fetch(`/eliminar_recompensa/${id}`, {
+            method: 'DELETE'
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showSuccess('Recompensa eliminada exitosamente');
+            cargarRecompensas();
+        } else {
+            showError('Error al eliminar recompensa');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showError('Error al eliminar recompensa');
+    }
+}
+</script>
 {% endblock %}

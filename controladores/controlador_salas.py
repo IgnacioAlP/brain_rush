@@ -167,20 +167,29 @@ def crear_grupos_sala(sala_id, num_grupos, nombres=None):
             # Primero eliminar grupos existentes de esta sala
             cursor.execute('DELETE FROM grupos_sala WHERE id_sala = %s', (sala_id,))
             
+            print(f"🎯 [CONTROLADOR] Creando {num_grupos} grupos para sala {sala_id}")
+            
             # Crear los nuevos grupos
             ids_grupos = []
             for i in range(num_grupos):
                 nombre_grupo = nombres[i] if nombres and i < len(nombres) else f'Grupo {i + 1}'
                 
                 cursor.execute('''
-                    INSERT INTO grupos_sala (id_sala, nombre_grupo, numero_grupo, capacidad_maxima) 
-                    VALUES (%s, %s, %s, %s)
-                ''', (sala_id, nombre_grupo, i + 1, 0))  # capacidad 0 = sin límite
+                    INSERT INTO grupos_sala (id_sala, nombre_grupo, numero_grupo) 
+                    VALUES (%s, %s, %s)
+                ''', (sala_id, nombre_grupo, i + 1))
                 
                 ids_grupos.append(cursor.lastrowid)
+                print(f"   ✅ Creado: {nombre_grupo} (ID: {cursor.lastrowid})")
             
             conexion.commit()
+            print(f"✅ [CONTROLADOR] {len(ids_grupos)} grupos creados exitosamente")
             return ids_grupos
+    except Exception as e:
+        print(f"❌ [CONTROLADOR] Error al crear grupos: {e}")
+        import traceback
+        traceback.print_exc()
+        raise
     finally:
         conexion.close()
 
@@ -194,30 +203,40 @@ def obtener_grupos_sala(sala_id):
     conexion = obtener_conexion()
     try:
         with conexion.cursor() as cursor:
+            print(f"🔍 [CONTROLADOR] Buscando grupos para sala {sala_id}")
             cursor.execute('''
                 SELECT 
                     g.id_grupo,
                     g.nombre_grupo,
                     g.numero_grupo,
-                    g.capacidad_maxima,
                     COUNT(p.id_participante) as num_participantes
                 FROM grupos_sala g
                 LEFT JOIN participantes_sala p ON g.id_grupo = p.id_grupo AND p.estado != 'desconectado'
                 WHERE g.id_sala = %s
-                GROUP BY g.id_grupo, g.nombre_grupo, g.numero_grupo, g.capacidad_maxima
+                GROUP BY g.id_grupo, g.nombre_grupo, g.numero_grupo
                 ORDER BY g.numero_grupo
             ''', (sala_id,))
             
             grupos = []
-            for row in cursor.fetchall():
+            rows = cursor.fetchall()
+            print(f"📊 [CONTROLADOR] Filas obtenidas: {len(rows)}")
+            
+            for row in rows:
+                print(f"   📦 Grupo: {row}")
                 grupos.append({
                     'id_grupo': row[0],
                     'nombre_grupo': row[1],
                     'numero_grupo': row[2],
-                    'capacidad_maxima': row[3],
-                    'num_participantes': row[4]
+                    'num_participantes': row[3]
                 })
+            
+            print(f"✅ [CONTROLADOR] Total grupos procesados: {len(grupos)}")
             return grupos
+    except Exception as e:
+        print(f"❌ [CONTROLADOR] Error en obtener_grupos_sala: {e}")
+        import traceback
+        traceback.print_exc()
+        raise
     finally:
         conexion.close()
 

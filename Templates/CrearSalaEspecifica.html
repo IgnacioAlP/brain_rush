@@ -523,18 +523,49 @@ document.addEventListener('DOMContentLoaded', function() {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
         })
-        .then(data => {
+        .then(async data => {
             console.log('Response data:', data);
 
             if (data && data.success) {
+                const salaId = data.sala_id;
+                const numGrupos = parseInt(document.getElementById('num_grupos').value);
+                const modoJuego = document.getElementById('modo_juego').value;
+
+                // Si es modo grupo y hay grupos configurados, crearlos
+                if (modoJuego === 'grupo' && numGrupos > 0) {
+                    console.log(`🎯 Configurando ${numGrupos} grupos para sala ${salaId}`);
+                    createText.textContent = 'Configurando Grupos...';
+
+                    try {
+                        const gruposResponse = await fetch(`/sala/${salaId}/configurar-grupos`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                num_grupos: numGrupos
+                            })
+                        });
+
+                        const gruposData = await gruposResponse.json();
+                        console.log('Grupos configurados:', gruposData);
+
+                        if (!gruposData.success) {
+                            console.warn('⚠️ No se pudieron crear grupos:', gruposData.error);
+                        }
+                    } catch (error) {
+                        console.error('❌ Error al configurar grupos:', error);
+                    }
+                }
+
                 // Éxito - mostrar mensaje y redirigir
                 createText.textContent = '¡Sala Creada!';
                 createIcon.style.display = 'block';
                 loadingSpinner.style.display = 'none';
 
                 setTimeout(() => {
-                    if (data.sala_id) {
-                        window.location.href = `/monitorear-sala/${data.sala_id}`;
+                    if (salaId) {
+                        window.location.href = `/monitorear-sala/${salaId}`;
                     } else {
                         window.location.href = "{{ url_for('mis_cuestionarios') }}";
                     }

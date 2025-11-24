@@ -305,7 +305,7 @@
             <h1><i class="fas fa-trophy"></i> Ranking XP Global</h1>
             <p class="text-muted">Los mejores estudiantes de Brain Rush</p>
             <div class="mt-3">
-                <button class="btn-back" onclick="window.location.href='/dashboard'">
+                <button class="btn-back" onclick="window.location.href='{{ url_for('dashboard_estudiante') if session.get('usuario_tipo') == 'estudiante' else url_for('dashboard') }}'">
                     <i class="fas fa-arrow-left"></i> Volver al Dashboard
                 </button>
                 <button class="refresh-btn" onclick="cargarRanking()">

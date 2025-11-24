@@ -238,11 +238,13 @@ def obtener_sala_por_id_simple(id_sala):
     conexion = obtener_conexion()
     try:
         cursor = conexion.cursor()
+        # Debug: verificar estado directamente de BD
         cursor.execute("""
             SELECT id_sala, pin_sala, id_cuestionario, modo_juego, estado, max_participantes, fecha_creacion, total_preguntas
             FROM salas_juego
             WHERE id_sala = %s
         """, (id_sala,))
+        print(f"🔍 [obtener_sala_por_id_simple] Consultando sala {id_sala}")
         sala = cursor.fetchone()
         if sala:
             # Determinar si es sala con docente (modo manual) o juego individual (modo automático)
@@ -261,7 +263,7 @@ def obtener_sala_por_id_simple(id_sala):
             print(f"\n🔍 DEBUG - Detectando modo de sala {id_sala}:")
             print(f"   PIN: {pin_sala} (tipo: {type(pin_sala)}, len: {len(str(pin_sala)) if pin_sala else 0})")
             print(f"   Modo juego: {modo_juego}")
-            print(f"   Estado: {estado}")
+            print(f"   Estado ACTUAL desde BD: '{estado}' (tipo: {type(estado)})")
 
             # REGLA 1: Salas colaborativas siempre tienen docente
             if modo_juego == 'colaborativo':
@@ -674,24 +676,21 @@ def unirse_a_sala():
 def fix_session():
     """Limpiar sesión en rutas API y corregir inconsistencias"""
     
-    # DEBUG: Mostrar TODAS las peticiones para detectar cuál borra la sesión
-    if session.get('logged_in'):
-        print(f"\n🌐 REQUEST: {request.method} {request.path}")
-        print(f"   📋 Session ANTES: usuario_tipo={session.get('usuario_tipo')}, usuario_id={session.get('usuario_id')}")
-    
     # Lista de rutas API que permiten autenticación por sesión (además de JWT)
     api_rutas_con_sesion = [
         '/api/cuestionarios/',
-        '/api/cuestionario/',  # ✅ AGREGADO: Para /api/cuestionario/<id>/salas
+        '/api/cuestionario/',  # Para /api/cuestionario/<id>/salas (docentes)
         '/api/sala/',
-        '/api/exportar-',
+        '/api/exportar-',  # Incluye exportar-historial-estudiante y exportar-resultados
         '/api/participante',  # Sin / al final para que coincida con /api/participantes/
         '/api/perfil-xp/',
         '/api/insignias',
         '/api/tienda-insignias',
         '/api/comprar-insignia',
         '/api/recompensas',
-        '/api/otorgar_recompensas_automaticas'
+        '/api/otorgar_recompensas_automaticas',
+        '/api/ranking-xp',  # Para ranking global (estudiantes)
+        '/unirse-juego'  # Para permitir unirse sin limpiar sesión
     ]
     
     # Solo limpiar sesión en rutas API que NO están en la lista blanca
@@ -700,24 +699,15 @@ def fix_session():
         permitir_sesion = any(ruta in request.path for ruta in api_rutas_con_sesion)
         
         if not permitir_sesion:
-            print(f"🧹 ¡LIMPIANDO SESIÓN! Ruta API no permitida: {request.path}")
-            print(f"   ❌ Session DESPUÉS de limpiar: usuario_tipo=None, todo borrado")
             session.clear()
             response = make_response()
             response.delete_cookie('session', path='/')
             response.delete_cookie('user_id', path='/')
             response.delete_cookie('user_name', path='/')
-        else:
-            print(f"   ✅ Ruta API permitida, sesión preservada")
     
     # Corregir inconsistencia en sesión (tipo_usuario vs usuario_tipo)
     elif 'tipo_usuario' in session and 'usuario_tipo' not in session:
         session['usuario_tipo'] = session['tipo_usuario']
-        print(f"✅ FIX_SESSION: Corregido usuario_tipo desde tipo_usuario: {session['usuario_tipo']}")
-    
-    # DEBUG: Mostrar sesión final
-    if session.get('logged_in') or request.path.startswith(('/dashboard', '/admin', '/monitorear')):
-        print(f"   📋 Session DESPUÉS: usuario_tipo={session.get('usuario_tipo')}, usuario_id={session.get('usuario_id')}\n")
 
 @app.route('/api/auth', methods=['POST'])
 def jwt_login():
@@ -1608,16 +1598,30 @@ def monitorear_sala(sala_id):
 @docente_required
 def iniciar_sala(sala_id):
     try:
+        print(f"\n{'='*80}")
+        print(f"🎮 DOCENTE INICIANDO JUEGO - Sala ID: {sala_id}")
+        print(f"{'='*80}\n")
+        
         resultado = controlador_juego.iniciar_juego_sala(sala_id)
+        
+        print(f"Resultado de iniciar_juego_sala: {resultado}")
 
         if not resultado:
             raise ValueError("No se pudo iniciar la sala")
+
+        # Verificar que el estado cambió correctamente
+        sala_verificar = obtener_sala_por_id_simple(sala_id)
+        print(f"✅ Estado actual de la sala después de iniciar: {sala_verificar.get('estado')} (debe ser 'en_curso')")
+        print(f"{'='*80}\n")
 
         if request.is_json:
             return jsonify({'success': True, 'message': 'Sala iniciada exitosamente'})
         flash('¡Sala iniciada exitosamente!', 'success')
         return redirect(url_for('monitorear_sala', sala_id=sala_id))
     except Exception as e:
+        print(f"❌ ERROR al iniciar sala: {e}")
+        import traceback
+        traceback.print_exc()
         if request.is_json:
             return jsonify({'success': False, 'error': str(e)}), 400
         flash(f'Error al iniciar la sala: {str(e)}', 'error')
@@ -1658,31 +1662,36 @@ def configurar_grupos_sala(sala_id):
 @app.route('/api/sala/<int:sala_id>/grupos')
 def api_obtener_grupos_sala(sala_id):
     try:
+        print(f"🔍 [API] Obteniendo grupos para sala {sala_id}")
         grupos = controlador_salas.obtener_grupos_sala(sala_id)
+        print(f"📦 [API] Grupos obtenidos: {len(grupos)} grupos")
+        print(f"📋 [API] Detalle de grupos: {grupos}")
         return jsonify({'success': True, 'grupos': grupos})
     except Exception as e:
-        print(f"ERROR api_obtener_grupos_sala: {e}")
+        print(f"❌ ERROR api_obtener_grupos_sala: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @app.route('/api/participante/<int:participante_id>/asignar-grupo', methods=['POST'])
-@jwt_or_session_required
 def api_asignar_participante_grupo(participante_id):
-    """Asignar participante a grupo - Requiere autenticación"""
+    """Asignar participante a grupo - Permite asignación después de unirse"""
     try:
         data = request.get_json(silent=True) or request.form.to_dict()
         id_grupo = int(data.get('id_grupo'))
 
-        # Validar sesión y que el participante sea el actual
-        if session.get('participante_id') != participante_id:
-            return jsonify({'success': False, 'error': 'No autorizado para asignar a este participante'}), 403
+        print(f"🎯 Asignando participante {participante_id} al grupo {id_grupo}")
 
         ok = controlador_salas.asignar_participante_grupo(participante_id, id_grupo)
         if ok:
+            print(f"✅ Grupo asignado correctamente")
             return jsonify({'success': True})
+        
+        print(f"❌ No se pudo asignar al grupo")
         return jsonify({'success': False, 'error': 'No se pudo asignar al grupo'}), 400
     except Exception as e:
-        print(f"ERROR api_asignar_participante_grupo: {e}")
+        print(f"❌ ERROR api_asignar_participante_grupo: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'error': 'Error del servidor'}), 500
@@ -2035,38 +2044,40 @@ def ver_resultados_juego(sala_id):
 
         # Obtener recompensas otorgadas en este juego
         recompensas_otorgadas = []
-        if cuestionario_data:
-            id_cuestionario = cuestionario_data[0]
-            # Obtener recompensas asignadas a los participantes de esta sala
-            conexion = obtener_conexion()
-            cursor = conexion.cursor()
-            cursor.execute('''
-                SELECT
-                    r.nombre AS recompensa,
-                    r.tipo,
-                    p.nombre_participante,
-                    rk.posicion,
-                    ro.fecha_otorgacion
-                FROM recompensas_otorgadas ro
-                JOIN recompensas r ON ro.id_recompensa = r.id_recompensa
-                JOIN usuarios u ON ro.id_estudiante = u.id_usuario
-                JOIN participantes_sala p ON p.id_usuario = u.id_usuario AND p.id_sala = %s
-                JOIN ranking_sala rk ON rk.id_participante = p.id_participante
-                WHERE r.id_cuestionario = %s
-                ORDER BY rk.posicion ASC
-            ''', (sala_id, id_cuestionario))
+        try:
+            if cuestionario_data:
+                id_cuestionario = cuestionario_data[0]
+                # Obtener recompensas asignadas a los participantes de esta sala
+                conexion = obtener_conexion()
+                cursor = conexion.cursor()
+                cursor.execute('''
+                    SELECT
+                        r.nombre AS recompensa,
+                        r.tipo,
+                        p.nombre_participante,
+                        rk.posicion,
+                        ro.fecha_otorgacion
+                    FROM recompensas_otorgadas ro
+                    JOIN recompensas r ON ro.id_recompensa = r.id_recompensa
+                    JOIN usuarios u ON ro.id_estudiante = u.id_usuario
+                    JOIN participantes_sala p ON p.id_usuario = u.id_usuario AND p.id_sala = %s
+                    JOIN ranking_sala rk ON rk.id_participante = p.id_participante AND rk.id_sala = %s
+                    ORDER BY rk.posicion ASC
+                ''', (sala_id, sala_id))
 
+                for row in cursor.fetchall():
+                    recompensas_otorgadas.append({
+                        'recompensa': row[0],
+                        'tipo': row[1],
+                        'nombre_participante': row[2],
+                        'posicion': row[3],
+                        'fecha': row[4]
+                    })
+                cursor.close()
+                conexion.close()
+        except Exception as e:
+            print(f"⚠️ Error al obtener recompensas otorgadas: {e}")
             recompensas_otorgadas = []
-            for row in cursor.fetchall():
-                recompensas_otorgadas.append({
-                    'recompensa': row[0],
-                    'tipo': row[1],
-                    'nombre_participante': row[2],
-                    'posicion': row[3],
-                    'fecha': row[4]
-                })
-            cursor.close()
-            conexion.close()
 
         # Si es estudiante, obtener su resultado personal
         resultado_personal = None
@@ -2075,9 +2086,22 @@ def ver_resultados_juego(sala_id):
             if participante_id:
                 resultado_personal = controlador_juego.obtener_resultado_participante(sala_id, participante_id)
 
+        # Normalizar nombres de campos para consistencia con el frontend
+        ranking_normalizado = []
+        for jugador in ranking:
+            ranking_normalizado.append({
+                'posicion': jugador.get('posicion'),
+                'nombre_participante': jugador.get('nombre_completo') or jugador.get('nombre_participante', 'Jugador'),
+                'puntaje_total': jugador.get('puntos_totales') or jugador.get('puntaje_total', 0),
+                'respuestas_correctas': jugador.get('respuestas_correctas', 0),
+                'tiempo_total_respuestas': jugador.get('tiempo_total_respuestas', 0),
+                'numero_grupo': jugador.get('numero_grupo'),
+                'id_participante': jugador.get('id_participante')
+            })
+
         return render_template('ResultadosJuego.html',
             sala=sala,
-            ranking=ranking,
+            ranking=ranking_normalizado,
             cuestionario_titulo=cuestionario_data[1] if cuestionario_data else 'Cuestionario',
             cuestionario_descripcion=cuestionario_data[2] if cuestionario_data else '',
             resultado_personal=resultado_personal,
@@ -2293,19 +2317,27 @@ def api_obtener_estado_sala(sala_id):
             return jsonify({'success': False, 'error': 'Sala no encontrada'}), 404
 
         participantes = controlador_salas.obtener_participantes_sala(sala_id)
+        
+        # Asegurar que el estado siempre tenga un valor
+        estado_actual = sala.get('estado') or 'esperando'
+        
+        print(f"🔍 [API ESTADO] Sala {sala_id}: estado='{estado_actual}', participantes={len(participantes)}")
 
         return jsonify({
             'success': True,
-            'estado': sala.get('estado', 'esperando'),
+            'estado': estado_actual,
             'total_participantes': len(participantes),
             'sala': {
                 'id': sala.get('id'),
                 'pin_sala': sala.get('pin_sala'),
-                'estado': sala.get('estado'),
+                'estado': estado_actual,
                 'max_participantes': sala.get('max_participantes', 30)
             }
         })
     except Exception as e:
+        print(f"❌ [API ESTADO] Error: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/sala/verificar/<string:pin>')
@@ -2443,12 +2475,12 @@ def unirse_juego():
         # Verificar límite de participantes
         print(f"📊 Obteniendo participantes actuales de sala {sala['id']}...")
         participantes_actuales = controlador_salas.obtener_participantes_sala(sala['id'])
-        max_participantes = sala.get('max_participantes', 30)
+        max_participantes = sala.get('max_participantes') or 30  # Default 30 si es None
 
         print(f"👥 Participantes actuales: {len(participantes_actuales)}/{max_participantes}")
         print(f"   Lista: {participantes_actuales}")
 
-        if len(participantes_actuales) >= max_participantes:
+        if max_participantes and len(participantes_actuales) >= max_participantes:
             print(f"❌ Error: Sala llena")
             return jsonify({'success': False, 'error': f'La sala está llena ({max_participantes} participantes máximo)'}), 400
 
@@ -4715,8 +4747,8 @@ def api_iniciar_juego_sala(sala_id):
         if not usuarios or len(usuarios) == 0:
             return jsonify({'success': False, 'error': 'No hay estudiantes conectados'}), 400
 
-        # Cambiar estado de la sala a 'en_progreso'
-        success = controlador_salas.actualizar_estado_sala(sala_id, 'en_progreso')
+        # Iniciar juego usando el controlador (esto establece estado 'en_curso')
+        success = controlador_juego.iniciar_juego_sala(sala_id)
 
         if success:
             return jsonify({
@@ -4819,13 +4851,17 @@ def exportar_resultados_excel(sala_id):
         for idx, player in enumerate(ranking, start=5):
             precision = round((player['respuestas_correctas'] / total_preguntas) * 100) if total_preguntas > 0 else 0
 
+            # Soportar ambos formatos: nombre_participante (frontend) o nombre_completo (backend)
+            nombre = player.get('nombre_participante') or player.get('nombre_completo', 'Jugador')
+            puntaje = player.get('puntaje_total') or player.get('puntos_totales', 0)
+
             row_data = [
                 player['posicion'],
-                player['nombre_participante'],
+                nombre,
                 player['respuestas_correctas'],
                 total_preguntas,
                 f"{precision}%",
-                player['puntaje_total'],
+                puntaje,
                 round(player['tiempo_total_respuestas'], 2)
             ]
 
@@ -4936,10 +4972,13 @@ def exportar_resultados_onedrive(sala_id):
         # Datos del ranking
         for row_idx, participante in enumerate(ranking, 3):
             ws.cell(row=row_idx, column=1, value=participante.get('posicion', row_idx-2))
-            # Usar nombre_participante en lugar de nombre_completo
-            ws.cell(row=row_idx, column=2, value=participante.get('nombre_participante', participante.get('nombre_completo', 'N/A')))
+            # Soportar ambos formatos de nombre
+            nombre = participante.get('nombre_participante') or participante.get('nombre_completo', 'N/A')
+            ws.cell(row=row_idx, column=2, value=nombre)
             ws.cell(row=row_idx, column=3, value=participante.get('nombre_grupo', 'Sin grupo'))
-            ws.cell(row=row_idx, column=4, value=participante.get('puntaje_total', 0))
+            # Soportar ambos formatos de puntaje
+            puntaje = participante.get('puntaje_total') or participante.get('puntos_totales', 0)
+            ws.cell(row=row_idx, column=4, value=puntaje)
             ws.cell(row=row_idx, column=5, value=participante.get('respuestas_correctas', 0))
 
             incorrectas = total_preguntas - participante.get('respuestas_correctas', 0)

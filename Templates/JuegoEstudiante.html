@@ -1003,7 +1003,7 @@ async function mostrarResultadosFinales() {
               return;
             }
             
-            if (estadoSala === 'en_juego') {
+            if (estadoSala === 'en_curso') {
               // Verificar si hay nueva pregunta
               const response = await fetch(`/api/sala/${SALA_ID}/pregunta-actual`);
               const data = await response.json();

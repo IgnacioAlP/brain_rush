@@ -1290,8 +1290,10 @@
         document.getElementById('question-form').reset();
     }
 
-    function previewQuiz() {
-        showWarning('Vista previa del cuestionario (función en desarrollo)');
+    async function previewQuiz() {
+        // Abrir el cuestionario en modo vista previa
+        const cuestionarioId = {{ cuestionario.id_cuestionario }};
+        window.open(`/cuestionario/${cuestionarioId}`, '_blank');
     }
 
     // Manejar envío del formulario de pregunta

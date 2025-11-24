@@ -532,8 +532,8 @@
           // VERIFICAR ESTADO DE LA SALA
           console.log('📊 Estado actual de la sala:', data.sala ? data.sala.estado : 'no disponible');
 
-          // Si el estado cambió a 'en_juego', redirigir automáticamente
-          if (data.sala && data.sala.estado === 'en_juego') {
+          // Si el estado cambió a 'en_curso', redirigir automáticamente
+          if (data.sala && data.sala.estado === 'en_curso') {
             console.log('🎮 ¡EL JUEGO HA INICIADO! Redirigiendo al juego...');
             showSuccess('¡El juego ha comenzado! Redirigiendo...');
             detenerActualizaciones();
@@ -601,28 +601,38 @@
         const response = await fetch(`/api/sala/${SALA_ID}/estado`);
         const data = await response.json();
 
+        console.log(`🔍 [SALA ESPERA] Verificando estado - Respuesta completa:`, data);
+
         if (data.success) {
           const estado = data.estado;
+          console.log(`📡 [SALA ESPERA] Estado actual de la sala: "${estado}"`);
 
           // Si el estado cambió a 'en_curso', redirigir al juego
           if (estado === 'en_curso') {
-            console.log('🎮 El juego ha comenzado, redirigiendo...');
+            console.log('🎮 [SALA ESPERA] ¡EL JUEGO HA COMENZADO! Redirigiendo...');
+            showSuccess('¡El juego ha comenzado! Redirigiendo...');
             detenerActualizaciones();
-            window.location.href = `/juego/{{ sala.pin_sala }}/jugar`;
+            setTimeout(() => {
+              console.log(`➡️ [SALA ESPERA] Redirigiendo a: /sala/${SALA_ID}/juego`);
+              window.location.href = `/sala/${SALA_ID}/juego`;
+            }, 1000);
+            return;
           }
 
           // Si la sala se cerró, redirigir
-          if (estado === 'finalizada') {
-            console.log('❌ La sala ha sido cerrada');
+          if (estado === 'finalizada' || estado === 'cerrada') {
+            console.log('❌ [SALA ESPERA] La sala ha sido cerrada');
             detenerActualizaciones();
             showWarning('La sala ha sido cerrada por el docente');
             setTimeout(() => {
-              window.location.href = '/dashboard-docente';
+              window.location.href = '/dashboard';
             }, 1500);
           }
+        } else {
+          console.error('❌ [SALA ESPERA] Error en respuesta del API:', data.error);
         }
       } catch (error) {
-        console.error('Error al verificar estado de sala:', error);
+        console.error('❌ [SALA ESPERA] Error al verificar estado de sala:', error);
       }
     }
 

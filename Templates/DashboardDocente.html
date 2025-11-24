@@ -1025,29 +1025,17 @@ function exportarResultados(cuestionarioId) {
     });
 }
 
-function exportarExcel() {
-    // Exportar todos los resultados a Excel
-    fetch('/exportar/excel', {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-        }
-    })
-    .then(response => response.blob())
-    .then(blob => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.style.display = 'none';
-        a.href = url;
-        a.download = `resultados_completos_${new Date().toISOString().split('T')[0]}.xlsx`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showError('Error al exportar a Excel');
-    });
+async function exportarExcel() {
+    // Esta función exporta los resultados desde la vista de resultados de cada juego
+    const info = await showInfo(
+        'Para exportar resultados a Excel:\n\n' +
+        '1. Ve a "Mis Cuestionarios"\n' +
+        '2. Click en "Ver Salas" del cuestionario\n' +
+        '3. Click en "Ver Resultados" de la sala\n' +
+        '4. Usa el botón "📊 Exportar a Excel"\n\n' +
+        'Los resultados se exportan por sala individual.',
+        'Exportar Resultados'
+    );
 }
 
 function exportarGoogleDrive() {
@@ -1073,29 +1061,16 @@ function exportarGoogleDrive() {
     */
 }
 
-function exportarPDF() {
+async function exportarPDF() {
     // Generar reporte PDF
-    fetch('/exportar/pdf', {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-        }
-    })
-    .then(response => response.blob())
-    .then(blob => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.style.display = 'none';
-        a.href = url;
-        a.download = `reporte_evaluaciones_${new Date().toISOString().split('T')[0]}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showError('Error al generar reporte PDF');
-    });
+    const info = await showInfo(
+        'La exportación a PDF estará disponible próximamente.\n\n' +
+        'Por ahora puedes:\n' +
+        '• Exportar resultados a Excel desde cada sala\n' +
+        '• Ver estadísticas en el ranking global\n' +
+        '• Revisar el historial de juegos',
+        'Exportar PDF'
+    );
 }
 
 // Funciones para publicar/despublicar cuestionarios

@@ -71,7 +71,7 @@ def iniciar_juego_sala(sala_id):
             # Actualizar estado de la sala
             cursor.execute('''
                 UPDATE salas_juego 
-                SET estado = 'en_juego', 
+                SET estado = 'en_curso', 
                     pregunta_actual = 1,
                     total_preguntas = %s,
                     tiempo_inicio_juego = NOW()
@@ -105,6 +105,12 @@ def iniciar_juego_sala(sala_id):
             ''', (sala_id,))
             
             conexion.commit()
+            
+            # Verificar que el estado se actualizó correctamente
+            cursor.execute('SELECT estado FROM salas_juego WHERE id_sala = %s', (sala_id,))
+            estado_verificado = cursor.fetchone()
+            print(f"✅ [CONTROLADOR_JUEGO] Estado verificado después de commit: '{estado_verificado[0] if estado_verificado else 'NULL'}'")
+            
             return True
     finally:
         conexion.close()
