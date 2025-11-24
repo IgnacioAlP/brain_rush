@@ -147,6 +147,20 @@
       font-size: 20px;
       font-weight: 800;
       margin-bottom: 8px;
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    
+    .player-name:hover {
+      white-space: normal;
+      overflow: visible;
+      text-overflow: unset;
+      z-index: 10;
+      position: relative;
     }
 
     .player-score {
@@ -265,6 +279,20 @@
       justify-content: center;
       font-weight: bold;
       color: white;
+      flex-shrink: 0;
+    }
+    
+    .player-info span {
+      max-width: 300px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    
+    .player-info:hover span {
+      white-space: normal;
+      overflow: visible;
+      text-overflow: unset;
     }
 
     .stat-value {
@@ -767,8 +795,8 @@
           <button onclick="exportarExcel()" class="export-option">
             📊 Descargar Excel
           </button>
-          <button onclick="exportarOneDrive()" class="export-option">
-            📧 Exportar por Email
+          <button id="btn-email-export" onclick="exportarOneDrive()" class="export-option">
+            <span id="email-icon">📧</span> <span id="email-text">Exportar por Email</span>
           </button>
         </div>
       </div>
@@ -975,6 +1003,23 @@
     }
 
     async function exportarOneDrive() {
+      const btnEmail = document.getElementById('btn-email-export');
+      const emailIcon = document.getElementById('email-icon');
+      const emailText = document.getElementById('email-text');
+      
+      // Verificar si ya se envió
+      if (btnEmail.dataset.sent === 'true') {
+        showWarning('El correo ya fue enviado. Revisa tu bandeja de entrada.');
+        return;
+      }
+      
+      // Deshabilitar botón y mostrar estado de envío
+      btnEmail.disabled = true;
+      btnEmail.style.opacity = '0.6';
+      btnEmail.style.cursor = 'not-allowed';
+      emailIcon.textContent = '⏳';
+      emailText.textContent = 'Enviando...';
+      
       try {
         const response = await fetch('/api/exportar-resultados/{{ sala.id }}/onedrive', {
           method: 'POST',
@@ -991,15 +1036,26 @@
         const data = await response.json();
 
         if (data.success) {
+          // Marcar como enviado
+          btnEmail.dataset.sent = 'true';
+          emailIcon.textContent = '✅';
+          emailText.textContent = 'Correo Enviado';
+          btnEmail.style.background = 'linear-gradient(135deg, #22c55e, #16a34a)';
+          
+          let mensaje = `${data.message}\n\nArchivo: ${data.file_name}`;
+          
+          if (data.email_sent) {
+            mensaje += '\n\n✅ Email de confirmación enviado a tu correo';
+          } else {
+            mensaje += '\n\n⚠️ No se pudo enviar el email de confirmación';
+          }
+          
           if (data.fallback) {
             // OneDrive falló, se envió por email
-            showWarning(`${data.message}\n\nArchivo: ${data.file_name}\n\nRevisa tu correo.`);
-          } else if (data.email_sent) {
-            // Solo email (sin intentar OneDrive)
-            showSuccess(`${data.message}\n\nArchivo: ${data.file_name}`);
+            showWarning(mensaje + '\n\nRevisa tu correo.');
           } else if (data.web_url) {
             // Subido exitosamente a OneDrive
-            showSuccess(`${data.message}\n\nCarpeta: ${data.folder}`);
+            showSuccess(mensaje);
             const abrirOneDrive = await confirmAction(
               '¿Deseas abrir el archivo en OneDrive?',
               'Abrir en OneDrive',
@@ -1010,10 +1066,16 @@
               window.open(data.web_url, '_blank');
             }
           } else {
-            showSuccess(`${data.message}\n\nArchivo: ${data.file_name}`);
+            showSuccess(mensaje);
           }
         } else if (data.require_auth) {
-          // Necesita autorizar OneDrive
+          // Necesita autorizar OneDrive - Restaurar botón
+          btnEmail.disabled = false;
+          btnEmail.style.opacity = '1';
+          btnEmail.style.cursor = 'pointer';
+          emailIcon.textContent = '📧';
+          emailText.textContent = 'Exportar por Email';
+          
           const autorizar = await confirmAction(
             `${data.message}\n\n¿Deseas autorizar OneDrive ahora?`,
             'Autorizar OneDrive',
@@ -1024,10 +1086,25 @@
             window.location.href = data.auth_url;
           }
         } else {
+          // Error - Restaurar botón para reintentar
+          btnEmail.disabled = false;
+          btnEmail.style.opacity = '1';
+          btnEmail.style.cursor = 'pointer';
+          emailIcon.textContent = '📧';
+          emailText.textContent = 'Exportar por Email';
+          
           showError(data.error || 'Error al procesar la solicitud');
         }
       } catch (error) {
         console.error('Error:', error);
+        
+        // Error - Restaurar botón para reintentar
+        btnEmail.disabled = false;
+        btnEmail.style.opacity = '1';
+        btnEmail.style.cursor = 'pointer';
+        emailIcon.textContent = '📧';
+        emailText.textContent = 'Exportar por Email';
+        
         showError('Error al procesar la solicitud');
       }
       document.getElementById('export-menu').style.display = 'none';

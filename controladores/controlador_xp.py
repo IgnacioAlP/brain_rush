@@ -769,15 +769,16 @@ def comprar_insignia(id_usuario, id_insignia):
             
             # 5. Registrar compra
             cursor.execute('''
-                INSERT INTO compras_insignias (id_usuario, id_insignia, precio_pagado)
+                INSERT INTO compras_insignias (id_usuario, id_insignia, xp_gastado)
                 VALUES (%s, %s, %s)
             ''', (id_usuario, id_insignia, precio))
             
-            # 6. Registrar en historial
-            cursor.execute('''
-                INSERT INTO historial_xp (id_usuario, cantidad_xp, razon)
-                VALUES (%s, %s, %s)
-            ''', (id_usuario, -precio, f'Compra de insignia: {nombre_insignia}'))
+            # 6. Registrar en historial (solo si el XP cambió)
+            if precio > 0:
+                cursor.execute('''
+                    INSERT INTO historial_xp (id_usuario, cantidad_xp, razon)
+                    VALUES (%s, %s, %s)
+                ''', (id_usuario, -precio, f'Compra de insignia: {nombre_insignia}'))
             
             conexion.commit()
             
@@ -806,7 +807,7 @@ def obtener_historial_compras(id_usuario):
     try:
         with conexion.cursor() as cursor:
             cursor.execute('''
-                SELECT c.fecha_compra, c.precio_pagado, i.nombre, i.icono
+                SELECT c.fecha_compra, c.xp_gastado, i.nombre, i.icono
                 FROM compras_insignias c
                 JOIN insignias_catalogo i ON c.id_insignia = i.id_insignia
                 WHERE c.id_usuario = %s
