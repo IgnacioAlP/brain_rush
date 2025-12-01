@@ -219,7 +219,9 @@ CREATE TABLE `recompensas` (
   `descripcion` TEXT,
   `puntos_requeridos` INT NOT NULL,
   `tipo` VARCHAR(20) NOT NULL COMMENT 'trofeo, insignia, medalla',
+  `id_cuestionario` INT DEFAULT NULL COMMENT 'Cuestionario asociado, NULL para recompensas globales',
   PRIMARY KEY (`id_recompensa`),
+  CONSTRAINT `FK_recompensas_id_cuestionario` FOREIGN KEY (`id_cuestionario`) REFERENCES `cuestionarios` (`id_cuestionario`) ON DELETE CASCADE,
   CONSTRAINT `CK_recompensas_tipo` CHECK (`tipo` IN ('trofeo','insignia','medalla'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 

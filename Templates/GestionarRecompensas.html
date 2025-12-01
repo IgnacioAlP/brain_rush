@@ -321,17 +321,21 @@ document.getElementById('form-recompensa').addEventListener('submit', async func
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
         
-        // Crear FormData para enviar al servidor
-        const formDataToSend = new FormData();
-        formDataToSend.append('nombre', nombre);
-        formDataToSend.append('descripcion', descripcion);
-        formDataToSend.append('puntos_requeridos', posicion); // Usar posición como puntos para ordenar
-        formDataToSend.append('tipo', tipoMap[posicion]);
-        formDataToSend.append('id_cuestionario', ID_CUESTIONARIO);
+        // Crear objeto de datos para enviar al servidor
+        const datosEnvio = {
+            nombre: nombre,
+            descripcion: descripcion,
+            puntos_requeridos: posicion, // Usar posición como puntos para ordenar
+            tipo: tipoMap[posicion],
+            id_cuestionario: ID_CUESTIONARIO
+        };
 
         const response = await fetch('/insertar_recompensa', {
             method: 'POST',
-            body: formDataToSend
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: new URLSearchParams(datosEnvio)
         });
 
         const data = await response.json();
@@ -367,7 +371,7 @@ async function cargarRecompensas() {
     try {
         console.log('🔄 Cargando recompensas para cuestionario:', ID_CUESTIONARIO);
         
-        const response = await fetch(`/api/recompensas/${ID_CUESTIONARIO}`);
+        const response = await fetch(`/recompensas_cuestionario/${ID_CUESTIONARIO}`);
         
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -427,7 +431,8 @@ async function cargarRecompensas() {
                     </div>
                 </td>
             </tr>
-        `).join('');
+            `;
+        }).join('');
     } catch (error) {
         console.error('Error:', error);
         document.getElementById('tabla-recompensas').innerHTML = `

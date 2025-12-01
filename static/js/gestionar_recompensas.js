@@ -81,7 +81,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function cargarRecompensas() {
     try {
-      const res = await fetch(`/api/recompensas/${idCuestionario}`);
+      const res = await fetch(`/recompensas_cuestionario/${idCuestionario}`);
       const data = await res.json();
       tabla.innerHTML = "";
 

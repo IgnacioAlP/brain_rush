@@ -4684,6 +4684,21 @@ def gestionar_recompensas(id_cuestionario):
     return render_template('GestionarRecompensas.html', id_cuestionario=id_cuestionario)
 
 
+@app.route('/recompensas_cuestionario/<int:id_cuestionario>')
+def recompensas_cuestionario_public(id_cuestionario):
+    """
+    Endpoint público (sin verificación de token) que devuelve las recompensas
+    asociadas a un cuestionario. Se usa desde las templates/JS del dashboard
+    para evitar colisiones con rutas API autenticadas.
+    """
+    try:
+        recompensas = controlador_recompensas.obtener_recompensas_por_cuestionario(id_cuestionario)
+        return jsonify({'success': True, 'recompensas': recompensas})
+    except Exception as e:
+        print(f"❌ Error al obtener recompensas (público) del cuestionario {id_cuestionario}: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/api/recompensas/<int:id_cuestionario>')
 def api_recompensas_por_cuestionario(id_cuestionario):
     """
@@ -4726,8 +4741,9 @@ def insertar_recompensa_por_cuestionario():
 
 @app.route('/eliminar_recompensa/<int:id_recompensa>', methods=['DELETE'])
 def eliminar_recompensa_por_cuestionario(id_recompensa):
-    """
-    Elimina una recompensa por su ID.
+    """Elimina una recompensa por su ID (usada desde la UI).
+
+    Responde JSON {'success': True} o {'success': False, 'error': ...}.
     """
     try:
         controlador_recompensas.eliminar_recompensa(id_recompensa)
