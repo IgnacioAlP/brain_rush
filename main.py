@@ -1,13 +1,42 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, Response, session, send_file, current_app, make_response
-from werkzeug.exceptions import InternalServerError
-from config import config
-from bd import verificar_conexion, obtener_conexion, inicializar_usuarios_prueba
+"""
+=====================================================================
+BRAIN RUSH - Sistema de Gamificación Educativa
+=====================================================================
+Aplicación Flask para crear y gestionar cuestionarios interactivos
+con mecánicas de juego en tiempo real.
+
+Autor: Brain Rush Team
+Fecha: 2025
+=====================================================================
+"""
+
+# ==================== IMPORTS ====================
+# Librerías estándar de Python
+import os
+import json
 import random
-import os, json
+import traceback
+import re
 from io import BytesIO
 from datetime import datetime, timedelta
+
+# Flask y extensiones
+from flask import (
+    Flask, render_template, request, redirect, url_for, flash, 
+    jsonify, Response, session, send_file, current_app, make_response
+)
+from werkzeug.exceptions import InternalServerError
+from dotenv import load_dotenv
+from itsdangerous import URLSafeTimedSerializer
+import pymysql.cursors
 import requests
-# Importar utilidades de autenticación personalizadas
+
+# Configuración y base de datos
+from config import config
+from bd import verificar_conexion, obtener_conexion, inicializar_usuarios_prueba
+from extensions import mail
+
+# Utilidades de autenticación
 from utils_auth import (
     login_required,
     jwt_or_session_required,
@@ -19,92 +48,153 @@ from utils_auth import (
     limpiar_cookies_usuario,
     obtener_usuario_cookies
 )
-# Importar controladores
-from controladores import controlador_salas
-from controladores import controlador_usuario
-from controladores import controlador_cuestionarios
-from controladores import controlador_juego
-from controladores import controlador_preguntas
-from controladores import controlador_participaciones
-from controladores import controlador_ranking
-from controladores import controlador_recompensas
-from controladores import controlador_respuestas
-from controladores import controlador_opciones
-from controladores import controlador_xp
 
-# Importar APIs CRUD
+# Controladores de negocio
+from controladores import (
+    controlador_salas,
+    controlador_usuario,
+    controlador_cuestionarios,
+    controlador_juego,
+    controlador_preguntas,
+    controlador_participaciones,
+    controlador_ranking,
+    controlador_recompensas,
+    controlador_respuestas,
+    controlador_opciones,
+    controlador_xp
+)
+
+# APIs CRUD
 from api_crud import api_crud
 
-# Importar msal solo si está disponible (necesario para OneDrive)
+# Verificar disponibilidad de MSAL para OneDrive
 try:
     import msal
     MSAL_AVAILABLE = True
 except ImportError:
     MSAL_AVAILABLE = False
-    print("WARNING: msal no está instalado. La funcionalidad de OneDrive no estará disponible.")
-    print("Para instalar: pip install msal")
+    print("⚠️  WARNING: msal no está instalado. La funcionalidad de OneDrive no estará disponible.")
+    print("   Para instalar: pip install msal")
 
-# Cargar variables de entorno desde .env
-from dotenv import load_dotenv
+# Cargar variables de entorno
 load_dotenv()
 
-# Importa las extensiones y librerías necesarias
-from extensions import mail
-from itsdangerous import URLSafeTimedSerializer
+# ==================== CONFIGURACIÓN DE LA APLICACIÓN ====================
 
-# Crea la aplicación Flask
+# Crear instancia de Flask
 app = Flask(__name__)
 
-# Carga la configuración desde config.py
+# Cargar configuración según el entorno
 env = os.getenv('FLASK_ENV', 'development')
 app_config = config.get(env, config['default'])
 app.config.from_object(app_config)
 app.secret_key = app_config.SECRET_KEY
 
+# Inicializar extensiones
 mail.init_app(app)
 
-# Serializador para tokens de email (DEBE usar la MISMA SECRET_KEY durante toda la ejecución)
+# Serializador para tokens de email (usa la misma SECRET_KEY)
 serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
-
-
 
 # Registrar blueprints de APIs
 app.register_blueprint(api_crud)
 
 # Configuración de sesiones seguras
-app.config['SESSION_COOKIE_SECURE'] = app.config.get('ENV') == 'production'  # Solo HTTPS en producción
+app.config['SESSION_COOKIE_SECURE'] = app.config.get('ENV') == 'production'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
 
 
+# ==================== CONTEXTO DE JINJA ====================
 
-# Agregar funciones al contexto de Jinja
 @app.context_processor
 def utility_processor():
-    """Agrega funciones útiles al contexto de Jinja"""
+    """Proporciona funciones útiles al contexto de Jinja2"""
     def now():
         return datetime.now()
     return dict(now=now)
+
+
+# ==================== MIDDLEWARE Y HOOKS ====================
+
+@app.before_request
+def fix_session():
+    """
+    Middleware para gestionar la limpieza de sesión en rutas API
+    y corregir inconsistencias en los datos de sesión
+    """
+    # Lista de rutas API que permiten autenticación por sesión (además de JWT)
+    api_rutas_con_sesion = [
+        '/api/cuestionarios/',
+        '/api/cuestionario/',
+        '/api/sala/',
+        '/api/exportar-',
+        '/api/participante',
+        '/api/perfil-xp/',
+        '/api/insignias',
+        '/api/tienda-insignias',
+        '/api/comprar-insignia',
+        '/api/recompensas',
+        '/api/otorgar_recompensas_automaticas',
+        '/api/ranking-xp',
+        '/unirse-juego'
+    ]
+    
+    # Limpiar sesión en rutas API que NO están en la lista blanca
+    if request.path.startswith('/api/'):
+        permitir_sesion = any(ruta in request.path for ruta in api_rutas_con_sesion)
+        
+        if not permitir_sesion:
+            session.clear()
+            response = make_response()
+            response.delete_cookie('session', path='/')
+            response.delete_cookie('user_id', path='/')
+            response.delete_cookie('user_name', path='/')
+    
+    # Corregir inconsistencia en sesión (tipo_usuario vs usuario_tipo)
+    elif 'tipo_usuario' in session and 'usuario_tipo' not in session:
+        session['usuario_tipo'] = session['tipo_usuario']
 
 
 # ==================== FUNCIONES HELPER ====================
 
 def es_sala_automatica(pin_sala):
     """
-    Verifica si un PIN corresponde a una sala en modo automático
-    Las salas automáticas tienen formato: AUTOXXXX (8 caracteres)
-    Las salas normales tienen formato: 6 dígitos numéricos
+    Verifica si un PIN corresponde a una sala en modo automático.
+    
+    Args:
+        pin_sala: Código PIN de la sala
+        
+    Returns:
+        bool: True si es sala automática, False en caso contrario
+        
+    Formato:
+        - Salas automáticas: AUTOXXXX (8 caracteres)
+        - Salas normales: 6 dígitos numéricos
     """
     if not pin_sala:
         return False
     return pin_sala.startswith('AUTO') and len(pin_sala) == 8
 
+
+def admin_required(f):
+    """
+    Decorador para requerir permisos de administrador.
+    Es un alias de docente_required para mantener compatibilidad.
+    """
+    return docente_required(f)
+
+
 # ==================== FUNCIONES DE SALAS ====================
 
-# Funciones mínimas para hacer funcionar las salas
 def verificar_y_crear_tabla_salas():
-    """Verifica si existe la tabla salas_juego y la crea si no existe"""
+    """
+    Verifica si existe la tabla salas_juego y la crea si no existe.
+    
+    Returns:
+        bool: True si la tabla existe o se creó exitosamente, False en caso de error
+    """
     try:
         conexion = obtener_conexion()
         cursor = conexion.cursor()
@@ -143,6 +233,15 @@ def verificar_y_crear_tabla_salas():
         return False
 
 def crear_sala_simple(cuestionario_id):
+    """
+    Crea una sala de juego simple para un cuestionario.
+    
+    Args:
+        cuestionario_id: ID del cuestionario asociado
+        
+    Returns:
+        tuple: (sala_id, pin_sala) si tiene éxito, (None, None) si falla
+    """
     try:
         print(f"DEBUG: crear_sala_simple - Iniciando con cuestionario_id: {cuestionario_id}")
 
@@ -235,6 +334,15 @@ def crear_grupos_para_sala(sala_id, num_grupos):
         return False
 
 def obtener_sala_por_id_simple(id_sala):
+    """
+    Obtiene información completa de una sala por su ID.
+    
+    Args:
+        id_sala: ID de la sala a buscar
+        
+    Returns:
+        dict: Información de la sala o None si no existe
+    """
     conexion = obtener_conexion()
     try:
         cursor = conexion.cursor()
@@ -309,6 +417,15 @@ def obtener_sala_por_id_simple(id_sala):
         conexion.close()
 
 def obtener_cuestionario_por_id_simple(id_cuestionario):
+    """
+    Obtiene información básica de un cuestionario por su ID.
+    
+    Args:
+        id_cuestionario: ID del cuestionario
+        
+    Returns:
+        tuple: (id, titulo, descripcion) o None si no existe
+    """
     conexion = obtener_conexion()
     try:
         cursor = conexion.cursor()
@@ -318,6 +435,15 @@ def obtener_cuestionario_por_id_simple(id_cuestionario):
         conexion.close()
 
 def obtener_preguntas_por_cuestionario_simple(id_cuestionario):
+    """
+    Obtiene el conteo de preguntas de un cuestionario.
+    
+    Args:
+        id_cuestionario: ID del cuestionario
+        
+    Returns:
+        list: Lista con objetos de preguntas
+    """
     conexion = obtener_conexion()
     try:
         cursor = conexion.cursor()
@@ -332,6 +458,15 @@ def obtener_preguntas_por_cuestionario_simple(id_cuestionario):
         conexion.close()
 
 def obtener_cuestionarios_por_docente_simple(id_docente):
+    """
+    Obtiene todos los cuestionarios creados por un docente.
+    
+    Args:
+        id_docente: ID del docente
+        
+    Returns:
+        list: Lista de diccionarios con información de cuestionarios
+    """
     conexion = obtener_conexion()
     try:
         cursor = conexion.cursor()
@@ -366,31 +501,195 @@ def obtener_cuestionarios_por_docente_simple(id_docente):
     finally:
         conexion.close()
 
-#---RUTAS FIJAS---#
+
+# ==================== FUNCIONES DE ESTADÍSTICAS ====================
+
+def obtener_partidas_recientes_estudiante(usuario_id, limit=5):
+    """
+    Obtiene las partidas recientes de un estudiante.
+    
+    Args:
+        usuario_id: ID del usuario estudiante
+        limit: Número máximo de partidas a retornar (default: 5)
+        
+    Returns:
+        list: Lista de diccionarios con información de partidas
+    """
+    conexion = obtener_conexion()
+    cursor = conexion.cursor()
+
+    try:
+        query = """
+            SELECT
+                ps.id_participante,
+                rs.puntaje_total,
+                rs.tiempo_total_respuestas,
+                ps.fecha_union,
+                s.id_sala,
+                s.pin_sala,
+                s.modo_juego,
+                c.id_cuestionario,
+                c.titulo as cuestionario_titulo,
+                c.descripcion as cuestionario_descripcion,
+                (SELECT COUNT(*) FROM cuestionario_preguntas cp WHERE cp.id_cuestionario = c.id_cuestionario) as total_preguntas
+            FROM participantes_sala ps
+            INNER JOIN salas_juego s ON ps.id_sala = s.id_sala
+            INNER JOIN cuestionarios c ON s.id_cuestionario = c.id_cuestionario
+            LEFT JOIN ranking_sala rs ON ps.id_participante = rs.id_participante AND ps.id_sala = rs.id_sala
+            WHERE ps.id_usuario = %s
+            ORDER BY ps.fecha_union DESC
+            LIMIT %s
+        """
+
+        cursor.execute(query, (usuario_id, limit))
+        partidas = cursor.fetchall()
+
+        partidas_formateadas = []
+        for partida in partidas:
+            es_individual = (partida[6] == 'individual')
+
+            partidas_formateadas.append({
+                'id_participante': partida[0],
+                'puntaje': partida[1] if partida[1] is not None else 0,
+                'tiempo': partida[2] if partida[2] is not None else 0,
+                'fecha': partida[3],
+                'sala_id': partida[4],
+                'sala_pin': partida[5],
+                'modo_juego': partida[6],
+                'es_individual': es_individual,
+                'cuestionario_id': partida[7],
+                'cuestionario_titulo': partida[8],
+                'cuestionario_descripcion': partida[9],
+                'total_preguntas': partida[10],
+                'tipo': 'Individual' if es_individual else 'Multijugador'
+            })
+
+        return partidas_formateadas
+
+    except Exception as e:
+        print(f"❌ Error en obtener_partidas_recientes_estudiante: {e}")
+        traceback.print_exc()
+        return []
+    finally:
+        cursor.close()
+        conexion.close()
+
+
+def obtener_estadisticas_estudiante(usuario_id):
+    """
+    Obtiene estadísticas completas del estudiante.
+    
+    Args:
+        usuario_id: ID del usuario estudiante
+        
+    Returns:
+        dict: Diccionario con estadísticas del estudiante
+    """
+    conexion = obtener_conexion()
+    cursor = conexion.cursor()
+
+    try:
+        # Total de participaciones
+        cursor.execute("""
+            SELECT COUNT(*)
+            FROM participantes_sala
+            WHERE id_usuario = %s
+        """, (usuario_id,))
+        total_participaciones = cursor.fetchone()[0] or 0
+
+        # Promedio de puntaje
+        cursor.execute("""
+            SELECT AVG(rs.puntaje_total)
+            FROM ranking_sala rs
+            INNER JOIN participantes_sala ps ON rs.id_participante = ps.id_participante
+            WHERE ps.id_usuario = %s AND rs.puntaje_total IS NOT NULL
+        """, (usuario_id,))
+        promedio_puntaje = cursor.fetchone()[0] or 0
+
+        # Mejor posición
+        cursor.execute("""
+            SELECT MIN(rs.posicion)
+            FROM ranking_sala rs
+            INNER JOIN participantes_sala ps ON rs.id_participante = ps.id_participante
+            WHERE ps.id_usuario = %s AND rs.posicion IS NOT NULL
+        """, (usuario_id,))
+        mejor_posicion = cursor.fetchone()[0] or 'N/A'
+
+        # Recompensas obtenidas
+        cursor.execute("""
+            SELECT COUNT(*)
+            FROM recompensas_otorgadas
+            WHERE id_estudiante = %s
+        """, (usuario_id,))
+        recompensas_obtenidas = cursor.fetchone()[0] or 0
+
+        return {
+            'total_participaciones': total_participaciones,
+            'promedio_puntaje': round(promedio_puntaje, 1) if promedio_puntaje else 0,
+            'mejor_posicion': mejor_posicion,
+            'recompensas_obtenidas': recompensas_obtenidas
+        }
+
+    except Exception as e:
+        print(f"❌ Error en obtener_estadisticas_estudiante: {e}")
+        traceback.print_exc()
+        return {
+            'total_participaciones': 0,
+            'promedio_puntaje': 0,
+            'mejor_posicion': 'N/A',
+            'recompensas_obtenidas': 0
+        }
+    finally:
+        cursor.close()
+        conexion.close()
+
+
+# =====================================================================
+# RUTAS DE LA APLICACIÓN
+# =====================================================================
+
+# =====================================================================
+# RUTAS DE LA APLICACIÓN
+# =====================================================================
+
+# ==================== RUTAS PRINCIPALES ====================
 
 @app.route('/')
 def index():
-    """Página principal que redirije según el estado de sesión"""
+    """
+    Ruta principal - Redirige según estado de autenticación.
+    """
     if 'logged_in' in session and session['logged_in']:
-        # Usuario ya logueado, redirigir a su dashboard
         if session.get('usuario_tipo') == 'estudiante':
             return redirect(url_for('dashboard_estudiante'))
         else:
             return redirect(url_for('dashboard_admin'))
     else:
-        # Usuario no logueado, mostrar login
         return redirect(url_for('login'))
+
+
+@app.route('/errorsistema')
+def error_sistema_page():
+    """Página de error del sistema"""
+    return render_template('ErrorSistema.html')
+
+
+# ==================== RUTAS LEGACY ====================
 
 @app.route('/crear_sala')
 def crear_sala():
-	return render_template('CrearSala.html')
+    """Legacy route - Usar /crear-sala en su lugar"""
+    return render_template('CrearSala.html')
+
 
 @app.route('/generar_preguntas', methods=['POST'])
 def generar_preguntas():
-    # Aquí procesas el formulario
+    """Legacy route - Generación de preguntas"""
     nombre_sala = request.form['nombre_sala']
-    # lógica para crear la sala o redirigir
     return render_template('GenerarPreguntas.html', nombre_sala=nombre_sala)
+
+
+# ==================== RUTAS DE AUTENTICACIÓN ====================
 
 @app.route('/registrarse', methods=['GET', 'POST'])
 def registrarse():
@@ -672,42 +971,8 @@ def unirse_a_sala():
         flash('Error al procesar la solicitud', 'error')
         return render_template('UnirseASala.html')
 
-@app.before_request
-def fix_session():
-    """Limpiar sesión en rutas API y corregir inconsistencias"""
-    
-    # Lista de rutas API que permiten autenticación por sesión (además de JWT)
-    api_rutas_con_sesion = [
-        '/api/cuestionarios/',
-        '/api/cuestionario/',  # Para /api/cuestionario/<id>/salas (docentes)
-        '/api/sala/',
-        '/api/exportar-',  # Incluye exportar-historial-estudiante y exportar-resultados
-        '/api/participante',  # Sin / al final para que coincida con /api/participantes/
-        '/api/perfil-xp/',
-        '/api/insignias',
-        '/api/tienda-insignias',
-        '/api/comprar-insignia',
-        '/api/recompensas',
-        '/api/otorgar_recompensas_automaticas',
-        '/api/ranking-xp',  # Para ranking global (estudiantes)
-        '/unirse-juego'  # Para permitir unirse sin limpiar sesión
-    ]
-    
-    # Solo limpiar sesión en rutas API que NO están en la lista blanca
-    if request.path.startswith('/api/'):
-        # Verificar si la ruta está en la lista de excepciones
-        permitir_sesion = any(ruta in request.path for ruta in api_rutas_con_sesion)
-        
-        if not permitir_sesion:
-            session.clear()
-            response = make_response()
-            response.delete_cookie('session', path='/')
-            response.delete_cookie('user_id', path='/')
-            response.delete_cookie('user_name', path='/')
-    
-    # Corregir inconsistencia en sesión (tipo_usuario vs usuario_tipo)
-    elif 'tipo_usuario' in session and 'usuario_tipo' not in session:
-        session['usuario_tipo'] = session['tipo_usuario']
+
+# ==================== RUTAS DE API JWT ====================
 
 @app.route('/api/auth', methods=['POST'])
 def jwt_login():
@@ -743,9 +1008,15 @@ def jwt_login():
         print(f"❌ ERROR en jwt_login: {e}")
         return jsonify({'success': False, 'error': 'Error del servidor'}), 500
 
-# Ruta de error de sistema divertida
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    """
+    Ruta de inicio de sesión con soporte para web y API.
+    
+    GET: Muestra formulario de login
+    POST: Procesa credenciales y crea sesión
+    """
     if request.method == 'GET':
         return render_template('Login.html')
 
@@ -811,17 +1082,17 @@ def login():
 
 @app.route('/logout')
 def logout():
-    """Cerrar sesión del usuario y limpiar cookies"""
+    """
+    Cierra la sesión del usuario y limpia cookies.
+    """
     session.clear()
     flash('Has cerrado sesión correctamente', 'success')
     response = make_response(redirect(url_for('login')))
-    # Limpiar cookies encriptadas
     limpiar_cookies_usuario(response)
     return response
 
-def admin_required(f):
-    """Decorador para requerir permisos de administrador (alias de docente_required)"""
-    return docente_required(f)
+
+# ==================== RUTAS DE DASHBOARDS ====================
 
 def obtener_partidas_recientes_estudiante(usuario_id, limit=5):
     """Obtiene las partidas recientes de un estudiante (salas y juegos individuales)"""
@@ -948,11 +1219,15 @@ def obtener_estadisticas_estudiante(usuario_id):
         cursor.close()
         conexion.close()
 
+
 @app.route('/estudiante')
 @login_required
 @estudiante_required
 def dashboard_estudiante():
-    """Dashboard para estudiantes - SOLO estudiantes pueden acceder"""
+    """
+    Dashboard principal para estudiantes.
+    Muestra estadísticas, cuestionarios disponibles y partidas recientes.
+    """
 
     usuario = {
         'id_usuario': session['usuario_id'],
@@ -1030,11 +1305,15 @@ def dashboard_admin():
 
     return render_template('DashboardAdmin.html', usuario=usuario, estadisticas=estadisticas)
 
+
 @app.route('/docente')
 @login_required
 @docente_required
 def dashboard_docente():
-    """Dashboard específico para docentes - SOLO docentes y admin pueden acceder"""
+    """
+    Dashboard principal para docentes.
+    Muestra cuestionarios, estadísticas y ranking de estudiantes.
+    """
     usuario = {
         'id_usuario': session['usuario_id'],
         'nombre': session['usuario_nombre'],
@@ -1160,7 +1439,7 @@ def exportar_dashboard_docente_excel():
                 estudiante['puntaje_acumulado'],
                 estudiante['total_participaciones'],
                 f"{estudiante['promedio_puntaje']:.1f}",
-                f"{estudiante['precision_promedio']:.1f}%"
+                f"{estudiante['precision_global']:.1f}%"
             ]
             
             for col, value in enumerate(row_data, start=1):
@@ -1528,10 +1807,14 @@ def exportar_dashboard_docente_pdf():
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
 
+
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    """Ruta genérica de dashboard que redirije según el tipo de usuario"""
+    """
+    Ruta genérica de dashboard que redirecciona según el tipo de usuario.
+    Útil para enlaces genéricos que necesitan determinar el dashboard apropiado.
+    """
     print(f"\n{'='*80}")
     print(f"🏠 DASHBOARD - Redirigiendo según tipo de usuario")
     print(f"   usuario_tipo: {session.get('usuario_tipo')}")
@@ -1548,7 +1831,9 @@ def dashboard():
         print("   → Redirigiendo a dashboard_admin")
         return redirect(url_for('dashboard_admin'))
 
-# Rutas adicionales para estudiantes
+
+# ==================== RUTAS ADICIONALES PARA ESTUDIANTES ====================
+
 @app.route('/historial/estudiante')
 @login_required
 def historial_estudiante():
@@ -1840,7 +2125,8 @@ def mis_recompensas():
 
     return render_template('MisRecompensas.html', recompensas=recompensas)
 
-# Rutas adicionales para administradores
+# ==================== RUTAS PARA ADMINISTRADORES ====================
+
 @app.route('/monitoreo/salas')
 @login_required
 @admin_required
@@ -1893,12 +2179,9 @@ def otorgar_recompensas():
     """Otorgar recompensas"""
     return render_template('OtorgarRecompensas.html')
 
-@app.route('/errorsistema')
-def error_sistema_page():
-    # Renderiza un template divertido de error interno
-    return render_template('ErrorSistema.html'), 500
 
-# Rutas para salas
+# ==================== RUTAS DE SALAS Y JUEGO ====================
+
 @app.route('/crear-sala', methods=['GET', 'POST'])
 @login_required
 @docente_required
