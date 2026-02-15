@@ -1,84 +1,376 @@
-# 🎮 Brain RUSH - Sistema de Juegos Educativos
+# 🎮 Brain Rush - Sistema de Gamificación Educativa
 
-## 📋 Descripción del Proyecto
+![Python](https://img.shields.io/badge/Python-43.8%25-blue)
+![HTML](https://img.shields.io/badge/HTML-51%25-orange)
+![CSS](https://img.shields.io/badge/CSS-3.2%25-blueviolet)
+![JavaScript](https://img.shields.io/badge/JavaScript-2%25-yellow)
+![Flask](https://img.shields.io/badge/Flask-3.0.0-green)
+![License](https://img.shields.io/badge/License-Educational-red)
 
-Brain RUSH es una plataforma web educativa desarrollada con Flask que permite a docentes crear cuestionarios interactivos y gestionar juegos de conocimiento en tiempo real con sus estudiantes. El sistema incluye un completo conjunto de características para gamificación educativa, gestión de usuarios, ranking en vivo y exportación de resultados.
+## 📋 Descripción
+
+Brain Rush es una aplicación web educativa desarrollada con Flask y Python que permite a docentes crear y gestionar cuestionarios interactivos con mecánicas de juego en tiempo real. El sistema combina gamificación, seguimiento de progreso estudiantil y herramientas avanzadas de exportación de datos para crear una experiencia educativa atractiva e interactiva.
 
 ---
 
 ## 🚀 Características Principales
 
-### 👥 Sistema de Usuarios
-- **Roles**: Docentes y Estudiantes con permisos diferenciados
-- **Autenticación**: JWT tokens para API + sesiones Flask
-- **Registro**: Con verificación de email obligatoria
-- **Perfil**: Gestión de datos personales y contraseñas
+### 🔐 Sistema de Autenticación y Usuarios
+- Autenticación segura con JWT tokens y sesiones Flask
+- Registro de usuarios con verificación de email
+- Recuperación de contraseña mediante email
+- Roles diferenciados: Docentes y Estudiantes
+- Gestión de perfil personal
+- Hash seguro de contraseñas con bcrypt
 
-### 📝 Gestión de Cuestionarios
-- Creación de cuestionarios con múltiples preguntas
-- Tipos de preguntas: Opción múltiple (A/B/C/D)
+### 📚 Gestión de Cuestionarios (Docentes)
+- Creación y edición de cuestionarios interactivos
+- Preguntas de opción múltiple (A/B/C/D)
 - Importación masiva desde Excel con plantilla predefinida
 - Configuración de tiempo límite por pregunta (5-300 segundos)
-- Asignación de recompensas automáticas (trofeos, medallas, insignias)
+- Asignación de recompensas (trofeos, medallas, insignias)
+- Categorización por nivel de dificultad
 
-### 🎯 Sistema de Juego en Tiempo Real
-- **Salas de Juego**: Generación de PIN único de 6 dígitos
-- **Grupos**: Organización de estudiantes en equipos
-- **Juego en Vivo**: Preguntas sincronizadas con timer visual
-- **Puntuación Dinámica**: Puntaje basado en velocidad de respuesta
-  - Máximo: 1000 puntos (< 0.5 seg)
-  - Decremento: 100 puntos cada 0.5 segundos
-  - Mínimo: 10 puntos
-- **Ranking en Tiempo Real**: Actualización automática de posiciones
-- **Estadísticas**: Respuestas correctas/incorrectas, tiempo total, precisión
+### 🎮 Sistema de Juego en Tiempo Real
+- Generación automática de PIN único de 6 dígitos para salas
+- Organización de estudiantes en grupos/equipos
+- Sincronización en tiempo real de preguntas
+- Contador visual de tiempo por pregunta
+- Puntuación dinámica basada en velocidad de respuesta
+- Ranking actualizado automáticamente
+- Estadísticas detalladas: precisión, tiempo, respuestas correctas/incorrectas
+
+### 📊 Dashboard para Docentes
+- Vista de cuestionarios creados
+- Monitoreo de juegos en vivo
+- Estadísticas de participación estudiantil
+- Exportación de resultados a Excel
+- Integración con OneDrive para almacenamiento en la nube
+- Envío de resultados por email
 
 ### 🏆 Sistema de Gamificación
-- **XP y Niveles**: Experiencia acumulada y progresión automática
-- **Insignias**: 12 insignias desbloqueables con requisitos específicos
-- **Tienda de Insignias**: Compra con puntos acumulados
-- **Recompensas Automáticas**: Top 3 reciben recompensas al finalizar juego
-- **Historial**: Seguimiento de logros y progreso
+- Sistema de XP y niveles automático
+- 12 insignias desbloqueables con requisitos específicos
+- Tienda de insignias con puntos acumulados
+- Recompensas automáticas para Top 3 jugadores
+- Historial de logros y progreso
+- Ranking global de estudiantes
 
-### 📊 Exportación de Resultados
-- **Excel (XLSX)**: Formato profesional con encabezados formateados
-- **OneDrive OAuth2**: Subida automática a carpeta BrainRush
-- **Email**: Envío automático con archivo adjunto (fallback)
-- **Formatos**: Ranking completo con estadísticas detalladas
+### 🔔 Sistema de Notificaciones
+- Notificaciones por email transaccional
+- Confirmación de registro
+- Recuperación de contraseña
+- Envío de resultados de juegos
+- Sistema de notificaciones visuales en la aplicación
+- Integración con Gmail SMTP
 
-### 🔔 Notificaciones
-- **Email Transaccional**: Confirmación de registro, restablecimiento de contraseña
-- **Configuración Gmail**: Integración con contraseñas de aplicación
-- **Templates HTML**: Emails con diseño profesional
+### 📈 Gestión de Datos Educativos
+- Seguimiento de progreso estudiantil
+- Estadísticas de rendimiento por cuestionario
+- Análisis de respuestas y patrones
+- Reportes exportables en múltiples formatos
+- Almacenamiento seguro en base de datos MySQL
 
 ---
 
 ## 🛠️ Tecnologías Utilizadas
 
 ### Backend
-- **Flask 3.0.0**: Framework web principal
-- **PyMySQL**: Conexión a base de datos MySQL
-- **PyJWT**: Autenticación con tokens JWT
-- **Flask-Mail**: Envío de correos electrónicos
-- **python-dotenv**: Gestión de variables de entorno
-- **bcrypt**: Hash seguro de contraseñas
+- **Python 3.8+**: Lenguaje principal de desarrollo
+- **Flask 3.0.0**: Framework web moderno y ligero
+- **PyMySQL 1.1.0**: Conector para base de datos MySQL
+- **Flask-Mail 0.9.1**: Gestión de correos electrónicos
+- **python-dotenv 1.0.0**: Manejo de variables de entorno
+- **Werkzeug 3.0.0**: Utilidades WSGI y seguridad
+- **itsdangerous**: Generación de tokens seguros
+- **bcrypt**: Hash de contraseñas
 
 ### Frontend
-- **HTML5 + CSS3**: Interfaz responsiva
-- **JavaScript (ES6+)**: Interactividad y AJAX
-- **SweetAlert2**: Alertas y modales elegantes
+- **HTML5**: Estructura semántica
+- **CSS3**: Estilos modernos y responsive
+- **JavaScript (ES6+)**: Interactividad y comunicación asíncrona
+- **Jinja2**: Motor de plantillas
 - **Font Awesome**: Iconografía
+- **SweetAlert2**: Alertas y notificaciones elegantes
 
 ### Base de Datos
-- **MySQL 5.7+**: 24 tablas con relaciones complejas
+- **MySQL 5.7+**: Sistema de gestión de base de datos relacional
+- **24 Tablas**: Arquitectura normalizada
 - **Triggers**: Actualización automática de XP y niveles
 - **Stored Procedures**: Lógica de negocio optimizada
 - **Índices**: Optimización de consultas
 
 ### Integraciones Externas
-- **Microsoft Graph API**: Subida de archivos a OneDrive
+- **Microsoft Graph API**: Integración con OneDrive
 - **Azure AD OAuth2**: Autenticación con cuentas Microsoft
-- **MSAL Python**: Librería de autenticación Microsoft
-- **openpyxl**: Generación de archivos Excel
+- **MSAL Python 1.26.0**: Librería de autenticación Microsoft
+- **openpyxl 3.1.2**: Generación y lectura de archivos Excel
+- **ReportLab 4.0.7**: Generación de reportes PDF
+- **Requests 2.31.0**: Cliente HTTP para APIs
+
+### Herramientas de Desarrollo
+- **Flask-WTF 1.2.1**: Formularios y validación
+- **WTForms 3.1.1**: Construcción de formularios
+- **Git**: Control de versiones
+- **PythonAnywhere**: Plataforma de despliegue
+
+---
+
+## 📋 Requisitos Previos
+
+Antes de instalar Brain Rush, asegúrate de tener:
+
+- **Python 3.8 o superior** instalado en tu sistema
+- **MySQL 5.7+** o **MariaDB 10.3+** como servidor de base de datos
+- **Cuenta de Gmail** (para envío de correos electrónicos)
+- **Cuenta de Microsoft Azure** (opcional, para integración con OneDrive)
+- **Git** para clonar el repositorio
+- **pip** para instalación de dependencias Python
+
+---
+
+## 💻 Instalación
+
+Sigue estos pasos para configurar Brain Rush en tu entorno local:
+
+### 1. Clonar el Repositorio
+
+```bash
+git clone https://github.com/IgnacioAlP/brain_rush.git
+cd brain_rush
+```
+
+### 2. Crear Entorno Virtual
+
+Es recomendable usar un entorno virtual para aislar las dependencias:
+
+```bash
+# Crear entorno virtual
+python -m venv .venv
+
+# Activar entorno virtual
+
+# En Windows:
+.venv\Scripts\activate
+
+# En Linux/Mac:
+source .venv/bin/activate
+```
+
+### 3. Instalar Dependencias
+
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Configurar Variables de Entorno
+
+Crea un archivo `.env` en la raíz del proyecto con la siguiente estructura:
+
+```bash
+# Copiar archivo de ejemplo (si existe)
+cp .env.example .env
+
+# O crear manualmente con tu editor favorito
+nano .env
+```
+
+Contenido del archivo `.env`:
+
+```env
+# Configuración de Base de Datos
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=tu_password_mysql
+DB_NAME=brain_rush
+
+# Clave secreta para JWT
+JWT_SECRET_KEY=tu-clave-secreta-muy-larga-y-aleatoria-aqui
+
+# Configuración de Email (Gmail)
+MAIL_USERNAME=tu_correo@gmail.com
+MAIL_PASSWORD=tu_contraseña_de_aplicacion_gmail
+
+# Configuración de OneDrive (Opcional)
+AZURE_CLIENT_ID=tu_application_id
+AZURE_CLIENT_SECRET=tu_client_secret
+AZURE_TENANT_ID=common
+ONEDRIVE_REDIRECT_URI=http://localhost:5000/callback/onedrive
+```
+
+**Nota**: Nunca subas el archivo `.env` al repositorio. Ya está incluido en `.gitignore`.
+
+### 5. Configurar Base de Datos
+
+```bash
+# Conectar a MySQL
+mysql -u root -p
+
+# Crear base de datos
+CREATE DATABASE brain_rush CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+exit;
+
+# Importar esquema completo
+mysql -u root -p brain_rush < database_schema_complete.sql
+```
+
+### 6. Ejecutar la Aplicación
+
+```bash
+python main.py
+```
+
+La aplicación estará disponible en: **http://localhost:5000**
+
+---
+
+## ⚙️ Configuración
+
+### Configuración de Gmail para Envío de Correos
+
+Para que Brain Rush pueda enviar correos de verificación y notificaciones:
+
+1. Ve a [Seguridad de tu cuenta Google](https://myaccount.google.com/security)
+2. Activa la **"Verificación en 2 pasos"**
+3. Ve a [Contraseñas de aplicación](https://myaccount.google.com/apppasswords)
+4. Genera una nueva contraseña de aplicación:
+   - **App**: Correo
+   - **Dispositivo**: Otro (escribe "Brain Rush")
+5. Copia la contraseña de 16 caracteres generada
+6. Pégala en la variable `MAIL_PASSWORD` del archivo `.env`
+
+### Configuración de OneDrive (Opcional)
+
+Para habilitar la exportación automática a OneDrive:
+
+#### Paso 1: Registrar Aplicación en Azure
+
+1. Ve al [Portal de Azure](https://portal.azure.com)
+2. Busca **"Azure Active Directory"** o **"Microsoft Entra ID"**
+3. Ve a **"App registrations"** → Click en **"+ New registration"**
+4. Configura la aplicación:
+   - **Name**: Brain Rush OneDrive Integration
+   - **Supported account types**: Accounts in any organizational directory and personal Microsoft accounts
+   - **Redirect URI**: Web → `http://localhost:5000/callback/onedrive`
+5. Click **"Register"**
+
+#### Paso 2: Obtener Credenciales
+
+1. En la página de tu aplicación, copia el **Application (client) ID**
+2. Ve a **"Certificates & secrets"** → **"+ New client secret"**
+3. Crea un nuevo secreto y copia el **Value** inmediatamente (solo se muestra una vez)
+4. Guarda ambos valores en tu archivo `.env`:
+   - `AZURE_CLIENT_ID`: Application ID
+   - `AZURE_CLIENT_SECRET`: Client Secret Value
+
+#### Paso 3: Configurar Permisos
+
+1. Ve a **"API permissions"**
+2. Click **"+ Add a permission"** → Selecciona **"Microsoft Graph"**
+3. Selecciona **"Delegated permissions"**
+4. Agrega los siguientes permisos:
+   - `Files.ReadWrite`
+   - `User.Read`
+5. Click **"Grant admin consent"** (si eres administrador)
+
+### Configuración de la Base de Datos
+
+El archivo `database_schema_complete.sql` incluye:
+
+- 24 tablas relacionadas
+- Triggers para actualización automática de XP
+- Stored procedures para lógica de negocio
+- Datos de ejemplo para insignias y configuraciones iniciales
+
+Si necesitas resetear la base de datos:
+
+```bash
+# Eliminar y recrear
+mysql -u root -p -e "DROP DATABASE IF EXISTS brain_rush; CREATE DATABASE brain_rush CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+
+# Reimportar esquema
+mysql -u root -p brain_rush < database_schema_complete.sql
+```
+
+---
+
+## 🚀 Uso
+
+### Para Docentes
+
+#### Crear un Cuestionario
+
+1. **Inicia sesión** como docente
+2. Ve al **Dashboard Docente**
+3. Click en **"Crear Cuestionario"**
+4. Completa la información:
+   - Título del cuestionario
+   - Descripción
+   - Nivel de dificultad
+   - Categoría
+5. Agrega preguntas:
+   - **Manualmente**: Click "Nueva Pregunta" y completa el formulario
+   - **Desde Excel**: 
+     - Download la plantilla Excel
+     - Completa las preguntas en el formato indicado
+     - Importa el archivo completado
+6. (Opcional) Configura recompensas para Top 3
+7. **Guarda** el cuestionario
+
+#### Crear una Sala de Juego
+
+1. Ve a **"Mis Cuestionarios"**
+2. Selecciona un cuestionario
+3. Click en **"Crear Sala de Juego"**
+4. Se genera automáticamente un **PIN de 6 dígitos**
+5. Comparte el PIN con tus estudiantes
+6. Espera a que se unan los estudiantes
+7. (Opcional) Organiza estudiantes en grupos
+8. Click **"Iniciar Juego"** cuando estés listo
+
+#### Exportar Resultados
+
+**Opción 1: OneDrive**
+1. Ve a **"Resultados"** de una sala finalizada
+2. Click en **"☁️ Subir a OneDrive"**
+3. Autoriza el acceso (solo primera vez)
+4. El archivo se sube automáticamente a `OneDrive/BrainRush/`
+
+**Opción 2: Email**
+1. Ve a **"Resultados"** de una sala finalizada
+2. Click en **"📧 Enviar por Correo"**
+3. Recibirás el archivo Excel en tu email
+
+### Para Estudiantes
+
+#### Unirse a un Juego
+
+1. **Inicia sesión** como estudiante
+2. Ve al **Dashboard Estudiante**
+3. Click en **"Unirse a Juego"**
+4. Ingresa el **PIN** proporcionado por tu docente
+5. Confirma tu nombre de usuario
+6. Espera a que el docente inicie el juego
+
+#### Jugar y Ganar Puntos
+
+1. Lee cada pregunta cuidadosamente
+2. Observa el **timer** (cuenta regresiva)
+3. Selecciona la respuesta correcta lo más rápido posible
+4. Mayor velocidad = Mayor puntaje (hasta 1000 puntos)
+5. Al finalizar, revisa tu posición en el **ranking**
+6. Gana **XP** e **insignias** por tu desempeño
+
+### Rutas Principales de la Aplicación
+
+- `/` - Página de inicio
+- `/login` - Iniciar sesión
+- `/registrarse` - Crear cuenta nueva
+- `/dashboard-docente` - Panel de control para docentes
+- `/dashboard-estudiante` - Panel de control para estudiantes
+- `/crear-cuestionario` - Formulario de creación de cuestionarios
+- `/mis-cuestionarios` - Lista de cuestionarios creados
+- `/unirse-juego` - Unirse a sala con PIN
 
 ---
 
@@ -86,31 +378,34 @@ Brain RUSH es una plataforma web educativa desarrollada con Flask que permite a 
 
 ```
 brain_rush/
-├── main.py                      # Aplicación Flask principal
-├── config.py                    # Configuraciones del sistema
-├── bd.py                        # Conexión a base de datos
-├── api_crud.py                  # Operaciones CRUD para API
-├── utils_auth.py                # Utilidades de autenticación
-├── extensions.py                # Extensiones Flask (Mail)
-├── onedrive_auth.py             # Autenticación OneDrive
-├── requirements.txt             # Dependencias Python
-├── .env                         # Variables de entorno (NO subir a Git)
-├── database_schema_complete.sql # Esquema completo de BD
 │
-├── controladores/               # Lógica de negocio
-│   ├── controlador_usuario.py
-│   ├── controlador_cuestionarios.py
-│   ├── controlador_preguntas.py
-│   ├── controlador_opciones.py
-│   ├── controlador_salas.py
-│   ├── controlador_juego.py
-│   ├── controlador_participaciones.py
-│   ├── controlador_ranking.py
-│   ├── controlador_xp.py
-│   ├── controlador_insignias.py
-│   └── controlador_recompensas.py
+├── main.py                      # 🎯 Punto de entrada de la aplicación Flask
+├── config.py                    # ⚙️ Configuraciones por entorno (dev, prod)
+├── bd.py                        # 💾 Gestión de conexión a base de datos
+├── api_crud.py                  # 🔌 API REST para operaciones CRUD
+├── utils_auth.py                # 🔐 Utilidades de autenticación (JWT, decoradores)
+├── extensions.py                # 🔧 Extensiones Flask (Flask-Mail)
+├── requirements.txt             # 📦 Dependencias Python del proyecto
+├── .env                         # 🔒 Variables de entorno (NO INCLUIR EN GIT)
+├── .env.pythonanywhere          # 🌐 Configuración para PythonAnywhere
+├── .gitignore                   # 🚫 Archivos excluidos de Git
+├── database_schema_complete.sql # 🗃️ Esquema completo de base de datos
 │
-├── Templates/                   # Plantillas HTML
+├── controladores/               # 🎮 Lógica de negocio (Controladores MVC)
+│   ├── __init__.py
+│   ├── controlador_usuario.py          # Gestión de usuarios
+│   ├── controlador_cuestionarios.py    # CRUD de cuestionarios
+│   ├── controlador_preguntas.py        # Gestión de preguntas
+│   ├── controlador_opciones.py         # Opciones de respuesta
+│   ├── controlador_salas.py            # Salas de juego
+│   ├── controlador_juego.py            # Lógica del juego en tiempo real
+│   ├── controlador_participaciones.py  # Participantes en salas
+│   ├── controlador_ranking.py          # Cálculo de rankings
+│   ├── controlador_xp.py               # Sistema de experiencia
+│   ├── controlador_respuestas.py       # Respuestas de participantes
+│   └── controlador_recompensas.py      # Sistema de recompensas
+│
+├── Templates/                   # 🎨 Plantillas HTML (Jinja2)
 │   ├── login.html
 │   ├── registro.html
 │   ├── DashboardDocente.html
@@ -121,688 +416,169 @@ brain_rush/
 │   ├── MonitoreoJuego.html
 │   ├── JuegoEstudiante.html
 │   ├── ResultadosJuego.html
-│   └── (más archivos...)
+│   └── ... (más plantillas)
 │
-└── static/                      # Archivos estáticos
-    ├── css/
-    ├── js/
-    └── images/
+└── static/                      # 📦 Archivos estáticos
+    ├── css/                     # Hojas de estilo
+    │   ├── brain_rush_v3.css
+    │   ├── notifications.css
+    │   ├── registro.css
+    │   └── ... (más CSS)
+    ├── js/                      # JavaScript del cliente
+    │   ├── brain-rush-notifications.js
+    │   ├── notifications.js
+    │   └── ... (más JS)
+    └── img/                     # Imágenes y recursos gráficos
 ```
 
----
-
-## 🗄️ Base de Datos
-
-### Tablas Principales (24 en total)
-
-#### Usuarios y Autenticación
-- `usuarios`: Docentes y estudiantes
-- `activacion_cuentas`: Tokens de verificación de email
-- `tokens_recuperacion`: Tokens para restablecer contraseña
-
-#### Cuestionarios y Preguntas
-- `cuestionarios`: Información de cuestionarios
-- `preguntas`: Preguntas con tipo y tiempo límite
-- `opciones_respuesta`: Opciones A/B/C/D para cada pregunta
-- `cuestionario_preguntas`: Relación con orden de preguntas
-
-#### Sistema de Juego
-- `salas_juego`: Salas con PIN único y estado
-- `participantes_sala`: Estudiantes en cada sala
-- `grupos_sala`: Organización en equipos
-- `estado_juego_sala`: Estado actual del juego
-- `respuestas_participantes`: Respuestas con tiempo y puntaje
-- `ranking_sala`: Posiciones finales
-
-#### Gamificación
-- `xp_estudiantes`: Experiencia y nivel de cada estudiante
-- `insignias`: 12 tipos de insignias disponibles
-- `insignias_estudiante`: Insignias desbloqueadas por cada estudiante
-- `progreso_insignias`: Progreso hacia requisitos de insignias
-- `tienda_insignias`: Insignias comprables con puntos
-- `compras_insignias`: Historial de compras
-- `recompensas`: Premios configurados por cuestionario
-- `recompensas_usuarios`: Recompensas obtenidas
-
----
-
-## ⚙️ Instalación y Configuración
-
-### 1. Requisitos Previos
-
-- Python 3.8+
-- MySQL 5.7+ o MariaDB 10.3+
-- Cuenta de Gmail (para envío de emails)
-- Cuenta de Microsoft Azure (opcional, para OneDrive)
-
-### 2. Clonar el Repositorio
-
-```bash
-git clone https://github.com/tu-usuario/brain_rush.git
-cd brain_rush
-```
-
-### 3. Crear Entorno Virtual
-
-```bash
-python -m venv venv
-
-# Windows
-venv\Scripts\activate
-
-# Linux/Mac
-source venv/bin/activate
-```
-
-### 4. Instalar Dependencias
-
-```bash
-pip install -r requirements.txt
-```
-
-### 5. Configurar Base de Datos
-
-```bash
-# Crear base de datos
-mysql -u root -p
-
-CREATE DATABASE brain_rush CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-exit;
-
-# Importar esquema
-mysql -u root -p brain_rush < database_schema_complete.sql
-```
-
-### 6. Configurar Variables de Entorno
-
-Crea un archivo `.env` en la raíz del proyecto:
-
-```env
-# Base de Datos
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=tu_password
-DB_NAME=brain_rush
-
-# JWT
-JWT_SECRET_KEY=tu-clave-secreta-muy-larga-y-aleatoria-aqui
-
-# Email (Gmail)
-MAIL_USERNAME=tu_correo@gmail.com
-MAIL_PASSWORD=contraseña-de-aplicacion-gmail
-
-# OneDrive (Opcional)
-AZURE_CLIENT_ID=tu-application-id
-AZURE_CLIENT_SECRET=tu-client-secret
-AZURE_TENANT_ID=common
-ONEDRIVE_REDIRECT_URI=http://localhost:5000/callback/onedrive
-```
-
-### 7. Configurar Gmail (para envío de emails)
-
-1. Ve a https://myaccount.google.com/security
-2. Activa "Verificación en 2 pasos"
-3. Ve a https://myaccount.google.com/apppasswords
-4. Genera contraseña de aplicación:
-   - App: "Correo"
-   - Dispositivo: "Otro" → "Brain RUSH"
-5. Copia la contraseña de 16 caracteres
-6. Pégala en `MAIL_PASSWORD` del archivo `.env`
-
-### 8. Configurar OneDrive (Opcional)
-
-#### Registrar Aplicación en Azure
-
-1. Ve a https://portal.azure.com
-2. Busca "Azure Active Directory" o "Microsoft Entra ID"
-3. Ve a "App registrations" → "+ New registration"
-4. Configura:
-   - **Name**: BrainRush OneDrive Integration
-   - **Supported account types**: Accounts in any organizational directory and personal Microsoft accounts
-   - **Redirect URI**: Web → `http://localhost:5000/callback/onedrive`
-5. Copia el **Application (client) ID**
-6. Ve a "Certificates & secrets" → "+ New client secret"
-7. Copia el **Value** (secret) inmediatamente
-8. Ve a "API permissions":
-   - "+ Add a permission" → Microsoft Graph
-   - Delegated permissions:
-     - `Files.ReadWrite`
-     - `User.Read`
-   - "Grant admin consent"
-
-#### Configurar URLs en Azure
-
-1. Ve a "Authentication"
-2. Agrega ambas URLs de redirección:
-   - `http://localhost:5000/callback/onedrive` (local)
-   - `https://tu-dominio.com/callback/onedrive` (producción)
-3. Marca:
-   - ✅ Access tokens
-   - ✅ ID tokens
-4. Guarda cambios
-
-### 9. Ejecutar la Aplicación
-
-```bash
-python main.py
-```
-
-La aplicación estará disponible en: http://localhost:5000
-
----
-
-## 📖 Guías de Uso
-
-### Para Docentes
-
-#### Crear un Cuestionario
-
-1. Login como docente
-2. Dashboard → "Crear Cuestionario"
-3. Completa información:
-   - Título
-   - Descripción
-   - Nivel de dificultad
-   - Categoría
-4. Agrega preguntas:
-   - **Manualmente**: Click "Nueva Pregunta"
-   - **Desde Excel**: 
-     - Click "Descargar Plantilla Excel"
-     - Completa preguntas en Excel
-     - Click "Importar desde Excel"
-     - Selecciona archivo completado
-5. Configura recompensas (opcional):
-   - Trofeo (1er lugar)
-   - Medalla (2do lugar)
-   - Insignia (3er lugar)
-6. Guarda cuestionario
-
-#### Crear Sala de Juego
-
-1. "Mis Cuestionarios" → Selecciona cuestionario
-2. Click "Crear Sala de Juego"
-3. Se genera PIN de 6 dígitos
-4. Comparte PIN con estudiantes
-5. Espera a que se unan
-6. (Opcional) Organiza en grupos
-7. Click "Iniciar Juego"
-
-#### Monitorear Juego en Vivo
-
-1. Vista en tiempo real de:
-   - Pregunta actual mostrada
-   - Cuántos estudiantes han respondido
-   - Tiempo transcurrido
-2. Click "Siguiente Pregunta" cuando estés listo
-3. Repite hasta finalizar todas las preguntas
-4. Sistema calcula ranking automáticamente
-5. Asigna recompensas a top 3 automáticamente
-
-#### Exportar Resultados
-
-**Opción 1: OneDrive (Automático)**
-1. "Ver Resultados" → Click "☁️ Subir a OneDrive"
-2. Primera vez: Autoriza acceso con cuenta Microsoft
-3. Archivo se sube automáticamente a OneDrive/BrainRush/
-4. Click "Abrir OneDrive" para ver el archivo
-
-**Opción 2: Email**
-1. "Ver Resultados" → Click "📧 Enviar por Correo"
-2. Recibes Excel adjunto en tu email
-3. Guarda donde prefieras
-
-### Para Estudiantes
-
-#### Unirse a un Juego
-
-1. Login como estudiante
-2. Dashboard → "Unirse a Juego"
-3. Ingresa PIN proporcionado por docente
-4. Ingresa tu nombre (o usa el de tu cuenta)
-5. Click "Unirse"
-6. Espera a que docente inicie el juego
-
-#### Jugar
-
-1. Lee la pregunta mostrada
-2. Observa el timer (cuenta regresiva)
-3. Click en la opción que creas correcta
-4. Feedback inmediato:
-   - ✅ Correcta: Puntaje obtenido
-   - ❌ Incorrecta: Respuesta correcta mostrada
-5. Espera siguiente pregunta
-6. Al finalizar, ve tu posición en el ranking
-
-#### Gestionar Perfil y Logros
-
-1. Dashboard → "Mi Perfil"
-2. Ve tu XP, nivel actual y progreso
-3. "Mis Insignias" → Insignias desbloqueadas y disponibles
-4. "Tienda" → Compra insignias con puntos acumulados
-5. "Historial" → Juegos pasados y estadísticas
-
----
-
-## 🎮 Sistema de Puntuación
-
-### Puntaje por Respuesta
-
-El puntaje se calcula según la velocidad de respuesta:
-
-| Tiempo de Respuesta | Puntaje Otorgado |
-|---------------------|------------------|
-| 0.0 - 0.5 seg       | 1000 puntos      |
-| 0.5 - 1.0 seg       | 900 puntos       |
-| 1.0 - 1.5 seg       | 800 puntos       |
-| 1.5 - 2.0 seg       | 700 puntos       |
-| ...                 | ...              |
-| 4.5 - 5.0 seg       | 100 puntos       |
-| > 5.0 seg           | 10 puntos (mín)  |
-
-**Fórmula**: `Puntaje = 1000 - (intervalos_de_0.5_seg × 100)`
-
-### Ranking
-
-**Criterios de ordenamiento**:
-1. **Puntaje Total** (mayor a menor)
-2. En caso de empate → **Tiempo Total** (menor a mayor)
-
-**Ejemplo**:
-```
-Pos | Nombre      | Puntaje | Correctas | Tiempo  | Precisión
-----|-------------|---------|-----------|---------|----------
-1   | Juan        | 8500    | 10        | 12.5s   | 100%
-2   | María       | 8500    | 10        | 15.2s   | 100%  ← Empate por tiempo
-3   | Pedro       | 7800    | 9         | 10.3s   | 90%
-```
-
-### Sistema XP
-
-- **Por respuesta correcta**: +10 XP
-- **Por finalizar juego**: +50 XP
-- **Nivel automático**: Se calcula con triggers SQL
-  - Nivel 1: 0-99 XP
-  - Nivel 2: 100-299 XP
-  - Nivel 3: 300-599 XP
-  - ... (escalado exponencial)
-
-### Insignias
-
-**12 insignias disponibles**:
-1. **Primera Victoria**: Ganar primer juego
-2. **Racha Ganadora**: Ganar 3 juegos consecutivos
-3. **Perfeccionista**: 100% de aciertos en un juego
-4. **Velocista**: Responder todas en < 2 segundos promedio
-5. **Constante**: Participar en 10 juegos
-6. **Experto**: Alcanzar nivel 10
-7. **Maestro**: Alcanzar nivel 25
-8. **Leyenda**: Alcanzar nivel 50
-9. **Coleccionista**: Desbloquear 5 insignias
-10. **Millonario**: Acumular 10,000 puntos totales
-11. **Competitivo**: Quedar top 3 en 5 juegos
-12. **Dedicado**: 50 respuestas correctas acumuladas
-
-**Insignias comprables en tienda**:
-- Costo: 500-2000 puntos según rareza
-- Desbloqueables: Aparecen al cumplir requisitos automáticamente
-
----
-
-## 📊 API Endpoints
-
-### Autenticación
-
-```
-POST /api/login          - Login (retorna JWT token)
-POST /api/register       - Registro de usuario
-POST /api/logout         - Cerrar sesión
-GET  /verificar-email    - Verificar email con token
-```
-
-### Cuestionarios
-
-```
-GET    /api/cuestionarios                    - Listar cuestionarios
-POST   /api/cuestionarios                    - Crear cuestionario
-GET    /api/cuestionarios/<id>               - Obtener cuestionario
-PUT    /api/cuestionarios/<id>               - Actualizar cuestionario
-DELETE /api/cuestionarios/<id>               - Eliminar cuestionario
-POST   /cuestionario/<id>/importar-preguntas - Importar preguntas desde Excel
-GET    /cuestionario/<id>/descargar-plantilla - Descargar plantilla Excel
-```
-
-### Juego en Tiempo Real
-
-```
-POST /sala/<sala_id>/iniciar                     - Iniciar juego
-GET  /api/sala/<sala_id>/pregunta-actual         - Obtener pregunta actual
-POST /api/sala/<sala_id>/responder               - Enviar respuesta
-POST /api/sala/<sala_id>/siguiente-pregunta      - Avanzar pregunta (docente)
-GET  /api/sala/<sala_id>/ranking                 - Obtener ranking
-GET  /api/sala/<sala_id>/estadisticas-pregunta   - Estadísticas en vivo
-```
-
-### Exportación
-
-```
-POST /api/exportar-resultados/<sala_id>/onedrive - Exportar a OneDrive
-POST /api/exportar-resultados/<sala_id>/email    - Enviar por email
-GET  /auth/onedrive                              - Iniciar auth OneDrive
-GET  /callback/onedrive                          - Callback OAuth2
-```
-
----
-
-## 🔒 Seguridad
-
-### Autenticación
-- **Contraseñas**: Hash con bcrypt (cost factor 12)
-- **JWT Tokens**: Firmados con clave secreta
-- **Sesiones**: Cookies con `httponly`, `secure` (HTTPS), `samesite=Lax`
-- **CSRF**: Protección en formularios (csrf_token)
-
-### Validaciones
-- **Email**: Formato válido + verificación obligatoria
-- **Contraseñas**: Mínimo 6 caracteres
-- **SQL Injection**: Consultas parametrizadas (PyMySQL)
-- **XSS**: Escapado automático de templates (Jinja2)
-
-### Permisos
-- **Docente**: CRUD de cuestionarios, crear salas, ver resultados
-- **Estudiante**: Unirse a salas, jugar, ver perfil
-- **Validaciones**: Verificación de propiedad en cada endpoint
-
-### Variables de Entorno
-- `.env` en `.gitignore` (no subir a Git)
-- Credenciales fuera del código fuente
-- Tokens y secrets rotativos
-
----
-
-## 🚀 Despliegue en PythonAnywhere
-
-### 1. Subir Archivos
-
-```bash
-# Usar Web Interface o Git
-git clone https://github.com/tu-usuario/brain_rush.git
-```
-
-### 2. Configurar Entorno Virtual
-
-```bash
-cd ~/brain_rush
-mkvirtualenv --python=/usr/bin/python3.10 brain-rush-env
-pip install -r requirements.txt
-```
-
-### 3. Configurar Base de Datos
-
-En PythonAnywhere → Databases:
-- Crear base de datos MySQL
-- Importar `database_schema_complete.sql`
-- Anotar host, usuario, contraseña
-
-### 4. Crear `.env`
-
-```bash
-nano .env
-```
-
-Pega configuración (cambia URL de redirección):
-```env
-DB_HOST=tu-usuario.mysql.pythonanywhere-services.com
-DB_USER=tu-usuario
-DB_PASSWORD=tu-password
-DB_NAME=tu-usuario$brain_rush
-
-JWT_SECRET_KEY=clave-secreta-aleatoria
-
-MAIL_USERNAME=tu_correo@gmail.com
-MAIL_PASSWORD=contraseña-aplicacion-gmail
-
-AZURE_CLIENT_ID=tu-client-id
-AZURE_CLIENT_SECRET=tu-client-secret
-AZURE_TENANT_ID=common
-ONEDRIVE_REDIRECT_URI=https://tu-usuario.pythonanywhere.com/callback/onedrive
-```
-
-### 5. Configurar Web App
-
-En PythonAnywhere → Web:
-- Source code: `/home/tu-usuario/brain_rush`
-- Working directory: `/home/tu-usuario/brain_rush`
-- Virtualenv: `/home/tu-usuario/.virtualenvs/brain-rush-env`
-- WSGI file: Edita y apunta a `main.py`
-
-```python
-import sys
-path = '/home/tu-usuario/brain_rush'
-if path not in sys.path:
-    sys.path.append(path)
-
-from main import app as application
-```
-
-### 6. Reload y Probar
-
-Click en "Reload" (botón verde)
-
-Abre: `https://tu-usuario.pythonanywhere.com`
-
----
-
-## 🧪 Pruebas
-
-### Ejecutar Pruebas Locales
-
-```bash
-# Instalar pytest
-pip install pytest
-
-# Ejecutar tests (cuando se implementen)
-pytest tests/
-```
-
-### Casos de Prueba Importantes
-
-1. **Registro y Login**:
-   - Registro con email válido
-   - Verificación de email
-   - Login con credenciales correctas/incorrectas
-   - Recuperación de contraseña
-
-2. **Cuestionarios**:
-   - Crear cuestionario con preguntas
-   - Importar preguntas desde Excel
-   - Editar/eliminar cuestionarios
-   - Validaciones de permisos
-
-3. **Juego**:
-   - Crear sala con PIN
-   - Unirse con PIN
-   - Responder preguntas
-   - Calcular puntaje correcto
-   - Generar ranking
-
-4. **Exportación**:
-   - Exportar a OneDrive (con autorización)
-   - Enviar por email
-   - Formato Excel correcto
-
----
-
-## 🐛 Solución de Problemas Comunes
-
-### Error: "No se pudo conectar a la base de datos"
-
-**Causa**: Credenciales incorrectas en `.env`
-
-**Solución**:
-1. Verifica `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`
-2. Prueba conexión:
-   ```bash
-   mysql -h DB_HOST -u DB_USER -p DB_NAME
-   ```
-
-### Error: "Las librerías de Microsoft no están instaladas"
-
-**Causa**: Falta instalar `msal` y `requests`
-
-**Solución**:
-```bash
-pip install msal requests
-```
-
-### Error: "redirect_uri_mismatch" (OneDrive)
-
-**Causa**: URL de redirección no configurada en Azure
-
-**Solución**:
-1. Azure Portal → Tu aplicación → Authentication
-2. Agrega URL: `http://localhost:5000/callback/onedrive`
-3. Para producción: `https://tu-dominio.com/callback/onedrive`
-
-### Error: "SMTPAuthenticationError" (Gmail)
-
-**Causa**: Contraseña de aplicación incorrecta
-
-**Solución**:
-1. Ve a https://myaccount.google.com/apppasswords
-2. Genera nueva contraseña de aplicación
-3. Actualiza `MAIL_PASSWORD` en `.env`
-
-### Archivos no se suben a OneDrive
-
-**Verificar**:
-1. ¿Autorizaste OneDrive? → Click "Subir a OneDrive" y autoriza
-2. ¿Expiraron tokens? → Volverá a pedir autorización automáticamente
-3. ¿Hay error de conexión? → Usa fallback de email
-
-### Emails no llegan
-
-**Verificar**:
-1. Revisa carpeta SPAM
-2. Verifica `MAIL_USERNAME` y `MAIL_PASSWORD` en `.env`
-3. Verifica email en base de datos sea válido
-4. Revisa logs de Flask para errores SMTP
-
----
-
-## 📝 Mantenimiento
-
-### Renovar Client Secret de Azure
-
-Los secrets expiran cada 24 meses:
-
-1. Azure Portal → Certificates & secrets
-2. "+ New client secret"
-3. Copia nuevo valor
-4. Actualiza `AZURE_CLIENT_SECRET` en `.env`
-5. Reload aplicación
-
-### Backup de Base de Datos
-
-```bash
-# Exportar
-mysqldump -u root -p brain_rush > backup_brain_rush_$(date +%Y%m%d).sql
-
-# Restaurar
-mysql -u root -p brain_rush < backup_brain_rush_20251027.sql
-```
-
-### Logs y Debugging
-
-```python
-# En main.py, activar modo debug (solo desarrollo):
-app.run(debug=True, host='0.0.0.0', port=5000)
-```
-
-**En producción**, revisar logs en:
-- PythonAnywhere: `/var/log/`
-- Local: Consola del terminal
-
----
-
-## 🤝 Contribuciones
-
-Este proyecto es parte de un trabajo académico. Para contribuir:
-
-1. Fork del repositorio
-2. Crea rama para feature: `git checkout -b feature/nueva-funcionalidad`
-3. Commit cambios: `git commit -m "Descripción"`
-4. Push a rama: `git push origin feature/nueva-funcionalidad`
-5. Abre Pull Request
-
----
-
-## 📄 Licencia
-
-Proyecto educativo - Universidad Señor de Sipán (USAT)
-
----
-
-## 📞 Soporte y Contacto
-
-Para dudas o problemas:
-- **Email**: alonzopezoi@gmail.com
-- **Institución**: Universidad Señor de Sipán
-- **Proyecto**: Brain RUSH - Sistema de Juegos Educativos
+### Descripción de Componentes Clave
+
+- **`main.py`**: Archivo principal que contiene todas las rutas Flask, configuración de la aplicación y lógica de presentación.
+- **`controladores/`**: Capa de lógica de negocio que abstrae las operaciones con la base de datos.
+- **`Templates/`**: Plantillas HTML renderizadas por Jinja2 con datos dinámicos.
+- **`static/`**: Recursos estáticos (CSS, JavaScript, imágenes) servidos directamente.
+- **`bd.py`**: Funciones para obtener conexiones a MySQL y verificar la BD.
+- **`api_crud.py`**: Endpoints de API REST para consumo externo o AJAX.
 
 ---
 
 ## 📚 Documentación Adicional
 
-### Importación de Preguntas desde Excel
+Para información más detallada sobre aspectos específicos del proyecto, consulta:
 
-**Formato de Plantilla**:
-- Columna A: Pregunta (obligatoria)
-- Columnas B-E: Opciones A, B, C, D (A y B obligatorias)
-- Columna F: Respuesta Correcta (A/B/C/D)
-- Columna G: Tiempo en segundos (5-300)
-
-**Validaciones**:
-- Mínimo 2 opciones por pregunta
-- Respuesta correcta debe existir
-- Tiempo entre 5 y 300 segundos
-
-### Sistema de Recompensas Automáticas
-
-Al finalizar un juego, el sistema asigna automáticamente:
-- **1er Lugar**: Trofeo configurado para el cuestionario
-- **2do Lugar**: Medalla configurada
-- **3er Lugar**: Insignia configurada
-
-Las recompensas deben configurarse ANTES de crear la sala de juego.
-
-### Renovación Automática de Tokens OneDrive
-
-El sistema maneja automáticamente:
-1. **Access Token** (válido ~1 hora) → Se renueva automáticamente
-2. **Refresh Token** (válido 90 días - 2 años) → Se renueva al usarse
-
-Solo necesitas autorizar UNA VEZ. El sistema se encarga del resto.
+- **[CONFIGURACION_ONEDRIVE_PRODUCCION.md](./CONFIGURACION_ONEDRIVE_PRODUCCION.md)**: Guía completa para configurar la integración con OneDrive en producción
+- **[ESTRUCTURA_CODIGO.md](./ESTRUCTURA_CODIGO.md)**: Documentación detallada de la arquitectura y organización del código
+- **[EXPORTACION_DASHBOARD_DOCENTE.md](./EXPORTACION_DASHBOARD_DOCENTE.md)**: Guía de uso del sistema de exportación de datos para docentes
+- **[NOTIFICACIONES_GUIA.md](./NOTIFICACIONES_GUIA.md)**: Documentación del sistema de notificaciones y alertas
 
 ---
 
-## 🎯 Roadmap y Mejoras Futuras
+## 🌐 Despliegue en Producción
 
-- [ ] Modo offline para juegos sin internet
-- [ ] Integración con Google Classroom
-- [ ] Reportes avanzados con gráficos
-- [ ] App móvil (React Native)
-- [ ] Preguntas con imágenes
-- [ ] Preguntas de respuesta abierta
-- [ ] Chat en vivo durante juego
-- [ ] Torneos y ligas escolares
-- [ ] Integración con Moodle/Blackboard
+### Despliegue en PythonAnywhere
+
+Brain Rush está configurado para ser desplegado en PythonAnywhere, una plataforma de hosting Python gratuita y fácil de usar.
+
+#### Pasos para Desplegar
+
+1. **Crear cuenta en PythonAnywhere**: [www.pythonanywhere.com](https://www.pythonanywhere.com)
+
+2. **Clonar el repositorio**:
+   ```bash
+   git clone https://github.com/IgnacioAlP/brain_rush.git
+   cd brain_rush
+   ```
+
+3. **Crear entorno virtual**:
+   ```bash
+   mkvirtualenv --python=/usr/bin/python3.10 brain-rush-env
+   pip install -r requirements.txt
+   ```
+
+4. **Configurar base de datos**:
+   - Crear base de datos MySQL en el panel de PythonAnywhere
+   - Importar `database_schema_complete.sql`
+   - Actualizar credenciales en `.env.pythonanywhere`
+
+5. **Configurar Web App**:
+   - Source code: `/home/tu-usuario/brain_rush`
+   - Working directory: `/home/tu-usuario/brain_rush`
+   - Virtualenv: `/home/tu-usuario/.virtualenvs/brain-rush-env`
+
+6. **Configurar WSGI**:
+   Edita el archivo WSGI para apuntar a `main.py`:
+   ```python
+   import sys
+   path = '/home/tu-usuario/brain_rush'
+   if path not in sys.path:
+       sys.path.append(path)
+   
+   from main import app as application
+   ```
+
+7. **Reload** la aplicación y accede a tu URL de PythonAnywhere.
+
+#### Variables de Entorno en Producción
+
+Utiliza el archivo `.env.pythonanywhere` como referencia para configurar las variables de entorno en producción:
+
+- Actualiza `DB_HOST` con el host de PythonAnywhere
+- Cambia `ONEDRIVE_REDIRECT_URI` a tu dominio de producción
+- Asegúrate de usar contraseñas seguras y únicas
 
 ---
 
-**Última actualización**: Noviembre 2024  
-**Versión**: 3.0  
-**Estado**: ✅ Funcional en producción
+## 🤝 Contribución
+
+¡Las contribuciones son bienvenidas! Si deseas contribuir al proyecto:
+
+1. **Fork** el repositorio
+2. Crea una **rama** para tu feature: `git checkout -b feature/nueva-funcionalidad`
+3. **Commit** tus cambios: `git commit -m "Agregar nueva funcionalidad"`
+4. **Push** a la rama: `git push origin feature/nueva-funcionalidad`
+5. Abre un **Pull Request** describiendo tus cambios
+
+### Guías de Contribución
+
+- Sigue las convenciones de código Python (PEP 8)
+- Documenta funciones y clases con docstrings
+- Prueba tu código antes de hacer commit
+- Mantén commits pequeños y descriptivos
+- Actualiza la documentación si es necesario
 
 ---
 
-¡Gracias por usar Brain RUSH! 🎮📚
+## 📄 Licencia
+
+Este proyecto es un trabajo académico desarrollado para la **Universidad Señor de Sipán (USAT)**.
+
+**Licencia**: Uso Educativo
+
+El código está disponible con fines educativos y de aprendizaje. Para uso comercial o redistribución, por favor contacta al autor.
+
+---
+
+## 👨‍💻 Autor
+
+**Ignacio Alonzo Pérez**
+
+- 📧 Email: [alonzopezoi@gmail.com](mailto:alonzopezoi@gmail.com)
+- 🏫 Institución: Universidad Señor de Sipán (USAT)
+- 💼 GitHub: [@IgnacioAlP](https://github.com/IgnacioAlP)
+
+---
+
+## 🙏 Agradecimientos
+
+Gracias a todos los que han contribuido y apoyado el desarrollo de Brain Rush:
+
+- Universidad Señor de Sipán por el apoyo académico
+- Docentes y estudiantes que han probado la plataforma
+- Comunidad de Flask y Python por la excelente documentación
+
+---
+
+## 📞 Soporte
+
+¿Tienes preguntas o problemas? Contáctanos:
+
+- **Issues**: [GitHub Issues](https://github.com/IgnacioAlP/brain_rush/issues)
+- **Email**: alonzopezoi@gmail.com
+
+---
+
+## 🔄 Versión
+
+**Versión actual**: 3.0  
+**Última actualización**: Febrero 2025  
+**Estado**: ✅ En producción
+
+---
+
+<div align="center">
+
+**¡Gracias por usar Brain Rush! 🎮📚**
+
+*Haciendo el aprendizaje más divertido, un quiz a la vez.*
+
+</div>
